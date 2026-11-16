@@ -1,0 +1,10 @@
+**Northwind**
+- Reporting feature built and demoed to the client; demo feedback issues fixed
+- Client meetings completed with no open questions
+- Blocker: none this week. Need: nothing further from the client.
+
+**Contoso**
+- Reviewed and approved the $50k estimate; client confirmed budget
+
+**Internal**
+- Onboarded a new teammate; attended the AI lunch & learn; updated documentation

@@ -1,0 +1,79 @@
+== demo-good-output.txt
+C1 PASS  Length: 70 words (limit: under 150)
+C2 PASS  Grouped by client: all three client labels found, no day labels
+C3 PASS  Blocker and ask: found "Blocker:" and "Need:"
+C4 PASS  Teams, not email: no email markers
+C5 PASS  Factual tone: no banned words or exclamation marks
+C6 PASS  Uses the rough notes: all note keywords found
+-> 6/6 criteria passed
+
+== northwind/fixture-bad.txt
+C1 FAIL  Length: 154 words (limit: under 150)
+C2 FAIL  Grouped by client: missing client label(s): Northwind, Contoso, Internal
+C3 FAIL  Blocker and ask: missing label(s): Blocker:, Need:
+C4 FAIL  Teams, not email: email marker(s) found: Subject:, Dear, Regards
+C5 FAIL  Factual tone: found: thrilled, proud, amazing, incredible, awesome, successfully, crushed, !
+C6 PASS  Uses the rough notes: all note keywords found
+-> 1/6 criteria passed
+
+== northwind/fixture-polished-but-wrong.txt
+C1 PASS  Length: 58 words (limit: under 150)
+C2 PASS  Grouped by client: all three client labels found, no day labels
+C3 PASS  Blocker and ask: found "Blocker:" and "Need:"
+C4 PASS  Teams, not email: no email markers
+C5 PASS  Factual tone: no banned words or exclamation marks
+C6 PASS  Uses the rough notes: all note keywords found
+-> 6/6 criteria passed
+
+== northwind/sample-run-1.txt
+C1 PASS  Length: 74 words (limit: under 150)
+C2 PASS  Grouped by client: all three client labels found, no day labels
+C3 PASS  Blocker and ask: found "Blocker:" and "Need:"
+C4 PASS  Teams, not email: no email markers
+C5 PASS  Factual tone: no banned words or exclamation marks
+C6 PASS  Uses the rough notes: all note keywords found
+-> 6/6 criteria passed
+
+== northwind/sample-run-2.txt
+C1 PASS  Length: 106 words (limit: under 150)
+C2 FAIL  Grouped by client: missing client label(s): Northwind, Contoso, Internal
+C3 PASS  Blocker and ask: found "Blocker:" and "Need:"
+C4 PASS  Teams, not email: no email markers
+C5 PASS  Factual tone: no banned words or exclamation marks
+C6 PASS  Uses the rough notes: all note keywords found
+-> 5/6 criteria passed
+
+== northwind/sample-run-3.txt
+C1 PASS  Length: 70 words (limit: under 150)
+C2 PASS  Grouped by client: all three client labels found, no day labels
+C3 FAIL  Blocker and ask: missing label(s): Blocker:, Need:
+C4 PASS  Teams, not email: no email markers
+C5 FAIL  Factual tone: found: successfully
+C6 PASS  Uses the rough notes: all note keywords found
+-> 4/6 criteria passed
+
+== northwind/sample-run-4.txt
+C1 PASS  Length: 71 words (limit: under 150)
+C2 PASS  Grouped by client: all three client labels found, no day labels
+C3 PASS  Blocker and ask: found "Blocker:" and "Need:"
+C4 PASS  Teams, not email: no email markers
+C5 PASS  Factual tone: no banned words or exclamation marks
+C6 PASS  Uses the rough notes: all note keywords found
+-> 6/6 criteria passed
+
+== northwind/sample-run-5.txt
+C1 FAIL  Length: 163 words (limit: under 150)
+C2 PASS  Grouped by client: all three client labels found, no day labels
+C3 PASS  Blocker and ask: found "Blocker:" and "Need:"
+C4 PASS  Teams, not email: no email markers
+C5 FAIL  Factual tone: found: excited
+C6 PASS  Uses the rough notes: all note keywords found
+-> 4/6 criteria passed
+
+== Pass rate per criterion
+C1 Length: 6/8
+C2 Grouped by client: 6/8
+C3 Blocker and ask: 6/8
+C4 Teams, not email: 7/8
+C5 Factual tone: 5/8
+C6 Uses the rough notes: 8/8

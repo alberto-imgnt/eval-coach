@@ -1,0 +1,705 @@
+{
+  "messages": {
+    "onedrive_warning": "This project folder is inside OneDrive. OneDrive can lock files while your CLI and the checker use them. A folder outside OneDrive is safer.",
+    "corrupt_progress": "Your saved progress could not be read: {path}. Nothing was changed. Rename or delete that file to start over, or choose a different project folder.",
+    "bad_settings": "The app's own settings file could not be read, so your last project was not reopened. Enter your project folder again to resume.",
+    "unknown_part": "There is no Part with that name. Nothing was changed.",
+    "example_fixtures_wrong_step": "The example's fixtures can only be used in the fixtures step. Open that step to use them there.",
+    "example_fixtures_own_project": "These fixtures belong to the Northwind example, so they would not test the checker for your own task. Press Start, then Send, and have your CLI write fixtures for your own test cases. If they look wrong, tell your CLI what your output should look like, then try again.",
+    "example_fixtures_cli_running": "Your CLI is still running. Press Stop, then use the example's fixtures.",
+    "example_fixtures_confirm_replace": "The fixtures folder already has text in it. Confirm that you want to replace it with the example's two fixtures, then try again.",
+    "example_fixtures_write_failed": "The example's fixtures could not be saved: {error}. Close anything that has the fixtures folder open, then try again."
+  },
+  "steps": {
+    "generate": {
+      "title": "Collect your answers",
+      "goal": "Get real answers from your own prompt, saved as files, before you build anything.",
+      "why": [
+        "One answer proves little, because the model varies from run to run. A baseline is a pass rate across several runs, not one answer.",
+        "Prompt, then answer, then file, then checker, then verdict. Every arrow is a deliberate action. Nothing moves on by itself.",
+        "This course uses a blind folder that holds only your prompt, so the model cannot read your tests. A model that can read them quietly writes to them, and your baseline would look better than it is.",
+        "Each run is a new chat, so no run can remember an earlier one. Five runs is what this course uses, because it gives a steady rate without taking long.",
+        "Pick a mid-tier model and record its name. A score belongs to one prompt on one model, and a good prompt should not need the most powerful model.",
+        "This is this course's way of working. Other approaches work too, and scripts, testing-tool configuration files and written test cases are all fine ways to evaluate."
+      ],
+      "instructions": [
+        "Press Start. Your CLI opens in the blind folder, which holds only your prompt.",
+        "In the terminal, pick a mid-tier model, not the most powerful one offered. Click in the terminal, type /model and press Enter. Most CLIs then show a list of models you can choose from with the arrow keys and Enter. If /model does nothing, type \"Which model are you using, and how do I switch to a different one?\" and follow the answer. Mid-tier means the everyday model, such as one called Sonnet or Mini or Standard, not the one described as the most capable, the largest or the newest flagship (for example Opus). Then write the exact model name shown in the box. You will need it later.",
+        "If your CLI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your CLI exits, use Start again.",
+        "Depending on its settings, your CLI may ask for approvals or may act on its own. Any approval requests appear in the terminal, and you answer them there. The app never answers for you.",
+        "When the CLI is ready, press Send. The app types the line for you.",
+        "The app waits for output.txt, saves it as your run file, closes the CLI, and moves to the next run.",
+        "Repeat until all five runs are saved. One prompt, one answer, one new chat each time. No second tries and no edits."
+      ],
+      "line": "Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.",
+      "folder_label": "Blind folder (only your prompt)",
+      "troubleshooting": [
+        {"problem": "Your CLI reports a temporary error, such as a busy service or a network problem.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Stop, then Start."},
+        {"problem": "Nothing happens after you press Send.", "fix": "Look at the terminal. If your CLI is set to ask for approval, it may be waiting for you. Answer it there."},
+        {"problem": "The run never finishes.", "fix": "The app needs a file called output.txt with text in it. If your CLI printed the answer but saved nothing, press Stop, then Start, and send the line again."},
+        {"problem": "The CLI will not start.", "fix": "Open Settings, go to the Setup group and check the command. Type the same command in a normal terminal to confirm that it works."}
+      ],
+      "gate": {
+        "runs": {"label": "Five runs saved", "ok": "All five runs are saved.", "fail": "{count} of 5 runs are saved. Keep going until all five are saved."},
+        "model": {"label": "Model name recorded", "ok": "", "fail": "Write the model name in the box."}
+      }
+    },
+    "build": {
+      "title": "Build the checker",
+      "ui": {
+        "first_look_blurb": "The first look runs your checker on your first saved answer. It shows you that the checker works. It is not your baseline.",
+        "first_look_missing": "Your CLI needs to write check.py first.",
+        "scan_blurb": "The app reads check.py and warns you if it imports anything that talks to a network or an AI service. Your checker should do neither.",
+        "scan_absent": "There is no check.py to scan yet.",
+        "scan_clear": "No warnings. check.py does not import any network or AI libraries."
+      },
+      "tracks": {
+        "promptfoo": {
+          "title": "Build the config",
+          "goal": "Have your agent build the promptfoo config from your test cases, then see the config score one real answer.",
+          "why": [
+            "You decide what good means. The agent writes the config. Your job is to check that the config means what you meant.",
+            "A config is your criteria written as rules that promptfoo applies the same way every time. The echo provider hands each saved answer to the checks unchanged, so no AI model is used and no API key is needed.",
+            "This course has the agent follow a skill, a plain-text instruction file that says exactly how to do the job. You can read it and hold the agent to it. There is nothing to install.",
+            "The first look is not the baseline. You see the loop work once before you are asked to doubt it. The baseline comes after your thresholds are settled.",
+            "The config sees only the saved answers. It never sees your prompt or your notes."
+          ],
+          "instructions": [
+            "Press Start. Your CLI opens in your project folder.",
+            "If your CLI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your CLI exits, use Start again.",
+            "When the CLI is ready, press Send. It reads the skill and builds promptfooconfig.yaml, with one test for each of your five runs. If your CLI asks for approvals, they appear in the terminal.",
+            "Read the NOT CHECKED list. Those criteria are not covered. Rewrite a threshold in test-cases.md with a number, a list of terms you choose, or a label, then ask your CLI to update the config. Spend at most 3 minutes, or leave it and move on.",
+            "Read the Interpretation choices. They are decisions the agent made for you, such as whole word or part of a word. Agree, or change test-cases.md.",
+            "Press Run first look. The app runs the whole config with promptfoo, which takes a few seconds, and shows you the result for your first run. You will see PASS, FAIL or NOT CHECKED for each criterion.",
+            "A non-zero exit code is normal. It only means at least one criterion failed or is NOT CHECKED. If promptfoo itself shows every test as failed while a criterion is NOT CHECKED, that is expected too.",
+            "Tick both boxes, then press Check my work."
+          ],
+          "line": "Read skills/build-promptfoo-config/SKILL.md and follow it in build mode on test-cases.md. Add runs/run-1.txt to runs/run-5.txt as tests named run-1 to run-5.",
+          "troubleshooting": [
+            {"problem": "The agent cannot read the skill file.", "fix": "Paste the text of SKILL.md into the terminal and add \"Follow these instructions\" before the line."},
+            {"problem": "The config has an error.", "fix": "Paste the error into the terminal and ask your CLI to fix it without changing any threshold. Then press Run first look again."},
+            {"problem": "A label check fails on an output that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. Tell your CLI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\" Then press Run first look again."},
+            {"problem": "The agent adds an llm-rubric check or asks for an API key.", "fix": "Say no. The checks must be rules only, and no API key is needed. The scan will stop you until the check is gone."},
+            {"problem": "The first look is slow.", "fix": "Wait. The app runs the copy of promptfoo it already downloaded, so a run normally takes a few seconds. If it takes more than 10 minutes, the app stops it and tells you."},
+            {"problem": "Every test shows as failed.", "fix": "That is normal while any criterion is NOT CHECKED. A NOT CHECKED criterion is built to fail on purpose, so promptfoo marks every test as failed. The app shows each criterion on its own, so you can still see which ones passed."},
+            {"problem": "The exit code is not 0.", "fix": "That is normal. promptfoo exits with a non-zero code whenever any criterion fails or is NOT CHECKED."},
+            {"problem": "Many criteria are NOT CHECKED.", "fix": "Spend at most 3 minutes on rewrites. A criterion that stays NOT CHECKED is counted as not covered. Do not loosen it just to get a pass."},
+            {"problem": "Your CLI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
+          ],
+          "gate": {
+            "checker": {"label": "promptfooconfig.yaml exists", "fail": "promptfooconfig.yaml was not found in your project folder. Ask your CLI to finish the build."},
+            "scan": {"label": "Rules only", "ok": "promptfooconfig.yaml uses rules only, with the echo provider."}
+          },
+          "ui": {
+            "first_look_blurb": "The first look runs your config on your saved answers and shows the result for your first run. It shows you that the config works. It is not your baseline.",
+            "first_look_missing": "Your CLI needs to write promptfooconfig.yaml first.",
+            "scan_blurb": "The app reads promptfooconfig.yaml and warns you if it uses a check that needs an AI model, or any provider other than echo. Your checks should use rules only.",
+            "scan_absent": "There is no promptfooconfig.yaml to scan yet.",
+            "scan_clear": "No warnings. promptfooconfig.yaml uses rules only, with the echo provider."
+          }
+        }
+      },
+      "goal": "Have your agent build a checker from your test cases, then see it score one real answer.",
+      "why": [
+        "You decide what good means. The agent writes the code. Your job is to check that the code means what you meant.",
+        "A checker is your criteria written as rules a computer applies the same way every time. It never calls an AI model, so the same answer always gets the same verdict.",
+        "This course has the agent follow a skill, a plain-text instruction file that says exactly how to do the job. You can read it and hold the agent to it. There is nothing to install.",
+        "The first look is not the baseline. You see the loop work once before you are asked to doubt it. The baseline comes after your thresholds are settled.",
+        "The checker sees only the saved answer. It never sees your prompt or your notes."
+      ],
+      "instructions": [
+        "Press Start. Your CLI opens in your project folder.",
+        "If your CLI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your CLI exits, use Start again.",
+        "When the CLI is ready, press Send. It reads the skill and builds check.py. If your CLI asks for approvals, they appear in the terminal.",
+        "Read the NOT CHECKED list. Those criteria are not covered. Rewrite a threshold in test-cases.md with a number, a list of terms you choose, or a label. Spend at most 3 minutes, or leave it and move on.",
+        "Read the Interpretation choices. They are decisions the agent made for you, such as whole word or part of a word. Agree, or change test-cases.md.",
+        "Press Run first look. The app runs check.py on your first run. You will see PASS, FAIL or NOT CHECKED for each criterion.",
+        "Exit code 1 is normal. It means at least one criterion failed or is NOT CHECKED.",
+        "Tick both boxes, then press Check my work."
+      ],
+      "line": "Read skills/build-eval-script/SKILL.md and follow it in build mode on test-cases.md.",
+      "folder_label": "Your project folder",
+      "checklist": [
+        {"id": "read_not_checked", "label": "I read the NOT CHECKED list and know which criteria are not covered."},
+        {"id": "read_interpretation", "label": "I read the Interpretation choices and I agree with them, or I changed test-cases.md."}
+      ],
+      "troubleshooting": [
+        {"problem": "The agent cannot read the skill file.", "fix": "Paste the text of SKILL.md into the terminal and add \"Follow these instructions\" before the line."},
+        {"problem": "check.py crashes.", "fix": "Paste the error into the terminal and ask your CLI to fix it without changing any threshold."},
+        {"problem": "Your CLI says python was not found.", "fix": "Ask your CLI to run check.py with py instead of python. If neither works, press Run first look: the app runs check.py itself, with its own copy of Python."},
+        {"problem": "A label check fails on an output that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. Tell your CLI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\" Then press Run first look again."},
+        {"problem": "The exit code is 1.", "fix": "That is normal. It is 1 whenever any criterion fails or is NOT CHECKED."},
+        {"problem": "The agent wants to call an AI model inside the script.", "fix": "Say no. The checker must be rules only. The scan will stop you until the call is gone."},
+        {"problem": "Many criteria are NOT CHECKED.", "fix": "Spend at most 3 minutes on rewrites. A criterion that stays NOT CHECKED is counted as not covered. Do not loosen it just to get a pass."},
+        {"problem": "Your CLI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
+      ],
+      "gate": {
+        "checker": {"label": "check.py exists", "ok": "", "fail": "check.py was not found in your project folder. Ask your CLI to finish the build."},
+        "scan": {"label": "No network or AI calls", "ok": "check.py uses rules only.", "fail": "{messages}"},
+        "read_not_checked": {"label": "NOT CHECKED list read", "ok": "", "fail": "Read the NOT CHECKED list, then tick the box."},
+        "read_interpretation": {"label": "Interpretation choices read", "ok": "", "fail": "Read the Interpretation choices, then tick the box."},
+        "first_look": {"label": "First look run", "ok": "", "fail": "Press Run first look, and make sure it finishes without an error."}
+      }
+    },
+    "fixtures": {
+      "title": "Make fixtures",
+      "tracks": {
+        "promptfoo": {
+          "why": [
+            "A checker needs its own test. A bad output must fail, and a polished-but-wrong output must fail.",
+            "The fixtures are written without seeing the config, so they test what you asked for, not what the config happens to do.",
+            "This course uses a new chat in a folder with only your test cases, your prompt and one skill, so it cannot open promptfooconfig.yaml or your runs.",
+            "The answer key comes later, after you lock your predictions, so nothing can influence them. A prediction is only useful if you commit to it first."
+          ],
+          "instructions": [
+            "Press Start. A new chat opens in the fixtures folder.",
+            "If your CLI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your CLI exits, use Start again.",
+            "When the CLI is ready, press Send. If your CLI asks for approvals, they appear in the terminal.",
+            "It writes fixture-bad.txt and fixture-polished-but-wrong.txt. A long approval request may not fit in the terminal, so scroll up to read all of it before you answer.",
+            "Press Check my work. The app copies the two fixtures into your project. The next step adds them to your config."
+          ]
+        }
+      },
+      "goal": "Have a new chat write test outputs, without seeing your checker.",
+      "why": [
+        "A checker needs its own test. A bad output must fail, and a polished-but-wrong output must fail.",
+        "The fixtures are written without seeing the checker, so they test what you asked for, not what the code happens to do.",
+        "This course uses a new chat in a folder with only your test cases, your prompt and one skill, so it cannot open check.py or your runs.",
+        "The answer key comes later, after you lock your predictions, so nothing can influence them. A prediction is only useful if you commit to it first."
+      ],
+      "instructions": [
+        "Press Start. A new chat opens in the fixtures folder.",
+        "If your CLI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your CLI exits, use Start again.",
+        "When the CLI is ready, press Send. If your CLI asks for approvals, they appear in the terminal.",
+        "It writes fixture-bad.txt and fixture-polished-but-wrong.txt. A long approval request may not fit in the terminal, so scroll up to read all of it before you answer.",
+        "Press Check my work. The app copies the two fixtures into your project."
+      ],
+      "line": "Read skills/make-eval-fixtures/SKILL.md and follow it for test-cases.md and prompt-v0.md, with one change: write only the two fixture files. Do not write the answer key, and do not say what is wrong with either fixture.",
+      "folder_label": "Fixtures folder (test cases, prompt and one skill only)",
+      "ui": {
+        "example_heading": "If your CLI cannot make usable fixtures",
+        "example_blurb": "These two files are the Northwind example's own fixtures. They fit the example's test cases only, which is why this is offered only for the Northwind example. Use them if your CLI could not write usable fixtures. Then press Check my work as usual. No answer key is written now: it is still written after you lock your predictions. Pressing Start again clears them.",
+        "example_button": "Use the example's fixtures",
+        "example_confirm_title": "Replace the fixtures?",
+        "example_confirm_body": "The fixtures folder already has text in it. This replaces it with the Northwind example's two fixtures.",
+        "example_confirm_label": "Replace them"
+      },
+      "troubleshooting": [
+        {"problem": "The agent cannot read the skill file.", "fix": "Paste the text of SKILL.md into the terminal and add \"Follow these instructions\" before the line."},
+        {"problem": "The fixtures look nothing like your task.", "fix": "Tell your CLI what the output should look like, press Stop, then Start, and run this step again."},
+        {"problem": "You chose the Northwind example and the fixtures came out empty or unusable.", "fix": "Press Stop. Then press Use the example's fixtures, under the list of files. It saves the example's own two fixtures in the fixtures folder, and writes no answer key. Press Check my work next. This works only with the Northwind example, because those two files fit its test cases only. With your own files, use the entry above instead."},
+        {"problem": "A file is missing.", "fix": "Look at the terminal. If your CLI is set to ask for approval, it may be waiting for you. Answer it there, then press Check my work again."},
+        {"problem": "Your CLI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
+      ],
+      "gate": {
+        "bad": {"label": "Bad fixture written", "ok": "", "fail": "fixture-bad.txt was not found, or it is empty."},
+        "polished": {"label": "Polished fixture written", "ok": "", "fail": "fixture-polished-but-wrong.txt was not found, or it is empty."},
+        "no_key_in_project": {"label": "No answer key in your project", "ok": "", "fail": "An answer-key.md is in your project's fixtures folder. Delete it, then press Check my work again."},
+        "nudge_stray_key": {"label": "", "text": "Your CLI wrote an answer key anyway. The app deleted it, and a new one will be written after you lock your predictions. If you saw what it said, predict as honestly as you can."}
+      }
+    },
+    "fixtures-config": {
+      "title": "Add the fixtures to the config",
+      "goal": "Have your CLI add your fixtures to the config as tests, so promptfoo can run them.",
+      "why": [
+        "The fixtures were written in a separate folder, so they could not see your config. Now they join it as two more tests, named fixture-bad and fixture-polished-but-wrong.",
+        "Your five runs stay as the tests run-1 to run-5. The baseline uses only those. The fixtures test the config, never your prompt.",
+        "Change nothing else, because if your CLI edits a threshold here, the config stops matching your test cases.",
+        "The answer key does not exist yet. It is written after you lock your predictions, so nothing can influence them."
+      ],
+      "instructions": [
+        "Press Start. Your CLI opens in your project folder, where your two fixtures are now saved.",
+        "If your CLI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your CLI exits, use Start again.",
+        "When the CLI is ready, press Send. Any approval requests appear in the terminal, and you answer them there.",
+        "The page shows whether both test names are now in the config.",
+        "Press Check my work."
+      ],
+      "line": "Read skills/build-promptfoo-config/SKILL.md. Add fixtures/fixture-bad.txt and fixtures/fixture-polished-but-wrong.txt to promptfooconfig.yaml as tests named fixture-bad and fixture-polished-but-wrong. Change nothing else.",
+      "folder_label": "Your project folder",
+      "ui": {
+        "config_heading": "Your config",
+        "tests_heading": "Tests the config needs",
+        "config_present": "promptfooconfig.yaml is in your project folder.",
+        "config_missing": "There is no promptfooconfig.yaml in your project folder yet.",
+        "tests_hint": "The names must match exactly. The app reads the config and looks for each one.",
+        "scan_clear": "No warnings. promptfooconfig.yaml uses rules only, with the echo provider."
+      },
+      "troubleshooting": [
+        {"problem": "The agent cannot read the skill file.", "fix": "Paste the text of SKILL.md into the terminal and add \"Follow these instructions\" before the line."},
+        {"problem": "A test name is not found.", "fix": "The names must be exactly fixture-bad and fixture-polished-but-wrong. Ask your CLI to rename the tests, then press Check my work again."},
+        {"problem": "Your CLI changed a threshold or removed one of your runs.", "fix": "Ask it to undo that change. This step adds two tests and changes nothing else."},
+        {"problem": "The agent adds an llm-rubric check or asks for an API key.", "fix": "Say no. The checks must be rules only, and no API key is needed."},
+        {"problem": "Your CLI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
+      ],
+      "gate": {
+        "config": {"label": "promptfooconfig.yaml exists", "ok": "", "fail": "promptfooconfig.yaml was not found in your project folder. Ask your CLI to write it, then press Check my work again."},
+        "tests": {"label": "Both fixtures are tests in the config", "ok": "", "fail": "Not in the config yet: {missing}. Press Send so your CLI adds them, with exactly those names."},
+        "runs_kept": {"label": "Your five runs are still tests", "ok": "", "fail": "These tests are missing from the config: {missing}. Ask your CLI to put them back and change nothing else."},
+        "scan": {"label": "Rules only", "ok": "promptfooconfig.yaml uses rules only, with the echo provider.", "fail": "{messages}"},
+        "no_key_in_project": {"label": "No answer key in your project", "ok": "", "fail": "An answer-key.md is in your project's fixtures folder. Delete it, then press Check my work again."}
+      }
+    },
+    "readback": {
+      "title": "Read it back",
+      "tracks": {
+        "promptfoo": {
+          "goal": "Have a new chat explain, with evidence, what your config really does. Then say Yes or No for each criterion.",
+          "why": [
+            "The markdown is the spec. The config is one implementation of it, and an agent can mistranslate it.",
+            "This is a new chat, so it tests the config without remembering building it.",
+            "Mismatches are findings. The agent reports them and does not quietly fix them.",
+            "The example files are evidence, not just a description."
+          ],
+          "instructions": [
+            "Press Start. A new chat opens in your project folder.",
+            "When the CLI is ready, press Send. It writes small example files, adds them to the config as examples and runs the config on them.",
+            "A long approval request may not fit in the terminal. Scroll up to read all of it before you answer.",
+            "For each criterion, answer Yes or No: is this what I meant?",
+            "Pick one interpretation choice you did not know was a choice, and decide whether you agree. Write it in the note if you like.",
+            "If the answer is No, you will fix the threshold in a later step. Note it for now.",
+            "Press Check my work."
+          ],
+          "line": "Read skills/build-promptfoo-config/SKILL.md and follow it in explain mode on test-cases.md and promptfooconfig.yaml.",
+          "troubleshooting": [
+            {"problem": "The agent cannot read the skill file.", "fix": "Paste the text of SKILL.md into the terminal and add \"Follow these instructions\" before the line."},
+            {"problem": "The agent changed promptfooconfig.yaml to clear a mismatch.", "fix": "Mismatches are findings. Ask it to undo the change and report the mismatch instead."},
+            {"problem": "No example files appeared.", "fix": "Press Send again. If your CLI asks for approvals, answer them in the terminal. The files go in the examples folder."},
+            {"problem": "The config reports an error when your CLI runs it.", "fix": "Paste the error into the terminal and ask your CLI to fix it without changing any threshold."},
+            {"problem": "A label check fails on an example that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. Tell your CLI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\" Then ask it to run the examples again."},
+            {"problem": "Your CLI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
+          ]
+        }
+      },
+      "goal": "Have a new chat explain, with evidence, what your checker really does. Then say Yes or No for each criterion.",
+      "why": [
+        "The markdown is the spec. The script is one implementation of it, and an agent can mistranslate it.",
+        "This is a new chat, so it tests the checker without remembering building it.",
+        "Mismatches are findings. The agent reports them and does not quietly fix them.",
+        "The example files are evidence, not just a description."
+      ],
+      "instructions": [
+        "Press Start. A new chat opens in your project folder.",
+        "When the CLI is ready, press Send. It writes small example files and runs the checker on them.",
+        "A long approval request may not fit in the terminal. Scroll up to read all of it before you answer.",
+        "For each criterion, answer Yes or No: is this what I meant?",
+        "Pick one interpretation choice you did not know was a choice, and decide whether you agree. Write it in the note if you like.",
+        "If the answer is No, you will fix the threshold in a later step. Note it for now.",
+        "Press Check my work."
+      ],
+      "line": "Read skills/build-eval-script/SKILL.md and follow it in explain mode on test-cases.md and check.py.",
+      "folder_label": "Your project folder",
+      "troubleshooting": [
+        {"problem": "The agent cannot read the skill file.", "fix": "Paste the text of SKILL.md into the terminal and add \"Follow these instructions\" before the line."},
+        {"problem": "The agent changed check.py to clear a mismatch.", "fix": "Mismatches are findings. Ask it to undo the change and report the mismatch instead."},
+        {"problem": "Your CLI says python was not found.", "fix": "Ask your CLI to run check.py with py instead of python. If neither works, ask it to write the example files anyway, and say what it expects check.py to print for each. The step needs only the files, and the app runs check.py itself in later steps."},
+        {"problem": "A label check fails on an example that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. Tell your CLI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\" Then ask it to run the examples again."},
+        {"problem": "No example files appeared.", "fix": "Press Send again. If your CLI asks for approvals, answer them in the terminal. The files go in the examples folder."},
+        {"problem": "Your CLI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
+      ],
+      "gate": {
+        "examples": {"label": "Example files written", "ok": "", "fail": "No examples/c*-pass.txt file was found. Press Send and let the agent write them."},
+        "answers": {"label": "Yes or No for every criterion", "ok": "", "fail": "Still to answer: {missing}."}
+      }
+    },
+    "predict": {
+      "title": "Predict",
+      "goal": "Commit to what the checker will say about both fixtures, before you see it.",
+      "why": [
+        "Commit before seeing results. Prediction shows where your idea of the code differs from the code.",
+        "Once locked, your predictions cannot change. That keeps the comparison honest.",
+        "The answer key does not exist yet. It is written after you lock, so nothing can influence your predictions."
+      ],
+      "instructions": [
+        "Read the polished fixture below.",
+        "For each criterion, pick P for pass, F for fail, or NC for NOT CHECKED, for both fixtures.",
+        "Answer three questions. What is wrong with the polished fixture? Which of your criteria should catch that? Across your five runs, which criterion will fail most often?",
+        "Press Lock. You cannot change your predictions after that."
+      ],
+      "troubleshooting": [
+        {"problem": "No criteria appear in the grid.", "fix": "The app could not read the criteria in your test-cases.md. Add one row for each criterion yourself."},
+        {"problem": "You want to change a prediction after locking.", "fix": "You cannot. A locked prediction is what you compare against, and a wrong guess is useful."}
+      ],
+      "gate": {
+        "cells": {"label": "Every prediction filled in", "ok": "", "fail": "Still to fill in: {missing}."},
+        "answers": {"label": "All three answers written", "ok": "", "fail": "Answer all three questions."},
+        "locked": {"label": "Predictions locked", "ok": "", "fail": "Press Lock."}
+      }
+    },
+    "key": {
+      "title": "Write the answer key",
+      "tracks": {
+        "promptfoo": {
+          "why": [
+            "The key is written only after you lock, so it cannot influence your predictions, even if your CLI shows it on screen.",
+            "This is a new chat in a folder with only your test cases, your prompt, one skill and the two fixtures. It cannot open promptfooconfig.yaml or your runs.",
+            "The key judges each fixture against your requirements, not against what the config happens to do."
+          ]
+        }
+      },
+      "goal": "Now that your predictions are locked, have a new chat write the answer key for your two fixtures.",
+      "why": [
+        "The key is written only after you lock, so it cannot influence your predictions, even if your CLI shows it on screen.",
+        "This is a new chat in a folder with only your test cases, your prompt, one skill and the two fixtures. It cannot open check.py or your runs.",
+        "The key judges each fixture against your requirements, not against what the checker happens to do."
+      ],
+      "instructions": [
+        "Press Start. A new chat opens in the answer key folder.",
+        "If your CLI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your CLI exits, use Start again.",
+        "When the CLI is ready, press Send. If your CLI asks for approvals, they appear in the terminal. A long approval request may not fit, so scroll up to read all of it before you answer.",
+        "Your CLI may show the key as it writes it. That is fine now, because your predictions are locked.",
+        "Press Check my work. The app seals the key away from your project folder. You will read it in the next step, after the checker has run."
+      ],
+      "line": "Read skills/make-eval-fixtures/SKILL.md. The two fixture files are already in fixtures/. Do not change them. Follow only the Answer key section, using test-cases.md, and write fixtures/answer-key.md. Do nothing else.",
+      "folder_label": "Answer key folder (test cases, prompt, one skill and the two fixtures only)",
+      "troubleshooting": [
+        {"problem": "The agent cannot read the skill file.", "fix": "Paste the text of SKILL.md into the terminal and add \"Follow these instructions\" before the line."},
+        {"problem": "The agent changed a fixture.", "fix": "Press Stop, then Start, and send the line again. The app restores both fixtures when you start."},
+        {"problem": "The file is missing.", "fix": "Look at the terminal. If your CLI is set to ask for approval, it may be waiting for you. Answer it there, then press Check my work again."},
+        {"problem": "Your CLI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
+      ],
+      "gate": {
+        "key": {"label": "Answer key written", "ok": "", "fail": "answer-key.md was not found, or it is empty."},
+        "fixtures_unchanged": {"label": "Fixtures unchanged", "ok": "", "fail": "A fixture changed during this step. Press Stop, then Start, and send the line again."},
+        "no_key_in_project": {"label": "No answer key in your project", "ok": "", "fail": "An answer-key.md is in your project's fixtures folder. Delete it, then press Check my work again."}
+      }
+    },
+    "run": {
+      "title": "Run it",
+      "ui": {"run_blurb": "This runs check.py on both fixtures: the bad one and the polished one."},
+      "tracks": {
+        "promptfoo": {
+          "goal": "Run your config on both fixtures and compare the result with your predictions.",
+          "why": [
+            "The same file always gives the same verdict. The AI that wrote the output varies. The config does not.",
+            "Every surprise is either a vague threshold, a config that reads your threshold differently, or a wrong guess. Which one it is tells you what to fix.",
+            "If the polished fixture passes every criterion, you found a check that was window dressing.",
+            "If promptfoo shows every test as failed, that is expected while any criterion is NOT CHECKED. A NOT CHECKED criterion is built to fail on purpose, so promptfoo marks every test as failed. The app shows each criterion on its own."
+          ],
+          "instructions": [
+            "Press Run checker. The app runs your config on both fixtures with promptfoo. No AI is involved, and it takes a few seconds.",
+            "A non-zero exit code is normal. It only means at least one criterion failed or is NOT CHECKED.",
+            "The grid compares your predictions with the config. Surprises are marked.",
+            "Read the answer key. It opens after your run succeeds.",
+            "Classify each surprise: the threshold is vague or too loose, the config reads my threshold differently than I meant, or I predicted wrong.",
+            "Press Check my work."
+          ],
+          "troubleshooting": [
+            {"problem": "The exit code is not 0.", "fix": "That is normal. promptfoo exits with a non-zero code whenever any criterion fails or is NOT CHECKED."},
+            {"problem": "Every test shows as failed.", "fix": "That is normal while any criterion is NOT CHECKED. That criterion fails on purpose in every test, so promptfoo marks every test as failed. Look at the grid: it shows each criterion on its own, and the other criteria still pass or fail on their merits."},
+            {"problem": "The run reports an error.", "fix": "Read the message and the raw output. promptfooconfig.yaml may have an error. Go back to your CLI and ask it to fix the error without changing any threshold."},
+            {"problem": "A label check fails on a fixture that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. If it is a surprise, classify it as the config reading your threshold differently than you meant. In the next step, add a short note to that criterion in test-cases.md saying that a Windows line ending after the label is fine. Then press Start and Send, and tell your CLI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\""},
+            {"problem": "The run takes a long time.", "fix": "Wait. A run normally takes a few seconds. If it takes more than 10 minutes, the app stops it and says so. Then press Run checker again."},
+            {"problem": "The polished fixture passed everything.", "fix": "Good: you found a gap. Read the answer key, then fix the threshold that should catch it in the next step."}
+          ],
+          "ui": {"run_blurb": "This runs your promptfoo config on both fixtures: the bad one and the polished one."}
+        }
+      },
+      "goal": "Run the checker on both fixtures and compare the result with your predictions.",
+      "why": [
+        "The same file always gives the same verdict. The AI that wrote the output varies. The checker does not.",
+        "Every surprise is either a vague threshold, a script that reads your threshold differently, or a wrong guess. Which one it is tells you what to fix.",
+        "If the polished fixture passes every criterion, you found a check that was window dressing."
+      ],
+      "instructions": [
+        "Press Run checker. The app runs check.py on both fixtures. No AI is involved.",
+        "Exit code 1 is normal. It means at least one criterion failed or is NOT CHECKED.",
+        "The grid compares your predictions with the checker. Surprises are marked.",
+        "Read the answer key. It opens after your run succeeds.",
+        "Classify each surprise: the threshold is vague or too loose, the script reads my threshold differently than I meant, or I predicted wrong.",
+        "Press Check my work."
+      ],
+      "troubleshooting": [
+        {"problem": "The exit code is 1.", "fix": "That is normal. It is 1 whenever any criterion fails or is NOT CHECKED."},
+        {"problem": "The run reports an error.", "fix": "Read the raw output. check.py may have crashed. Go back to your CLI and ask it to fix the error without changing any threshold."},
+        {"problem": "A label check fails on a fixture that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. If it is a surprise, classify it as the script reading your threshold differently than you meant. In the next step, add a short note to that criterion in test-cases.md saying that a Windows line ending after the label is fine. Then press Start and Send, and tell your CLI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\""},
+        {"problem": "The polished fixture passed everything.", "fix": "Good: you found a gap. Read the answer key, then fix the threshold that should catch it in the next step."}
+      ],
+      "gate": {
+        "ran": {"label": "Checker ran on both fixtures", "ok": "", "fail": "Press Run checker, and make sure it finishes without an error."},
+        "classified": {"label": "Every surprise classified", "ok": "", "fail": "Still to classify: {missing}."}
+      }
+    },
+    "fix": {
+      "title": "Fix the spec",
+      "ui": {
+        "edit_blurb": "Fix the spec, not the checker. Reword the threshold here, save, then press Send to CLI so your CLI updates check.py to match.",
+        "flag_checker": "check.py updated after that change"
+      },
+      "tracks": {
+        "promptfoo": {
+          "goal": "Fix the spec, not the config. Change a threshold in your test cases, and let the agent update the config to match.",
+          "why": [
+            "When a result is wrong, change the written rules and let the agent update the config to match, so the two never drift apart.",
+            "Never edit the config to make a result pass, because a failing result is the information.",
+            "Deterministic checks narrow the gap. They do not close it. A tightened keyword check is still a proxy."
+          ],
+          "instructions": [
+            "Read the reason on each surprise. If the bad fixture passes something it should fail, the threshold is too loose. If the polished fixture passes everything, tighten the threshold that should catch what it gets wrong.",
+            "Edit test-cases.md here and save it. Change the wording of the threshold.",
+            "Press Start. When the CLI is ready, press Send. It updates only the assertions whose threshold changed.",
+            "A long approval request may not fit in the terminal. Scroll up to read all of it before you answer.",
+            "Press Run both fixtures. The bad fixture should fail more than half of its checked criteria.",
+            "The polished fixture should fail at least one criterion. If you think it should pass, write why in the box.",
+            "Press Check my work. If there were no surprises and the polished fixture already failed a criterion, you can skip this step."
+          ],
+          "line": "I changed test-cases.md. Update promptfooconfig.yaml to match, changing only the assertions whose threshold changed. Then run the two fixtures again.",
+          "troubleshooting": [
+            {"problem": "You changed promptfooconfig.yaml by hand.", "fix": "Change the sentence in test-cases.md instead, then ask your CLI to update promptfooconfig.yaml."},
+            {"problem": "The config has an error after the change.", "fix": "Paste the error into the terminal and ask your CLI to fix it without changing any threshold. Then press Run both fixtures again."},
+            {"problem": "A label check fails on a fixture that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. Tell your CLI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\" Then press Run both fixtures again."},
+            {"problem": "The agent added an llm-rubric check or an AI model.", "fix": "Say no. The checks must be rules only. The scan will stop you until it is gone."},
+            {"problem": "The bad fixture no longer fails most criteria.", "fix": "The change made a threshold too loose. Tighten it in test-cases.md and run both fixtures again."},
+            {"problem": "Every test shows as failed.", "fix": "That is normal while any criterion is NOT CHECKED. That criterion fails on purpose in every test. The app shows each criterion on its own."},
+            {"problem": "Your CLI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
+          ],
+          "gate": {
+            "checker_changed": {"label": "promptfooconfig.yaml updated after that", "fail": "promptfooconfig.yaml has not changed since your last edit to test-cases.md. Press Start, then Send."},
+            "scan": {"label": "Rules only", "ok": "promptfooconfig.yaml uses rules only, with the echo provider."},
+            "nudge_check_only": {"text": "You changed promptfooconfig.yaml, but test-cases.md is the same as when this step began. Fix the spec, not the config. Change the threshold in test-cases.md, then ask your CLI to update promptfooconfig.yaml to match."}
+          },
+          "ui": {
+            "edit_blurb": "Fix the spec, not the config. Reword the threshold here, save, then press Send to CLI so your CLI updates promptfooconfig.yaml to match.",
+            "flag_checker": "promptfooconfig.yaml updated after that change"
+          }
+        }
+      },
+      "goal": "Fix the spec, not the checker. Change a threshold in your test cases, and let the agent update the checker to match.",
+      "why": [
+        "When a result is wrong, change the written rules and let the agent update the checker to match, so the two never drift apart.",
+        "Never edit the checker to make a result pass, because a failing result is the information.",
+        "Deterministic checks narrow the gap. They do not close it. A tightened keyword check is still a proxy."
+      ],
+      "instructions": [
+        "Read the reason on each surprise. If the bad fixture passes something it should fail, the threshold is too loose. If the polished fixture passes everything, tighten the threshold that should catch what it gets wrong.",
+        "Edit test-cases.md here and save it. Change the wording of the threshold.",
+        "Press Start. When the CLI is ready, press Send. It updates only the functions whose threshold changed.",
+        "A long approval request may not fit in the terminal. Scroll up to read all of it before you answer.",
+        "Press Run both fixtures. The bad fixture should fail more than half of its checked criteria.",
+        "The polished fixture should fail at least one criterion. If you think it should pass, write why in the box.",
+        "Press Check my work. If there were no surprises and the polished fixture already failed a criterion, you can skip this step."
+      ],
+      "line": "I changed test-cases.md. Update check.py to match, changing only the functions whose threshold changed. Then run the two fixtures again.",
+      "folder_label": "Your project folder",
+      "troubleshooting": [
+        {"problem": "You changed check.py by hand.", "fix": "Change the sentence in test-cases.md instead, then ask your CLI to update check.py."},
+        {"problem": "check.py crashes after the change.", "fix": "Paste the error into the terminal and ask your CLI to fix it without changing any threshold. Then press Run both fixtures again."},
+        {"problem": "Your CLI says python was not found.", "fix": "Ask your CLI to run check.py with py instead of python. If neither works, let it finish updating check.py, then press Run both fixtures again: the app runs check.py itself, with its own copy of Python."},
+        {"problem": "A label check fails on a fixture that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. Tell your CLI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\" Then press Run both fixtures again."},
+        {"problem": "The agent added an AI model call.", "fix": "Say no. The checker must be rules only. The scan will stop you until the call is gone."},
+        {"problem": "The bad fixture no longer fails most criteria.", "fix": "The change made a threshold too loose. Tighten it in test-cases.md and run both fixtures again."},
+        {"problem": "Your CLI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
+      ],
+      "gate": {
+        "spec_changed": {"label": "test-cases.md changed", "ok": "", "fail": "test-cases.md is the same as when this step began. Change a threshold first."},
+        "checker_changed": {"label": "check.py updated after that", "ok": "", "fail": "check.py has not changed since your last edit to test-cases.md. Press Start, then Send."},
+        "scan": {"label": "No network or AI calls", "ok": "check.py uses rules only.", "fail": "{messages}"},
+        "rerun": {"label": "Both fixtures run again", "ok": "", "fail": "Press Run both fixtures after your last change."},
+        "bad_fails": {"label": "Bad fixture fails most criteria", "ok": "", "fail": "The bad fixture should fail more than half of its checked criteria."},
+        "polished": {"label": "Polished fixture caught or explained", "ok": "", "fail": "The polished fixture passed everything. Tighten a threshold, or write why it should pass."},
+        "nudge_check_only": {"label": "", "text": "You changed check.py, but test-cases.md is the same as when this step began. Fix the spec, not the checker. Change the threshold in test-cases.md, then ask your CLI to update check.py to match."}
+      }
+            },
+            "baseline": {
+              "title": "Log your baseline",
+      "ui": {
+        "count_blurb": "The app runs your checker on all five runs itself, with no AI. This is the number your log must match.",
+        "no_checker": "There is no check.py to run.",
+        "stale": "check.py or one of your runs changed after this count. Press Run my checker on the five runs again."
+      },
+      "tracks": {
+        "promptfoo": {
+          "why": [
+            "The baseline is the starting number for the next iteration. In Part 4 you change the prompt, run the same config, and compare the new numbers with these.",
+            "It is a pass rate across five runs, not one answer, because the model varies from run to run. For example, 4 of 5 is 80%.",
+            "It is logged only after your thresholds are settled. If a threshold changes later, the logged numbers used the earlier wording, so they no longer mean the same thing. That is why the first look was never your baseline.",
+            "NOT CHECKED means not covered. A NOT CHECKED criterion stays in the log, marked as not checked, and is left out of the overall total. It is a gap to be honest about, not a pass.",
+            "Never edit the config to make a failing output pass. A failing result is the information. If a result looks wrong, change the threshold in test-cases.md and let your CLI update promptfooconfig.yaml to match.",
+            "The app runs your config on the five runs itself, with promptfoo and no AI, and compares its numbers with your log. Your CLI writes the log. The app only reads it and never changes it."
+          ],
+          "instructions": [
+            "Check the model name in the box. It is the name you wrote in the first step, and the app types it into the line.",
+            "Press Start my CLI. Your CLI opens in your project folder. If it asks whether to trust the folder, choose the yes option. The highlighted default may be No.",
+            "When the CLI is ready, press Send to CLI. It runs your config on your five runs and adds an Iteration 0 entry to iteration-log.md. Any approval requests appear in the terminal, and you answer them there.",
+            "Press Run my checker on the five runs. The app runs your promptfoo config itself and shows the pass rate for each criterion. A non-zero exit code is normal. It only means at least one check failed or is NOT CHECKED.",
+            "Compare the app's count with the entry your CLI wrote. The numbers should be the same. If your CLI logged a different number, say so in the terminal and ask it to correct the entry, or fix the number yourself in iteration-log.md. The app never edits your log.",
+            "Press Check my work.",
+            "Before Part 4, keep your whole project folder. Look at your five runs and pick the one you think is best. It becomes your known-good output, and your checks should score it 95% or more. If they do not, that tells you something about the config, not the prompt.",
+            "Optional: name the criterion that failed most often in your baseline and write one guess why. It becomes your hypothesis in Part 4."
+          ],
+          "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The runs are the tests named run-1 to run-5. The prompt file is prompt-v0.md. The model was {model}.",
+          "troubleshooting": [
+            {"problem": "Your CLI cannot read the skill file.", "fix": "Open skills\\build-promptfoo-config\\SKILL.md in your project folder and copy all of its text. Paste it into the terminal, add the words Follow these instructions, and press Enter. Then press Send to CLI."},
+            {"problem": "The app says promptfoo is not downloaded.", "fix": "Open Settings, go to the Setup group, press Install for promptfoo, and choose Check everything again. Then press Run my checker on the five runs."},
+            {"problem": "The config has an error.", "fix": "Paste the error into the terminal and ask your CLI to fix it without changing any threshold. Then press Run my checker on the five runs again."},
+            {"problem": "Your CLI wants an llm-rubric check or an API key.", "fix": "Say no. The checks must be rules only, and no API key is needed. The scan will stop the app's own run until the check is gone."},
+            {"problem": "Every test shows as failed.", "fix": "That is normal while any criterion is NOT CHECKED. That criterion fails on purpose in every test, so promptfoo marks every test as failed. The app counts each criterion on its own, so the other criteria still show their real pass rates."},
+            {"problem": "The exit code is not 0.", "fix": "That is normal. promptfoo exits with a non-zero code whenever any criterion fails or is NOT CHECKED."},
+            {"problem": "The app's count and your log disagree.", "fix": "The app's count comes from running your config itself, so trust it over the log. Ask your CLI to correct the entry, or fix the number in iteration-log.md. Do not change promptfooconfig.yaml to match the log."},
+            {"problem": "You changed a threshold after you logged.", "fix": "The logged numbers used the earlier wording. Ask your CLI to update promptfooconfig.yaml, press Run my checker on the five runs again, then ask your CLI to log again and choose to replace Iteration 0, so the log holds one entry that matches."},
+            {"problem": "The log has two Iteration 0 entries.", "fix": "Keep one. Open iteration-log.md, delete the older entry, and press Check my work again."},
+            {"problem": "Your CLI logged a pass rate for a NOT CHECKED criterion.", "fix": "A criterion that was not scored cannot have a rate. Ask your CLI to list it under Not checked, and write not checked in its table row."},
+            {"problem": "Your CLI logged the fixtures or the example files.", "fix": "Only your five runs belong in the baseline. Ask your CLI to log only the tests named run-1 to run-5."},
+            {"problem": "Your CLI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Stop, then Start my CLI, and send the line again."}
+          ],
+          "gate": {
+            "ran": {"ok": "The app's count matches your current runs and promptfooconfig.yaml."},
+            "problems": {
+              "stale": "promptfooconfig.yaml or a run file changed after the app counted. Press Run my checker on the five runs again."
+            }
+          },
+          "ui": {
+            "count_blurb": "The app runs your promptfoo config on all five runs itself, with no AI. This is the number your log must match.",
+            "no_checker": "There is no promptfooconfig.yaml to run.",
+            "stale": "promptfooconfig.yaml or one of your runs changed after this count. Press Run my checker on the five runs again."
+          }
+        }
+      },
+              "goal": "Record Iteration 0: your pass rate for each criterion across your saved runs. Your CLI writes the log, and the app counts the same runs itself to confirm it.",
+              "why": [
+                "The baseline is the starting number for the next iteration. In Part 4 you change the prompt, run the same checker, and compare the new numbers with these. If the score does not move, the change did not help.",
+                "It is a pass rate across five runs, not one answer, because the model varies from run to run. For example, 4 of 5 is 80%.",
+                "It is logged only after your thresholds are settled. If a threshold changes later, the logged numbers used the earlier wording, so they no longer mean the same thing. That is why the first look was never your baseline.",
+                "NOT CHECKED means not covered. A NOT CHECKED criterion stays in the log, marked as not checked, and is left out of the overall total. It is a gap to be honest about, not a pass.",
+                "Never edit the checker to make a failing output pass. A failing result is the information. If a result looks wrong, change the threshold in test-cases.md and let your CLI update check.py to match.",
+                "The app runs your checker on the five runs itself, with no AI, and compares its numbers with your log. Your CLI writes the log. The app only reads it and never changes it."
+              ],
+              "instructions": [
+                "Check the model name in the box. It is the name you wrote in the first step, and the app types it into the line.",
+                "Press Start my CLI. Your CLI opens in your project folder. If it asks whether to trust the folder, choose the yes option. The highlighted default may be No.",
+                "When the CLI is ready, press Send to CLI. It runs check.py on your five runs and adds an Iteration 0 entry to iteration-log.md. Any approval requests appear in the terminal, and you answer them there.",
+                "Press Run my checker on the five runs. The app runs check.py itself and shows the pass rate for each criterion. Exit code 1 is normal. It only means at least one check failed or is NOT CHECKED.",
+                "Compare the app's count with the entry your CLI wrote. The numbers should be the same. If your CLI logged a different number, say so in the terminal and ask it to correct the entry, or fix the number yourself in iteration-log.md. The app never edits your log.",
+                "Press Check my work.",
+                "Before Part 4, keep your whole project folder. Look at your five runs and pick the one you think is best. It becomes your known-good output, and your checker should score it 95% or more. If it does not, that tells you something about the checker, not the prompt.",
+                "Optional: name the criterion that failed most often in your baseline and write one guess why. It becomes your hypothesis in Part 4."
+              ],
+              "line_template": "Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are runs/run-1.txt to runs/run-5.txt. The prompt file is prompt-v0.md. The model was {model}.",
+              "model_missing": "The model name is empty, so the line cannot be sent. Write the name of the model you used for your five runs in the box, then press Send to CLI.",
+              "folder_label": "Your project folder",
+              "messages": {
+                "missing_runs": "These run files are missing or empty: {files}. Your five runs must all be saved in the runs folder before the app can count them."
+              },
+              "troubleshooting": [
+                {"problem": "Your CLI cannot read the skill file.", "fix": "Open skills\\build-eval-script\\SKILL.md in your project folder and copy all of its text. Paste it into the terminal, add the words Follow these instructions, and press Enter. Then press Send to CLI."},
+                {"problem": "Your CLI says python was not found.", "fix": "Ask your CLI to run the checker with py instead of python. If neither works, you can still write the Iteration 0 entry yourself in iteration-log.md. Copy the format from Mode 3 in skills\\build-eval-script\\SKILL.md and use the numbers from the app's own count."},
+                {"problem": "check.py crashes.", "fix": "Paste the error into the terminal and ask your CLI to fix it without changing any threshold. Then press Run my checker on the five runs again."},
+                {"problem": "Your CLI wants to call an AI model inside the script.", "fix": "Say no. The script must be rules only. The scan will stop the app's own run until the call is gone."},
+                {"problem": "The exit code is not 0.", "fix": "That is normal. It is 1 whenever any criterion fails or is NOT CHECKED. Only an exit code other than 0 or 1 means the checker itself broke."},
+                {"problem": "The app's count and your log disagree.", "fix": "The app's count comes from running check.py itself, so trust it over the log. Ask your CLI to correct the entry, or fix the number in iteration-log.md. Do not change check.py to match the log."},
+                {"problem": "You changed a threshold after you logged.", "fix": "The logged numbers used the earlier wording. Ask your CLI to update check.py, press Run my checker on the five runs again, then ask your CLI to log again and choose to replace Iteration 0, so the log holds one entry that matches."},
+                {"problem": "The log has two Iteration 0 entries.", "fix": "Keep one. Open iteration-log.md, delete the older entry, and press Check my work again."},
+                {"problem": "Your CLI logged a pass rate for a NOT CHECKED criterion.", "fix": "A criterion that was not scored cannot have a rate. Ask your CLI to list it under Not checked, and write not checked in its table row."},
+                {"problem": "Your CLI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Stop, then Start my CLI, and send the line again."}
+              ],
+              "gate": {
+                "log": {"label": "iteration-log.md exists", "ok": "", "fail": "iteration-log.md was not found in your project folder. Press Start my CLI, then Send to CLI, so your CLI writes it."},
+                "entry": {"label": "Iteration 0 entry found", "ok": "", "fail": "{problem}"},
+                "ran": {"label": "The app counted your five runs", "ok": "The app's count matches your current runs and check.py.", "fail": "{problem}"},
+                "counts": {"label": "Pass counts match the app's count", "ok": "Every pass count and the overall total match.", "fail": "{problem}"},
+                "not_checked": {"label": "NOT CHECKED criteria are listed", "ok": "The log lists the same criteria as not checked.", "fail": "{problem}"},
+                "runs": {"label": "The log says 5 runs", "ok": "", "fail": "{problem}"},
+                "problems": {
+                  "no_log": "There is no log to read yet.",
+                  "unusable": "{error} Press Send to CLI again so your CLI writes the entry, or fix iteration-log.md yourself.",
+                  "no_entry": "The log has no Iteration 0 entry. Press Send to CLI so your CLI adds one that starts with the heading Iteration 0: baseline.",
+                  "two_entries": "The log has more than one Iteration 0 entry. Keep one, delete the other in iteration-log.md, then press Check my work.",
+                  "not_run": "The app has not counted your runs yet. Press Run my checker on the five runs.",
+                  "stale": "check.py or a run file changed after the app counted. Press Run my checker on the five runs again.",
+                  "wait_entry": "This is compared once the log has a readable Iteration 0 entry.",
+                  "wait_run": "This is compared once the app has counted your five runs. Press Run my checker on the five runs.",
+                  "no_row": "The log has no row for {id}. The app counted {app}. Add the row.",
+                  "row_not_checked": "The log says {id} was not checked. The app checked it and counted {app}.",
+                  "row_no_count": "The log row for {id} has no pass count. The app counted {app}.",
+                  "count": "The log says {id} passed {log} runs. The app counted {app}.",
+                  "no_overall": "The log has no Overall line. The app counted {app}.",
+                  "overall": "The log says the overall was {log}. The app counted {app}.",
+                  "nc_missing": "The log does not list {id} as not checked. The app saw it as NOT CHECKED, so add it to the Not checked line.",
+                  "nc_extra": "The log lists {id} as not checked. The app checked it and counted {app}.",
+                  "nc_unknown": "The log lists {id} as not checked, but your checker has no criterion with that ID.",
+                  "nc_row_has_count": "The log gives {id} a pass count of {log} runs. The app saw it as NOT CHECKED, so its table row should say not checked.",
+                  "nc_count": "The log says {count} criteria were not checked but lists {listed}. Make the count match the list.",
+                  "no_runs": "The log has no Runs line. It should say 5.",
+                  "runs": "The log says Runs: {log}. Your baseline uses {app} runs."
+                },
+                "nudge_log_fields": {"label": "", "text": "The log entry has an empty Prompt or Model line. Fill them in, so Part 4 compares like with like. The app does not need them to pass this step."}
+              }
+                            },
+                            "live": {
+                              "title": "Optional: live mode",
+                              "optional": true,
+                              "goal": "Optional. Have promptfoo write fresh outputs through your own signed-in CLI, and score them with the same checks. You can skip this step: the course is complete without it.",
+                              "why": [
+                                "Your five saved runs are fixed. In live mode your CLI writes new answers on demand, so you can see how the same checks score answers you have not seen yet.",
+                                "Each live run is a new answer, so the scores change from run to run. They are a sample, not a baseline.",
+                                "Live mode never replaces your baseline. It does not use your saved runs, and your promptfooconfig.yaml and iteration-log.md stay exactly as they are.",
+                                "The checks stay rules only. The AI writes the outputs, and it never grades them. No API key is involved: your CLI signs in with its own login."
+                              ],
+                              "instructions": [
+                                "Read the warning below. It says what live mode does to your CLI, including which CLI the helper script puts into auto mode.",
+                                "Tick the box to say you have read it, then choose the CLI you use. Live mode supports only the CLIs in the list.",
+                                "Check the model name in the box. It is the name you wrote in the first step, and the app types it into the line.",
+                                "Press Start my CLI, and when it is ready press Send to CLI. Your CLI copies agent-provider.js next to your config, writes promptfooconfig.live.yaml with the same checks, and runs it. Any approval requests appear in the terminal, and you answer them there. The app never answers for you.",
+                                "Do not ask your CLI to log these runs. Your baseline stays the one from your saved runs.",
+                                "Press Check my work. The app only reads your files. It does not run the live config.",
+                                "Read the live scores as your CLI shows them. They can differ from run to run, and that is expected."
+                              ],
+                              "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in live mode. I use {cli} with the model {model}.",
+                              "model_missing": "The model name is empty, so the line cannot be sent. Write the name of the model you used for your five runs in the box, then press Send to CLI.",
+                              "folder_label": "Your project folder",
+                              "clis": [
+                                {"id": "copilot", "label": "GitHub Copilot CLI", "note": "The helper runs GitHub Copilot CLI with -p and -s, which prints one answer and exits. It adds no permission flag."},
+                                {"id": "claude", "label": "Claude Code", "note": "The helper runs Claude Code with -p, which prints one answer and exits. It adds no permission flag."},
+                                {"id": "devin", "label": "Devin CLI", "note": "The helper runs Devin CLI with --permission-mode auto. That turns on Devin's auto mode for each live run, so Devin may act without asking you."}
+                              ],
+                              "messages": {
+                                "not_acknowledged": "Read the warning and tick the box that says you have read it, then press Start my CLI.",
+                                "no_cli": "Choose the CLI you use from the list, then press Start my CLI."
+                              },
+                              "ui": {
+                                "warning_title": "Read this before you start live mode",
+                                "warning_intro": "Live mode is optional. The course is complete without it, so you can skip this step.",
+                                "warning_points": [
+                                  "Live mode makes promptfoo call your own signed-in CLI to write fresh outputs. No API key is involved: your CLI uses its own sign-in.",
+                                  "To do that, the helper script agent-provider.js starts your CLI by itself. For Devin CLI the helper adds --permission-mode auto, which turns on Devin's auto mode for that run, so Devin may act without asking you. For GitHub Copilot CLI and Claude Code the helper adds no permission flag.",
+                                  "The helper runs your CLI from an empty temporary folder, so it cannot see test-cases.md or your other project files.",
+                                  "Results change from run to run, because every live run is a new answer.",
+                                  "Live mode does not use your saved runs and never changes your baseline. Your promptfooconfig.yaml and iteration-log.md must stay exactly as they are.",
+                                  "The app does not run live mode. Your own CLI runs it in the terminal, and you answer any approval requests there."
+                                ],
+                                "ack_label": "I have read this warning. I understand that live mode starts my CLI by itself, and that for Devin CLI the helper turns on auto mode so it may act without asking me.",
+                                "cli_heading": "Which CLI do you use?",
+                                "cli_hint": "Live mode supports these three. Choose the one you use, so the line names it.",
+                                "model_label": "The model you used for your five runs",
+                                "model_hint": "This is the same name as in your first step.",
+                                "files_heading": "Your live files",
+                                "files_blurb": "The app only reads these files. It never runs the live config.",
+                                "config_missing": "There is no promptfooconfig.live.yaml in your project folder yet.",
+                                "provider_missing": "There is no agent-provider.js in your project folder yet.",
+                                "provider_changed": "agent-provider.js in your project is not the copy that came with the course. Ask your CLI to copy it again from skills\\build-promptfoo-config, without editing it.",
+                                "scan_clear": "No warnings. promptfooconfig.live.yaml uses only the helper, and its checks are rules only.",
+                                "started_note": "The app noted your promptfooconfig.yaml and iteration-log.md when you started. Check my work confirms that neither one changed."
+                              },
+                              "troubleshooting": [
+                                {"problem": "The agent cannot read the skill file.", "fix": "Paste the text of SKILL.md into the terminal and add \"Follow these instructions\" before the line."},
+                                {"problem": "Live mode says \"Not logged in\" or \"No agent CLI found\".", "fix": "Choose the CLI you really use in the list above, and press Send to CLI again. The helper starts that CLI by its short name, so the name must work in a normal terminal. If it says Not logged in, sign in to that CLI once in a normal terminal, then press Send to CLI again."},
+                                {"problem": "The agent adds an llm-rubric check or asks for an API key.", "fix": "Say no. The checks must be rules only, and live mode needs no API key. The scan will stop you until the check is gone."},
+                                {"problem": "Every test shows as failed.", "fix": "That is normal while any criterion is NOT CHECKED. That criterion fails on purpose in every test, so promptfoo marks every test as failed. The summary shows each criterion on its own."},
+                                {"problem": "The live scores are different each time.", "fix": "That is expected. Every live run is a new answer, so the scores change. They are a sample and never replace your baseline."},
+                                {"problem": "The config has an error.", "fix": "Paste the error into the terminal and ask your CLI to fix it without changing any threshold. Then ask it to run the live config again."},
+                                {"problem": "Your prompt file contains double curly brackets.", "fix": "promptfoo reads {{ and {% as template syntax, so it may change those parts of your prompt before your CLI sees them. Ask your CLI in the terminal to show you where they are, and keep that in mind when you read the live scores. Your prompt file stays as it is."},
+                                {"problem": "Check my work says promptfooconfig.yaml or iteration-log.md changed.", "fix": "Live mode must not change them. Ask your CLI to undo that change, or restore the file yourself, then press Check my work again. Your baseline stays as it was."},
+                                {"problem": "Check my work says agent-provider.js is not the copy that came with the course.", "fix": "Ask your CLI to copy agent-provider.js again from skills\\build-promptfoo-config next to your config, without editing it. Then press Check my work again."},
+                                {"problem": "Your CLI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Stop, then Start my CLI, and send the line again."}
+                              ],
+                              "gate": {
+                                "acknowledged": {"label": "Warning read", "ok": "", "fail": "Read the warning and tick the box that says you have read it."},
+                                "config": {"label": "promptfooconfig.live.yaml exists", "ok": "", "fail": "promptfooconfig.live.yaml was not found in your project folder. Press Start my CLI, then Send to CLI, so your CLI writes it."},
+                                "scan": {"label": "Only the helper, rules only", "ok": "promptfooconfig.live.yaml uses only the helper, and its checks are rules only.", "fail": "{messages}"},
+                                "provider": {"label": "agent-provider.js is unchanged", "ok": "", "fail": "agent-provider.js is missing from your project folder, or it is not the copy that came with the course. Ask your CLI to copy it from skills\\build-promptfoo-config next to your config, without editing it."},
+                                "started": {"label": "Live mode was started here", "ok": "", "fail": "Press Start my CLI first, so the app can note your files before live mode runs."},
+                                "main_unchanged": {"label": "promptfooconfig.yaml is unchanged", "ok": "", "fail": "promptfooconfig.yaml changed since you started live mode. Ask your CLI to undo that change, then press Check my work again."},
+                                "log_unchanged": {"label": "iteration-log.md is unchanged", "ok": "", "fail": "iteration-log.md changed since you started live mode. Live mode never changes your baseline. Ask your CLI to undo that change, then press Check my work again."}
+                              }
+                            }
+          }
+        }

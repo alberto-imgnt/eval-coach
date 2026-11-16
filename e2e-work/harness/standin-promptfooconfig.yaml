@@ -1,0 +1,87 @@
+# Stand-in config for the promptfoo-track end-to-end run. The stand-in CLI writes this, the way the build skill would
+# for the Northwind test cases (C1 to C6): the echo provider hands each saved file to rule-based checks, no model.
+description: Northwind end-of-week update checks (C1-C6)
+prompts:
+  - "{{output}}"
+providers:
+  - echo
+defaultTest:
+  assert:
+    # C1: Word count under 150 passes
+    - type: word-count
+      metric: C1_length
+      value:
+        max: 149
+    # C2: Northwind, Contoso, Internal all appear as labels; no day name used as a label
+    - type: regex
+      metric: C2_grouped_by_client
+      value: '(?:^|\n)[ \t>*#_-]*Northwind[ \t*_]*(?::|\r?\n|$)'
+    - type: regex
+      metric: C2_grouped_by_client
+      value: '(?:^|\n)[ \t>*#_-]*Contoso[ \t*_]*(?::|\r?\n|$)'
+    - type: regex
+      metric: C2_grouped_by_client
+      value: '(?:^|\n)[ \t>*#_-]*Internal[ \t*_]*(?::|\r?\n|$)'
+    - type: not-regex
+      metric: C2_grouped_by_client
+      value: '(?:^|\n)[ \t>*#_-]*(?:[Mm]on|[Tt]ue|[Ww]ed|[Tt]hu|[Ff]ri)[a-z]*(?:\s*[–-]\s*(?:[Mm]on|[Tt]ue|[Ww]ed|[Tt]hu|[Ff]ri)[a-z]*)?[ \t*_]*(?::|\r?\n|$)'
+    # C3: A "Blocker:" label and a "Need:" label both appear
+    - type: contains-all
+      metric: C3_blocker_and_ask
+      value:
+        - "Blocker:"
+        - "Need:"
+    # C3-END
+    # C4: None of "Subject:", "Dear", "Regards", "Sincerely" appear
+    - type: not-icontains-any
+      metric: C4_teams_not_email
+      value:
+        - "Subject:"
+        - "Dear"
+        - "Regards"
+        - "Sincerely"
+    # C5: Zero banned words and no exclamation marks
+    - type: not-icontains-any
+      metric: C5_factual_tone
+      value:
+        - "excited"
+        - "thrilled"
+        - "proud"
+        - "amazing"
+        - "incredible"
+        - "awesome"
+        - "delighted"
+        - "successfully"
+        - "crushed"
+        - "happy to report"
+        - "!"
+    # C6: Every note keyword is found
+    - type: icontains-all
+      metric: C6_uses_the_notes
+      value:
+        - "estimate"
+        - "onboard"
+        - "demo"
+        - "lunch"
+        - "documentation"
+        - "reporting feature"
+    # Empty outputs must not pass "must not contain" checks
+    - type: javascript
+      metric: non_empty
+      value: output.trim().length > 0
+tests:
+  - description: run-1
+    vars:
+      output: file://runs/run-1.txt
+  - description: run-2
+    vars:
+      output: file://runs/run-2.txt
+  - description: run-3
+    vars:
+      output: file://runs/run-3.txt
+  - description: run-4
+    vars:
+      output: file://runs/run-4.txt
+  - description: run-5
+    vars:
+      output: file://runs/run-5.txt

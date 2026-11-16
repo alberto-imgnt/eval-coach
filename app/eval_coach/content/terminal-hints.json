@@ -1,0 +1,4 @@
+{
+  "marker_variable": "WT_SESSION",
+  "commands_that_need_a_terminal_marker": ["devin"]
+}

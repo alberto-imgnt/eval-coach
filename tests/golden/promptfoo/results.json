@@ -1,0 +1,1998 @@
+{
+  "evalId": "eval-899-2026-11-09T16:19:37",
+  "results": {
+    "version": 3,
+    "timestamp": "2026-11-09T16:19:37.162Z",
+    "prompts": [
+      {
+        "id": "343155ae77c81fd6d016484b639909bc6f4e68f7730061d1d2a8d7e707456d32",
+        "raw": "{{output}}",
+        "label": "{{output}}",
+        "provider": "echo",
+        "metrics": {
+          "score": 4.571428571428571,
+          "testPassCount": 0,
+          "testFailCount": 7,
+          "testErrorCount": 0,
+          "testCacheHitCount": 0,
+          "assertPassCount": 32,
+          "assertFailCount": 17,
+          "totalLatencyMs": 8,
+          "tokenUsage": {
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "total": 0,
+            "numRequests": 7,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            },
+            "assertions": {
+              "total": 0,
+              "prompt": 0,
+              "completion": 0,
+              "cached": 0,
+              "numRequests": 0,
+              "completionDetails": {
+                "reasoning": 0,
+                "acceptedPrediction": 0,
+                "rejectedPrediction": 0,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0
+              }
+            }
+          },
+          "namedScores": {
+            "C1_length": 5,
+            "C2_grouped_by_client": 15,
+            "C3_blocker_and_ask": 5,
+            "C4_teams_not_email": 0,
+            "non_empty": 7
+          },
+          "namedScoresCount": {
+            "C1_length": 7,
+            "C2_grouped_by_client": 21,
+            "C3_blocker_and_ask": 7,
+            "C4_teams_not_email": 7,
+            "non_empty": 7
+          },
+          "namedScoreWeights": {
+            "C1_length": 7,
+            "C2_grouped_by_client": 21,
+            "C3_blocker_and_ask": 7,
+            "C4_teams_not_email": 7,
+            "non_empty": 7
+          },
+          "cost": 0
+        }
+      }
+    ],
+    "results": [
+      {
+        "cost": 0,
+        "error": "NOT CHECKED: needs judgment",
+        "gradingResult": {
+          "pass": false,
+          "score": 0.14285714285714285,
+          "reason": "NOT CHECKED: needs judgment",
+          "namedScores": {
+            "C1_length": 0,
+            "C2_grouped_by_client": 0,
+            "C3_blocker_and_ask": 0,
+            "C4_teams_not_email": 0,
+            "non_empty": 1
+          },
+          "namedScoreWeights": {
+            "C1_length": 1,
+            "C2_grouped_by_client": 3,
+            "C3_blocker_and_ask": 1,
+            "C4_teams_not_email": 1,
+            "non_empty": 1
+          },
+          "tokensUsed": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0
+          },
+          "componentResults": [
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Word count 154 is greater than maximum 149",
+              "assertion": {
+                "type": "word-count",
+                "metric": "C1_length",
+                "value": {
+                  "max": 149
+                }
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Expected output to match regex \"(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)\"",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Expected output to match regex \"(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)\"",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Expected output to match regex \"(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)\"",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Expected output to contain all of [Blocker:, Need:]. Missing: [Blocker:, Need:]",
+              "assertion": {
+                "type": "contains-all",
+                "metric": "C3_blocker_and_ask",
+                "value": [
+                  "Blocker:",
+                  "Need:"
+                ]
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "NOT CHECKED: needs judgment",
+              "assertion": {
+                "type": "javascript",
+                "metric": "C4_teams_not_email",
+                "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "javascript",
+                "metric": "non_empty",
+                "value": "output.trim().length > 0"
+              }
+            }
+          ]
+        },
+        "id": "b769d7d0-924f-44b9-ba48-097cee14453c",
+        "latencyMs": 2,
+        "namedScores": {
+          "C1_length": 0,
+          "C2_grouped_by_client": 0,
+          "C3_blocker_and_ask": 0,
+          "C4_teams_not_email": 0,
+          "non_empty": 1
+        },
+        "prompt": {
+          "raw": "Subject: Weekly Update - Really Productive Week!\r\n\r\nDear [Lead],\r\n\r\nI'm thrilled to share a summary of my amazing week!\r\n\r\nMonday: I successfully attended the standup and had two incredible client meetings with Northwind about the new reporting feature. I also started working on the Northwind reporting feature, which I continued on Tuesday.\r\n\r\nTuesday: I crushed the Northwind reporting feature development and made excellent progress.\r\n\r\nWednesday: I helped onboard a new teammate and then prepared and ran the Northwind demo, which went great!\r\n\r\nThursday: Unfortunately I was a little delayed waiting on some client access, so I worked on documentation instead. I also attended the internal AI lunch & learn, which was awesome.\r\n\r\nFriday: I fixed all of the issues from the demo feedback and reviewed a Contoso estimate.\r\n\r\nOverall it was a very successful week and I am proud of what I accomplished. Please let me know if you have any questions.\r\n\r\nRegards,\r\n[Name]",
+          "label": "{{output}}",
+          "config": {}
+        },
+        "promptId": "343155ae77c81fd6d016484b639909bc6f4e68f7730061d1d2a8d7e707456d32",
+        "promptIdx": 0,
+        "provider": {
+          "id": "echo",
+          "label": ""
+        },
+        "response": {
+          "output": "Subject: Weekly Update - Really Productive Week!\r\n\r\nDear [Lead],\r\n\r\nI'm thrilled to share a summary of my amazing week!\r\n\r\nMonday: I successfully attended the standup and had two incredible client meetings with Northwind about the new reporting feature. I also started working on the Northwind reporting feature, which I continued on Tuesday.\r\n\r\nTuesday: I crushed the Northwind reporting feature development and made excellent progress.\r\n\r\nWednesday: I helped onboard a new teammate and then prepared and ran the Northwind demo, which went great!\r\n\r\nThursday: Unfortunately I was a little delayed waiting on some client access, so I worked on documentation instead. I also attended the internal AI lunch & learn, which was awesome.\r\n\r\nFriday: I fixed all of the issues from the demo feedback and reviewed a Contoso estimate.\r\n\r\nOverall it was a very successful week and I am proud of what I accomplished. Please let me know if you have any questions.\r\n\r\nRegards,\r\n[Name]",
+          "raw": "Subject: Weekly Update - Really Productive Week!\r\n\r\nDear [Lead],\r\n\r\nI'm thrilled to share a summary of my amazing week!\r\n\r\nMonday: I successfully attended the standup and had two incredible client meetings with Northwind about the new reporting feature. I also started working on the Northwind reporting feature, which I continued on Tuesday.\r\n\r\nTuesday: I crushed the Northwind reporting feature development and made excellent progress.\r\n\r\nWednesday: I helped onboard a new teammate and then prepared and ran the Northwind demo, which went great!\r\n\r\nThursday: Unfortunately I was a little delayed waiting on some client access, so I worked on documentation instead. I also attended the internal AI lunch & learn, which was awesome.\r\n\r\nFriday: I fixed all of the issues from the demo feedback and reviewed a Contoso estimate.\r\n\r\nOverall it was a very successful week and I am proud of what I accomplished. Please let me know if you have any questions.\r\n\r\nRegards,\r\n[Name]",
+          "cost": 0,
+          "cached": false,
+          "tokenUsage": {
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "total": 0,
+            "numRequests": 1,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            },
+            "assertions": {
+              "total": 0,
+              "prompt": 0,
+              "completion": 0,
+              "cached": 0,
+              "numRequests": 0,
+              "completionDetails": {
+                "reasoning": 0,
+                "acceptedPrediction": 0,
+                "rejectedPrediction": 0,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0
+              }
+            }
+          },
+          "isRefusal": false,
+          "metadata": {}
+        },
+        "score": 0.14285714285714285,
+        "success": false,
+        "testCase": {
+          "description": "fixture-bad",
+          "vars": {
+            "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\fixture-bad.txt"
+          },
+          "assert": [
+            {
+              "type": "word-count",
+              "metric": "C1_length",
+              "value": {
+                "max": 149
+              }
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "contains-all",
+              "metric": "C3_blocker_and_ask",
+              "value": [
+                "Blocker:",
+                "Need:"
+              ]
+            },
+            {
+              "type": "javascript",
+              "metric": "C4_teams_not_email",
+              "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+            },
+            {
+              "type": "javascript",
+              "metric": "non_empty",
+              "value": "output.trim().length > 0"
+            }
+          ],
+          "options": {},
+          "metadata": {}
+        },
+        "testIdx": 0,
+        "tokenUsage": {
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "total": 0,
+          "numRequests": 1,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0
+          },
+          "assertions": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            }
+          }
+        },
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\fixture-bad.txt"
+        },
+        "metadata": {
+          "_promptfooFileMetadata": {}
+        },
+        "failureReason": 1
+      },
+      {
+        "cost": 0,
+        "error": "NOT CHECKED: needs judgment",
+        "gradingResult": {
+          "pass": false,
+          "score": 0.8571428571428571,
+          "reason": "NOT CHECKED: needs judgment",
+          "namedScores": {
+            "C1_length": 1,
+            "C2_grouped_by_client": 1,
+            "C3_blocker_and_ask": 1,
+            "C4_teams_not_email": 0,
+            "non_empty": 1
+          },
+          "namedScoreWeights": {
+            "C1_length": 1,
+            "C2_grouped_by_client": 3,
+            "C3_blocker_and_ask": 1,
+            "C4_teams_not_email": 1,
+            "non_empty": 1
+          },
+          "tokensUsed": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0
+          },
+          "componentResults": [
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "word-count",
+                "metric": "C1_length",
+                "value": {
+                  "max": 149
+                }
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "contains-all",
+                "metric": "C3_blocker_and_ask",
+                "value": [
+                  "Blocker:",
+                  "Need:"
+                ]
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "NOT CHECKED: needs judgment",
+              "assertion": {
+                "type": "javascript",
+                "metric": "C4_teams_not_email",
+                "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "javascript",
+                "metric": "non_empty",
+                "value": "output.trim().length > 0"
+              }
+            }
+          ]
+        },
+        "id": "c9f7be9a-9e83-413c-9436-b8c4612f4a7e",
+        "latencyMs": 1,
+        "namedScores": {
+          "C1_length": 1,
+          "C2_grouped_by_client": 1,
+          "C3_blocker_and_ask": 1,
+          "C4_teams_not_email": 0,
+          "non_empty": 1
+        },
+        "prompt": {
+          "raw": "**Northwind**\r\n- Reporting feature built and demoed to the client; demo feedback issues fixed\r\n- Client meetings completed with no open questions\r\n- Blocker: none this week. Need: nothing further from the client.\r\n\r\n**Contoso**\r\n- Reviewed and approved the $50k estimate; client confirmed budget\r\n\r\n**Internal**\r\n- Onboarded a new teammate; attended the AI lunch & learn; updated documentation",
+          "label": "{{output}}",
+          "config": {}
+        },
+        "promptId": "343155ae77c81fd6d016484b639909bc6f4e68f7730061d1d2a8d7e707456d32",
+        "promptIdx": 0,
+        "provider": {
+          "id": "echo",
+          "label": ""
+        },
+        "response": {
+          "output": "**Northwind**\r\n- Reporting feature built and demoed to the client; demo feedback issues fixed\r\n- Client meetings completed with no open questions\r\n- Blocker: none this week. Need: nothing further from the client.\r\n\r\n**Contoso**\r\n- Reviewed and approved the $50k estimate; client confirmed budget\r\n\r\n**Internal**\r\n- Onboarded a new teammate; attended the AI lunch & learn; updated documentation",
+          "raw": "**Northwind**\r\n- Reporting feature built and demoed to the client; demo feedback issues fixed\r\n- Client meetings completed with no open questions\r\n- Blocker: none this week. Need: nothing further from the client.\r\n\r\n**Contoso**\r\n- Reviewed and approved the $50k estimate; client confirmed budget\r\n\r\n**Internal**\r\n- Onboarded a new teammate; attended the AI lunch & learn; updated documentation",
+          "cost": 0,
+          "cached": false,
+          "tokenUsage": {
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "total": 0,
+            "numRequests": 1,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            },
+            "assertions": {
+              "total": 0,
+              "prompt": 0,
+              "completion": 0,
+              "cached": 0,
+              "numRequests": 0,
+              "completionDetails": {
+                "reasoning": 0,
+                "acceptedPrediction": 0,
+                "rejectedPrediction": 0,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0
+              }
+            }
+          },
+          "isRefusal": false,
+          "metadata": {}
+        },
+        "score": 0.8571428571428571,
+        "success": false,
+        "testCase": {
+          "description": "fixture-polished-but-wrong",
+          "vars": {
+            "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\fixture-polished-but-wrong.txt"
+          },
+          "assert": [
+            {
+              "type": "word-count",
+              "metric": "C1_length",
+              "value": {
+                "max": 149
+              }
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "contains-all",
+              "metric": "C3_blocker_and_ask",
+              "value": [
+                "Blocker:",
+                "Need:"
+              ]
+            },
+            {
+              "type": "javascript",
+              "metric": "C4_teams_not_email",
+              "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+            },
+            {
+              "type": "javascript",
+              "metric": "non_empty",
+              "value": "output.trim().length > 0"
+            }
+          ],
+          "options": {},
+          "metadata": {}
+        },
+        "testIdx": 1,
+        "tokenUsage": {
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "total": 0,
+          "numRequests": 1,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0
+          },
+          "assertions": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            }
+          }
+        },
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\fixture-polished-but-wrong.txt"
+        },
+        "metadata": {
+          "_promptfooFileMetadata": {}
+        },
+        "failureReason": 1
+      },
+      {
+        "cost": 0,
+        "error": "NOT CHECKED: needs judgment",
+        "gradingResult": {
+          "pass": false,
+          "score": 0.42857142857142855,
+          "reason": "NOT CHECKED: needs judgment",
+          "namedScores": {
+            "C1_length": 1,
+            "C2_grouped_by_client": 0,
+            "C3_blocker_and_ask": 1,
+            "C4_teams_not_email": 0,
+            "non_empty": 1
+          },
+          "namedScoreWeights": {
+            "C1_length": 1,
+            "C2_grouped_by_client": 3,
+            "C3_blocker_and_ask": 1,
+            "C4_teams_not_email": 1,
+            "non_empty": 1
+          },
+          "tokensUsed": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0
+          },
+          "componentResults": [
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "word-count",
+                "metric": "C1_length",
+                "value": {
+                  "max": 149
+                }
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Expected output to match regex \"(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)\"",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Expected output to match regex \"(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)\"",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Expected output to match regex \"(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)\"",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "contains-all",
+                "metric": "C3_blocker_and_ask",
+                "value": [
+                  "Blocker:",
+                  "Need:"
+                ]
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "NOT CHECKED: needs judgment",
+              "assertion": {
+                "type": "javascript",
+                "metric": "C4_teams_not_email",
+                "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "javascript",
+                "metric": "non_empty",
+                "value": "output.trim().length > 0"
+              }
+            }
+          ]
+        },
+        "id": "0882e4bd-e346-4f87-81dc-6c2d7736f6c7",
+        "latencyMs": 1,
+        "namedScores": {
+          "C1_length": 1,
+          "C2_grouped_by_client": 0,
+          "C3_blocker_and_ask": 1,
+          "C4_teams_not_email": 0,
+          "non_empty": 1
+        },
+        "prompt": {
+          "raw": "Hi, here's my end-of-week update.\r\n\r\nMon: Standup, then two Northwind client meetings about the new reporting feature. Started building the Northwind reporting feature.\r\nTue: Kept building the Northwind reporting feature.\r\nWed: Helped onboard a new teammate. Prepared and ran the Northwind demo for the client.\r\nThu: Blocker: lost half a day waiting on client test data access, so I worked on documentation instead. Need: access granted before Monday so testing can continue. Also attended the internal AI lunch & learn.\r\nFri: Fixed the issues raised in the demo feedback. Reviewed a Contoso estimate.\r\n\r\nLet me know if you need anything else from me before the weekend.",
+          "label": "{{output}}",
+          "config": {}
+        },
+        "promptId": "343155ae77c81fd6d016484b639909bc6f4e68f7730061d1d2a8d7e707456d32",
+        "promptIdx": 0,
+        "provider": {
+          "id": "echo",
+          "label": ""
+        },
+        "response": {
+          "output": "Hi, here's my end-of-week update.\r\n\r\nMon: Standup, then two Northwind client meetings about the new reporting feature. Started building the Northwind reporting feature.\r\nTue: Kept building the Northwind reporting feature.\r\nWed: Helped onboard a new teammate. Prepared and ran the Northwind demo for the client.\r\nThu: Blocker: lost half a day waiting on client test data access, so I worked on documentation instead. Need: access granted before Monday so testing can continue. Also attended the internal AI lunch & learn.\r\nFri: Fixed the issues raised in the demo feedback. Reviewed a Contoso estimate.\r\n\r\nLet me know if you need anything else from me before the weekend.",
+          "raw": "Hi, here's my end-of-week update.\r\n\r\nMon: Standup, then two Northwind client meetings about the new reporting feature. Started building the Northwind reporting feature.\r\nTue: Kept building the Northwind reporting feature.\r\nWed: Helped onboard a new teammate. Prepared and ran the Northwind demo for the client.\r\nThu: Blocker: lost half a day waiting on client test data access, so I worked on documentation instead. Need: access granted before Monday so testing can continue. Also attended the internal AI lunch & learn.\r\nFri: Fixed the issues raised in the demo feedback. Reviewed a Contoso estimate.\r\n\r\nLet me know if you need anything else from me before the weekend.",
+          "cost": 0,
+          "cached": false,
+          "tokenUsage": {
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "total": 0,
+            "numRequests": 1,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            },
+            "assertions": {
+              "total": 0,
+              "prompt": 0,
+              "completion": 0,
+              "cached": 0,
+              "numRequests": 0,
+              "completionDetails": {
+                "reasoning": 0,
+                "acceptedPrediction": 0,
+                "rejectedPrediction": 0,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0
+              }
+            }
+          },
+          "isRefusal": false,
+          "metadata": {}
+        },
+        "score": 0.42857142857142855,
+        "success": false,
+        "testCase": {
+          "description": "run-2",
+          "vars": {
+            "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-2.txt"
+          },
+          "assert": [
+            {
+              "type": "word-count",
+              "metric": "C1_length",
+              "value": {
+                "max": 149
+              }
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "contains-all",
+              "metric": "C3_blocker_and_ask",
+              "value": [
+                "Blocker:",
+                "Need:"
+              ]
+            },
+            {
+              "type": "javascript",
+              "metric": "C4_teams_not_email",
+              "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+            },
+            {
+              "type": "javascript",
+              "metric": "non_empty",
+              "value": "output.trim().length > 0"
+            }
+          ],
+          "options": {},
+          "metadata": {}
+        },
+        "testIdx": 3,
+        "tokenUsage": {
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "total": 0,
+          "numRequests": 1,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0
+          },
+          "assertions": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            }
+          }
+        },
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-2.txt"
+        },
+        "metadata": {
+          "_promptfooFileMetadata": {}
+        },
+        "failureReason": 1
+      },
+      {
+        "cost": 0,
+        "error": "NOT CHECKED: needs judgment",
+        "gradingResult": {
+          "pass": false,
+          "score": 0.8571428571428571,
+          "reason": "NOT CHECKED: needs judgment",
+          "namedScores": {
+            "C1_length": 1,
+            "C2_grouped_by_client": 1,
+            "C3_blocker_and_ask": 1,
+            "C4_teams_not_email": 0,
+            "non_empty": 1
+          },
+          "namedScoreWeights": {
+            "C1_length": 1,
+            "C2_grouped_by_client": 3,
+            "C3_blocker_and_ask": 1,
+            "C4_teams_not_email": 1,
+            "non_empty": 1
+          },
+          "tokensUsed": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0
+          },
+          "componentResults": [
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "word-count",
+                "metric": "C1_length",
+                "value": {
+                  "max": 149
+                }
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "contains-all",
+                "metric": "C3_blocker_and_ask",
+                "value": [
+                  "Blocker:",
+                  "Need:"
+                ]
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "NOT CHECKED: needs judgment",
+              "assertion": {
+                "type": "javascript",
+                "metric": "C4_teams_not_email",
+                "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "javascript",
+                "metric": "non_empty",
+                "value": "output.trim().length > 0"
+              }
+            }
+          ]
+        },
+        "id": "23bfc770-6918-434d-9d9d-32c40e9e0744",
+        "latencyMs": 1,
+        "namedScores": {
+          "C1_length": 1,
+          "C2_grouped_by_client": 1,
+          "C3_blocker_and_ask": 1,
+          "C4_teams_not_email": 0,
+          "non_empty": 1
+        },
+        "prompt": {
+          "raw": "**Northwind**\r\n- Two client meetings on the new reporting feature; built the feature Mon–Tue\r\n- Ran the demo Wed and fixed the feedback issues Fri\r\n- Blocker: lost half a day Thu waiting on client test data access\r\n- Need: access granted before Monday so testing can continue\r\n\r\n**Contoso**\r\n- Reviewed an estimate Fri\r\n\r\n**Internal**\r\n- Helped onboard a new teammate Wed; attended the AI lunch & learn Thu; worked on documentation while blocked",
+          "label": "{{output}}",
+          "config": {}
+        },
+        "promptId": "343155ae77c81fd6d016484b639909bc6f4e68f7730061d1d2a8d7e707456d32",
+        "promptIdx": 0,
+        "provider": {
+          "id": "echo",
+          "label": ""
+        },
+        "response": {
+          "output": "**Northwind**\r\n- Two client meetings on the new reporting feature; built the feature Mon–Tue\r\n- Ran the demo Wed and fixed the feedback issues Fri\r\n- Blocker: lost half a day Thu waiting on client test data access\r\n- Need: access granted before Monday so testing can continue\r\n\r\n**Contoso**\r\n- Reviewed an estimate Fri\r\n\r\n**Internal**\r\n- Helped onboard a new teammate Wed; attended the AI lunch & learn Thu; worked on documentation while blocked",
+          "raw": "**Northwind**\r\n- Two client meetings on the new reporting feature; built the feature Mon–Tue\r\n- Ran the demo Wed and fixed the feedback issues Fri\r\n- Blocker: lost half a day Thu waiting on client test data access\r\n- Need: access granted before Monday so testing can continue\r\n\r\n**Contoso**\r\n- Reviewed an estimate Fri\r\n\r\n**Internal**\r\n- Helped onboard a new teammate Wed; attended the AI lunch & learn Thu; worked on documentation while blocked",
+          "cost": 0,
+          "cached": false,
+          "tokenUsage": {
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "total": 0,
+            "numRequests": 1,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            },
+            "assertions": {
+              "total": 0,
+              "prompt": 0,
+              "completion": 0,
+              "cached": 0,
+              "numRequests": 0,
+              "completionDetails": {
+                "reasoning": 0,
+                "acceptedPrediction": 0,
+                "rejectedPrediction": 0,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0
+              }
+            }
+          },
+          "isRefusal": false,
+          "metadata": {}
+        },
+        "score": 0.8571428571428571,
+        "success": false,
+        "testCase": {
+          "description": "run-1",
+          "vars": {
+            "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-1.txt"
+          },
+          "assert": [
+            {
+              "type": "word-count",
+              "metric": "C1_length",
+              "value": {
+                "max": 149
+              }
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "contains-all",
+              "metric": "C3_blocker_and_ask",
+              "value": [
+                "Blocker:",
+                "Need:"
+              ]
+            },
+            {
+              "type": "javascript",
+              "metric": "C4_teams_not_email",
+              "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+            },
+            {
+              "type": "javascript",
+              "metric": "non_empty",
+              "value": "output.trim().length > 0"
+            }
+          ],
+          "options": {},
+          "metadata": {}
+        },
+        "testIdx": 2,
+        "tokenUsage": {
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "total": 0,
+          "numRequests": 1,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0
+          },
+          "assertions": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            }
+          }
+        },
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-1.txt"
+        },
+        "metadata": {
+          "_promptfooFileMetadata": {}
+        },
+        "failureReason": 1
+      },
+      {
+        "cost": 0,
+        "error": "NOT CHECKED: needs judgment",
+        "gradingResult": {
+          "pass": false,
+          "score": 0.7142857142857143,
+          "reason": "NOT CHECKED: needs judgment",
+          "namedScores": {
+            "C1_length": 1,
+            "C2_grouped_by_client": 1,
+            "C3_blocker_and_ask": 0,
+            "C4_teams_not_email": 0,
+            "non_empty": 1
+          },
+          "namedScoreWeights": {
+            "C1_length": 1,
+            "C2_grouped_by_client": 3,
+            "C3_blocker_and_ask": 1,
+            "C4_teams_not_email": 1,
+            "non_empty": 1
+          },
+          "tokensUsed": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0
+          },
+          "componentResults": [
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "word-count",
+                "metric": "C1_length",
+                "value": {
+                  "max": 149
+                }
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Expected output to contain all of [Blocker:, Need:]. Missing: [Blocker:, Need:]",
+              "assertion": {
+                "type": "contains-all",
+                "metric": "C3_blocker_and_ask",
+                "value": [
+                  "Blocker:",
+                  "Need:"
+                ]
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "NOT CHECKED: needs judgment",
+              "assertion": {
+                "type": "javascript",
+                "metric": "C4_teams_not_email",
+                "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "javascript",
+                "metric": "non_empty",
+                "value": "output.trim().length > 0"
+              }
+            }
+          ]
+        },
+        "id": "4b24a67a-b69e-4d42-815b-ae2f80b6d9fd",
+        "latencyMs": 1,
+        "namedScores": {
+          "C1_length": 1,
+          "C2_grouped_by_client": 1,
+          "C3_blocker_and_ask": 0,
+          "C4_teams_not_email": 0,
+          "non_empty": 1
+        },
+        "prompt": {
+          "raw": "**Northwind**\r\n- Held two client meetings on the new reporting feature and built it Mon–Tue\r\n- Successfully ran the demo Wed and fixed feedback issues Fri\r\n- Blocked Thu for half a day waiting on client test data access. Ask: please get access granted before Monday.\r\n\r\n**Contoso**\r\n- Reviewed the estimate Fri\r\n\r\n**Internal**\r\n- Onboarded a new teammate Wed; attended the AI lunch & learn Thu; worked on documentation Thu",
+          "label": "{{output}}",
+          "config": {}
+        },
+        "promptId": "343155ae77c81fd6d016484b639909bc6f4e68f7730061d1d2a8d7e707456d32",
+        "promptIdx": 0,
+        "provider": {
+          "id": "echo",
+          "label": ""
+        },
+        "response": {
+          "output": "**Northwind**\r\n- Held two client meetings on the new reporting feature and built it Mon–Tue\r\n- Successfully ran the demo Wed and fixed feedback issues Fri\r\n- Blocked Thu for half a day waiting on client test data access. Ask: please get access granted before Monday.\r\n\r\n**Contoso**\r\n- Reviewed the estimate Fri\r\n\r\n**Internal**\r\n- Onboarded a new teammate Wed; attended the AI lunch & learn Thu; worked on documentation Thu",
+          "raw": "**Northwind**\r\n- Held two client meetings on the new reporting feature and built it Mon–Tue\r\n- Successfully ran the demo Wed and fixed feedback issues Fri\r\n- Blocked Thu for half a day waiting on client test data access. Ask: please get access granted before Monday.\r\n\r\n**Contoso**\r\n- Reviewed the estimate Fri\r\n\r\n**Internal**\r\n- Onboarded a new teammate Wed; attended the AI lunch & learn Thu; worked on documentation Thu",
+          "cost": 0,
+          "cached": false,
+          "tokenUsage": {
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "total": 0,
+            "numRequests": 1,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            },
+            "assertions": {
+              "total": 0,
+              "prompt": 0,
+              "completion": 0,
+              "cached": 0,
+              "numRequests": 0,
+              "completionDetails": {
+                "reasoning": 0,
+                "acceptedPrediction": 0,
+                "rejectedPrediction": 0,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0
+              }
+            }
+          },
+          "isRefusal": false,
+          "metadata": {}
+        },
+        "score": 0.7142857142857143,
+        "success": false,
+        "testCase": {
+          "description": "run-3",
+          "vars": {
+            "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-3.txt"
+          },
+          "assert": [
+            {
+              "type": "word-count",
+              "metric": "C1_length",
+              "value": {
+                "max": 149
+              }
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "contains-all",
+              "metric": "C3_blocker_and_ask",
+              "value": [
+                "Blocker:",
+                "Need:"
+              ]
+            },
+            {
+              "type": "javascript",
+              "metric": "C4_teams_not_email",
+              "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+            },
+            {
+              "type": "javascript",
+              "metric": "non_empty",
+              "value": "output.trim().length > 0"
+            }
+          ],
+          "options": {},
+          "metadata": {}
+        },
+        "testIdx": 4,
+        "tokenUsage": {
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "total": 0,
+          "numRequests": 1,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0
+          },
+          "assertions": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            }
+          }
+        },
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-3.txt"
+        },
+        "metadata": {
+          "_promptfooFileMetadata": {}
+        },
+        "failureReason": 1
+      },
+      {
+        "cost": 0,
+        "error": "NOT CHECKED: needs judgment",
+        "gradingResult": {
+          "pass": false,
+          "score": 0.8571428571428571,
+          "reason": "NOT CHECKED: needs judgment",
+          "namedScores": {
+            "C1_length": 1,
+            "C2_grouped_by_client": 1,
+            "C3_blocker_and_ask": 1,
+            "C4_teams_not_email": 0,
+            "non_empty": 1
+          },
+          "namedScoreWeights": {
+            "C1_length": 1,
+            "C2_grouped_by_client": 3,
+            "C3_blocker_and_ask": 1,
+            "C4_teams_not_email": 1,
+            "non_empty": 1
+          },
+          "tokensUsed": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0
+          },
+          "componentResults": [
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "word-count",
+                "metric": "C1_length",
+                "value": {
+                  "max": 149
+                }
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "contains-all",
+                "metric": "C3_blocker_and_ask",
+                "value": [
+                  "Blocker:",
+                  "Need:"
+                ]
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "NOT CHECKED: needs judgment",
+              "assertion": {
+                "type": "javascript",
+                "metric": "C4_teams_not_email",
+                "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "javascript",
+                "metric": "non_empty",
+                "value": "output.trim().length > 0"
+              }
+            }
+          ]
+        },
+        "id": "4208e7b4-90e6-4c12-b940-2881379c07e9",
+        "latencyMs": 1,
+        "namedScores": {
+          "C1_length": 1,
+          "C2_grouped_by_client": 1,
+          "C3_blocker_and_ask": 1,
+          "C4_teams_not_email": 0,
+          "non_empty": 1
+        },
+        "prompt": {
+          "raw": "**Northwind**\r\n- Held two client meetings on the reporting feature; built it Mon–Tue\r\n- Ran the demo Wed; fixed demo feedback issues Fri\r\n- Blocker: half a day lost Thu waiting on client test data access. Need: access granted before Monday so testing can resume.\r\n\r\n**Contoso**\r\n- Reviewed the estimate Fri\r\n\r\n**Internal**\r\n- Helped onboard a new teammate Wed; attended the AI lunch & learn Thu; worked on documentation while blocked",
+          "label": "{{output}}",
+          "config": {}
+        },
+        "promptId": "343155ae77c81fd6d016484b639909bc6f4e68f7730061d1d2a8d7e707456d32",
+        "promptIdx": 0,
+        "provider": {
+          "id": "echo",
+          "label": ""
+        },
+        "response": {
+          "output": "**Northwind**\r\n- Held two client meetings on the reporting feature; built it Mon–Tue\r\n- Ran the demo Wed; fixed demo feedback issues Fri\r\n- Blocker: half a day lost Thu waiting on client test data access. Need: access granted before Monday so testing can resume.\r\n\r\n**Contoso**\r\n- Reviewed the estimate Fri\r\n\r\n**Internal**\r\n- Helped onboard a new teammate Wed; attended the AI lunch & learn Thu; worked on documentation while blocked",
+          "raw": "**Northwind**\r\n- Held two client meetings on the reporting feature; built it Mon–Tue\r\n- Ran the demo Wed; fixed demo feedback issues Fri\r\n- Blocker: half a day lost Thu waiting on client test data access. Need: access granted before Monday so testing can resume.\r\n\r\n**Contoso**\r\n- Reviewed the estimate Fri\r\n\r\n**Internal**\r\n- Helped onboard a new teammate Wed; attended the AI lunch & learn Thu; worked on documentation while blocked",
+          "cost": 0,
+          "cached": false,
+          "tokenUsage": {
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "total": 0,
+            "numRequests": 1,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            },
+            "assertions": {
+              "total": 0,
+              "prompt": 0,
+              "completion": 0,
+              "cached": 0,
+              "numRequests": 0,
+              "completionDetails": {
+                "reasoning": 0,
+                "acceptedPrediction": 0,
+                "rejectedPrediction": 0,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0
+              }
+            }
+          },
+          "isRefusal": false,
+          "metadata": {}
+        },
+        "score": 0.8571428571428571,
+        "success": false,
+        "testCase": {
+          "description": "run-4",
+          "vars": {
+            "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-4.txt"
+          },
+          "assert": [
+            {
+              "type": "word-count",
+              "metric": "C1_length",
+              "value": {
+                "max": 149
+              }
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "contains-all",
+              "metric": "C3_blocker_and_ask",
+              "value": [
+                "Blocker:",
+                "Need:"
+              ]
+            },
+            {
+              "type": "javascript",
+              "metric": "C4_teams_not_email",
+              "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+            },
+            {
+              "type": "javascript",
+              "metric": "non_empty",
+              "value": "output.trim().length > 0"
+            }
+          ],
+          "options": {},
+          "metadata": {}
+        },
+        "testIdx": 5,
+        "tokenUsage": {
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "total": 0,
+          "numRequests": 1,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0
+          },
+          "assertions": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            }
+          }
+        },
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-4.txt"
+        },
+        "metadata": {
+          "_promptfooFileMetadata": {}
+        },
+        "failureReason": 1
+      },
+      {
+        "cost": 0,
+        "error": "NOT CHECKED: needs judgment",
+        "gradingResult": {
+          "pass": false,
+          "score": 0.7142857142857143,
+          "reason": "NOT CHECKED: needs judgment",
+          "namedScores": {
+            "C1_length": 0,
+            "C2_grouped_by_client": 1,
+            "C3_blocker_and_ask": 1,
+            "C4_teams_not_email": 0,
+            "non_empty": 1
+          },
+          "namedScoreWeights": {
+            "C1_length": 1,
+            "C2_grouped_by_client": 3,
+            "C3_blocker_and_ask": 1,
+            "C4_teams_not_email": 1,
+            "non_empty": 1
+          },
+          "tokensUsed": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0
+          },
+          "componentResults": [
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Word count 163 is greater than maximum 149",
+              "assertion": {
+                "type": "word-count",
+                "metric": "C1_length",
+                "value": {
+                  "max": 149
+                }
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "regex",
+                "metric": "C2_grouped_by_client",
+                "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "contains-all",
+                "metric": "C3_blocker_and_ask",
+                "value": [
+                  "Blocker:",
+                  "Need:"
+                ]
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "NOT CHECKED: needs judgment",
+              "assertion": {
+                "type": "javascript",
+                "metric": "C4_teams_not_email",
+                "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+              }
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "javascript",
+                "metric": "non_empty",
+                "value": "output.trim().length > 0"
+              }
+            }
+          ]
+        },
+        "id": "bc4dfdf9-dd19-4af0-83d5-0168e584972c",
+        "latencyMs": 1,
+        "namedScores": {
+          "C1_length": 0,
+          "C2_grouped_by_client": 1,
+          "C3_blocker_and_ask": 1,
+          "C4_teams_not_email": 0,
+          "non_empty": 1
+        },
+        "prompt": {
+          "raw": "**Northwind**\r\n- Attended standup and joined two client meetings about the new reporting feature, where we walked through the requirements in detail and agreed on the next steps for the days ahead\r\n- Spent Monday and Tuesday building the Northwind reporting feature, focusing on the core data views, the filters and the export options so the demo would be ready on time\r\n- Prepared and ran the Northwind demo on Wednesday, which the client responded to well, and I'm excited about the feedback we collected\r\n- Fixed all of the issues that came out of the demo feedback on Friday\r\n- Blocker: lost half a day on Thursday waiting on client test data access. Need: access granted before Monday so testing can continue.\r\n\r\n**Contoso**\r\n- Reviewed the estimate on Friday and shared my notes with the team\r\n\r\n**Internal**\r\n- Helped onboard a new teammate, attended the internal AI lunch & learn, and worked on documentation while I was blocked on the client data",
+          "label": "{{output}}",
+          "config": {}
+        },
+        "promptId": "343155ae77c81fd6d016484b639909bc6f4e68f7730061d1d2a8d7e707456d32",
+        "promptIdx": 0,
+        "provider": {
+          "id": "echo",
+          "label": ""
+        },
+        "response": {
+          "output": "**Northwind**\r\n- Attended standup and joined two client meetings about the new reporting feature, where we walked through the requirements in detail and agreed on the next steps for the days ahead\r\n- Spent Monday and Tuesday building the Northwind reporting feature, focusing on the core data views, the filters and the export options so the demo would be ready on time\r\n- Prepared and ran the Northwind demo on Wednesday, which the client responded to well, and I'm excited about the feedback we collected\r\n- Fixed all of the issues that came out of the demo feedback on Friday\r\n- Blocker: lost half a day on Thursday waiting on client test data access. Need: access granted before Monday so testing can continue.\r\n\r\n**Contoso**\r\n- Reviewed the estimate on Friday and shared my notes with the team\r\n\r\n**Internal**\r\n- Helped onboard a new teammate, attended the internal AI lunch & learn, and worked on documentation while I was blocked on the client data",
+          "raw": "**Northwind**\r\n- Attended standup and joined two client meetings about the new reporting feature, where we walked through the requirements in detail and agreed on the next steps for the days ahead\r\n- Spent Monday and Tuesday building the Northwind reporting feature, focusing on the core data views, the filters and the export options so the demo would be ready on time\r\n- Prepared and ran the Northwind demo on Wednesday, which the client responded to well, and I'm excited about the feedback we collected\r\n- Fixed all of the issues that came out of the demo feedback on Friday\r\n- Blocker: lost half a day on Thursday waiting on client test data access. Need: access granted before Monday so testing can continue.\r\n\r\n**Contoso**\r\n- Reviewed the estimate on Friday and shared my notes with the team\r\n\r\n**Internal**\r\n- Helped onboard a new teammate, attended the internal AI lunch & learn, and worked on documentation while I was blocked on the client data",
+          "cost": 0,
+          "cached": false,
+          "tokenUsage": {
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "total": 0,
+            "numRequests": 1,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            },
+            "assertions": {
+              "total": 0,
+              "prompt": 0,
+              "completion": 0,
+              "cached": 0,
+              "numRequests": 0,
+              "completionDetails": {
+                "reasoning": 0,
+                "acceptedPrediction": 0,
+                "rejectedPrediction": 0,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0
+              }
+            }
+          },
+          "isRefusal": false,
+          "metadata": {}
+        },
+        "score": 0.7142857142857143,
+        "success": false,
+        "testCase": {
+          "description": "run-5",
+          "vars": {
+            "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-5.txt"
+          },
+          "assert": [
+            {
+              "type": "word-count",
+              "metric": "C1_length",
+              "value": {
+                "max": 149
+              }
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "regex",
+              "metric": "C2_grouped_by_client",
+              "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+            },
+            {
+              "type": "contains-all",
+              "metric": "C3_blocker_and_ask",
+              "value": [
+                "Blocker:",
+                "Need:"
+              ]
+            },
+            {
+              "type": "javascript",
+              "metric": "C4_teams_not_email",
+              "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+            },
+            {
+              "type": "javascript",
+              "metric": "non_empty",
+              "value": "output.trim().length > 0"
+            }
+          ],
+          "options": {},
+          "metadata": {}
+        },
+        "testIdx": 6,
+        "tokenUsage": {
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "total": 0,
+          "numRequests": 1,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0
+          },
+          "assertions": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            }
+          }
+        },
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-5.txt"
+        },
+        "metadata": {
+          "_promptfooFileMetadata": {}
+        },
+        "failureReason": 1
+      }
+    ],
+    "stats": {
+      "successes": 0,
+      "failures": 7,
+      "errors": 0,
+      "tokenUsage": {
+        "prompt": 0,
+        "completion": 0,
+        "cached": 0,
+        "total": 0,
+        "numRequests": 7,
+        "completionDetails": {
+          "reasoning": 0,
+          "acceptedPrediction": 0,
+          "rejectedPrediction": 0,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0
+        },
+        "assertions": {
+          "total": 0,
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "numRequests": 0,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0
+          }
+        }
+      },
+      "durationMs": 66,
+      "evaluationDurationMs": 66
+    }
+  },
+  "config": {
+    "tags": {},
+    "description": "Northwind end-of-week update checks",
+    "prompts": [
+      "{{output}}"
+    ],
+    "providers": [
+      "echo"
+    ],
+    "tests": [
+      {
+        "description": "fixture-bad",
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\fixture-bad.txt"
+        }
+      },
+      {
+        "description": "fixture-polished-but-wrong",
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\fixture-polished-but-wrong.txt"
+        }
+      },
+      {
+        "description": "run-1",
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-1.txt"
+        }
+      },
+      {
+        "description": "run-2",
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-2.txt"
+        }
+      },
+      {
+        "description": "run-3",
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-3.txt"
+        }
+      },
+      {
+        "description": "run-4",
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-4.txt"
+        }
+      },
+      {
+        "description": "run-5",
+        "vars": {
+          "output": "file://C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\northwind\\sample-run-5.txt"
+        }
+      }
+    ],
+    "env": {},
+    "sharing": false,
+    "outputPath": [
+      "results.json"
+    ],
+    "extensions": [],
+    "metadata": {},
+    "evaluateOptions": {},
+    "defaultTest": {
+      "assert": [
+        {
+          "type": "word-count",
+          "metric": "C1_length",
+          "value": {
+            "max": 149
+          }
+        },
+        {
+          "type": "regex",
+          "metric": "C2_grouped_by_client",
+          "value": "(?:^|\\n)[ \\t>*#_-]*Northwind[ \\t*_]*(?::|\\r?\\n|$)"
+        },
+        {
+          "type": "regex",
+          "metric": "C2_grouped_by_client",
+          "value": "(?:^|\\n)[ \\t>*#_-]*Contoso[ \\t*_]*(?::|\\r?\\n|$)"
+        },
+        {
+          "type": "regex",
+          "metric": "C2_grouped_by_client",
+          "value": "(?:^|\\n)[ \\t>*#_-]*Internal[ \\t*_]*(?::|\\r?\\n|$)"
+        },
+        {
+          "type": "contains-all",
+          "metric": "C3_blocker_and_ask",
+          "value": [
+            "Blocker:",
+            "Need:"
+          ]
+        },
+        {
+          "type": "javascript",
+          "metric": "C4_teams_not_email",
+          "value": "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+        },
+        {
+          "type": "javascript",
+          "metric": "non_empty",
+          "value": "output.trim().length > 0"
+        }
+      ],
+      "vars": {},
+      "options": {},
+      "metadata": {}
+    },
+    "basePath": "C:\\Users\\AlbertoSalazar\\dev\\eval-coach\\tests\\golden\\promptfoo"
+  },
+  "shareableUrl": null,
+  "metadata": {
+    "promptfooVersion": "0.125.1",
+    "nodeVersion": "v26.13.0",
+    "platform": "win32",
+    "arch": "x64",
+    "exportedAt": "2026-11-09T16:19:37.246Z",
+    "evaluationCreatedAt": "2026-11-09T16:19:37.162Z"
+  },
+  "vars": [
+    "output"
+  ],
+  "runtimeOptions": {
+    "eventSource": "cli",
+    "showProgressBar": true,
+    "repeat": 1,
+    "maxConcurrency": 4,
+    "cache": false
+  }
+}

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>eval-coach · Graphite and Lime · design preview</title>
+<style>
+  :root {
+    --bg: #f5f5f9; --surface: #ffffff; --sunken: #f0f0f6; --ink: #12131f; --ink-soft: #4d5066; --ink-faint: #62657b; --rule: #e3e3ee;
+    --accent: #4f6a00; --accent-solid: #b8db35; --accent-hover: #c9e75c; --accent-ink: #11160a; --accent-tint: #f2f7dc;
+    --accent-glow: rgba(184, 219, 53, 0.4);
+    --grad: linear-gradient(90deg, #8fae24 0%, #b8db35 55%, #cfec62 100%);
+    --grad-deep: linear-gradient(135deg, #0f1307 0%, #2b3510 100%);
+    --pass: #0b7350; --pass-tint: #daf5e8; --fail: #c01c44; --fail-tint: #fde6eb; --nc: #555b6e; --nc-tint: #ebecf2; --attn: #8f5400; --attn-tint: #fff0d4;
+    --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    --mono: "Cascadia Mono", Consolas, monospace;
+  }
+  [data-theme="dark"] {
+    --bg: #0c0c13; --surface: #16161f; --sunken: #111119; --ink: #eeeef6; --ink-soft: #a9abc0; --ink-faint: #8f92a8; --rule: #272735;
+    --accent: #d6ff3e; --accent-solid: #d6ff3e; --accent-hover: #e4ff7a; --accent-tint: #1d2308; --accent-glow: rgba(214, 255, 62, 0.22);
+    --grad: linear-gradient(90deg, #8fbf00 0%, #b9e41a 55%, #d6ff3e 100%);
+    --pass: #4ddc9c; --pass-tint: #0f2a20; --fail: #ff8097; --fail-tint: #34151f; --nc: #a9abc0; --nc-tint: #23232f; --attn: #ffc45c; --attn-tint: #2f2510;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.5; }
+  main { max-width: 980px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
+  h1 { font-family: var(--display); font-size: 2rem; letter-spacing: -0.02em; margin: 0; }
+  h2 { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 2.2rem 0 0.7rem; }
+  .btn { font: 600 0.95rem var(--sans); padding: 0.6rem 1.1rem; border-radius: 10px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary { background: var(--accent-solid); border-color: transparent; color: var(--accent-ink); }
+  .btn-primary:hover { background: var(--accent-hover); color: var(--accent-ink); }
+  .row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem; }
+  .sw { border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; background: var(--surface); font: 0.75rem var(--mono); }
+  .sw i { display: block; height: 56px; }
+  .sw span { display: block; padding: 0.45rem 0.6rem; color: var(--ink-soft); }
+  .card { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 1.1rem 1.3rem; }
+  .mission { background: var(--grad-deep); color: #fff; border-radius: 14px; padding: 1.15rem 1.35rem; font: 600 1.2rem/1.4 var(--display); }
+  .mission strong { display: block; font: 600 0.66rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: #d6ff3e; margin-bottom: 0.35rem; }
+  .bar { height: 8px; border-radius: 999px; background: var(--rule); overflow: hidden; }
+  .bar b { display: block; height: 100%; width: 62%; background: var(--grad); }
+  .tag { display: inline-flex; gap: 0.35rem; align-items: center; font: 700 0.72rem var(--mono); padding: 0.2rem 0.6rem; border-radius: 999px; }
+  .pass { background: var(--pass-tint); color: var(--pass); } .fail { background: var(--fail-tint); color: var(--fail); }
+  .nc { background: var(--nc-tint); color: var(--nc); } .attn { background: var(--attn-tint); color: var(--attn); }
+  .now { background: var(--accent-solid); color: var(--accent-ink); }
+  .mark { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; font: 700 0.75rem var(--sans); }
+  .done { background: var(--accent-solid); color: var(--accent-ink); }
+  .active { border: 2px solid var(--accent); color: var(--accent); background: var(--accent-tint); }
+  .locked { border: 1.5px dashed var(--rule); color: var(--ink-faint); }
+  .sel { background: var(--accent-tint); border: 1px solid var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); border-radius: 12px; padding: 0.7rem 1rem; }
+  a { color: var(--accent); }
+  .term { background: #101018; color: #e9e9f2; border-radius: 14px; padding: 0.9rem 1.1rem; font: 0.85rem var(--mono); }
+  .term::before { content: "›"; color: #d6ff3e; font-weight: 700; margin-right: 0.6rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Graphite and Lime</h1>
+      <div style="color:var(--ink-soft)">eval-coach design preview · tokens from <code>app/eval_coach/web/styles.css</code></div>
+    </div>
+    <button class="btn" id="toggle" type="button">Switch to dark theme</button>
+  </header>
+
+  <h2>Accent roles</h2>
+  <div class="swatches">
+    <div class="sw"><i style="background:var(--accent-solid)"></i><span>accent-solid · fills</span></div>
+    <div class="sw"><i style="background:var(--accent-hover)"></i><span>accent-solid-hover</span></div>
+    <div class="sw"><i style="background:var(--accent)"></i><span>accent · text, links, focus</span></div>
+    <div class="sw"><i style="background:var(--accent-tint)"></i><span>accent-tint · selected</span></div>
+    <div class="sw"><i style="background:var(--accent-ink)"></i><span>accent-ink · text on fills</span></div>
+    <div class="sw"><i style="background:var(--grad)"></i><span>grad · progress, wins</span></div>
+  </div>
+
+  <h2>Buttons and links</h2>
+  <div class="row">
+    <button class="btn btn-primary" type="button">Start my CLI</button>
+    <button class="btn" type="button">Send to CLI</button>
+    <a href="#">A link in running text</a>
+  </div>
+
+  <h2>Progress and course marks</h2>
+  <div class="card">
+    <div class="bar" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100"><b></b></div>
+    <div class="row" style="margin-top:1rem">
+      <span class="mark done">✓</span> Your mission
+      <span class="mark active">3</span> One update, three grades <span class="tag now">NOW</span>
+      <span class="mark locked">4</span> The loop
+    </div>
+  </div>
+
+  <h2>Selected state</h2>
+  <div class="sel">The same verdict always</div>
+
+  <h2>Verdicts keep their own colours</h2>
+  <div class="row">
+    <span class="tag pass">✓ PASS</span><span class="tag fail">✕ FAIL</span><span class="tag nc">○ NOT CHECKED</span><span class="tag attn">Surprise</span>
+  </div>
+
+  <h2>Mission card and console</h2>
+  <div class="mission"><strong>Your mission</strong>Leave with a checker you can trust.</div>
+  <div class="term" style="margin-top:0.9rem">Read update.txt and requirements.md. Score the update from 1 to 10.</div>
+</main>
+<script>
+  const root = document.documentElement, btn = document.getElementById('toggle');
+  btn.addEventListener('click', () => {
+    const dark = root.getAttribute('data-theme') !== 'dark';
+    root.setAttribute('data-theme', dark ? 'dark' : 'light');
+    btn.textContent = dark ? 'Switch to light theme' : 'Switch to dark theme';
+  });
+</script>
+</body>
+</html>

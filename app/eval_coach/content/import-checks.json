@@ -1,0 +1,28 @@
+{
+  "blocking": {
+    "missing_prompt_path": "Enter the full path of your prompt file, for example C:\\Users\\you\\Documents\\my-prompt.md. Then press Check my files.",
+    "missing_test_cases_path": "Enter the full path of your test cases file, for example C:\\Users\\you\\Documents\\my-test-cases.md. Then press Check my files.",
+    "not_absolute": "The path to your {label} file is not a full path. Enter the full path, starting with a drive letter, for example C:\\Users\\you\\Documents\\my-file.md. In File Explorer you can right-click the file and choose Copy as path. Then press Check my files.",
+    "file_not_found": "Your {label} file was not found at {path}. Check the path, or right-click the file in File Explorer, choose Copy as path, paste it here and press Check my files again.",
+    "not_a_file": "The path for your {label} file points to a folder, not a file. Enter the path of the file itself, then press Check my files again.",
+    "file_unreadable": "Your {label} file could not be read ({reason}). Close the file in any program that has it open, or pick another copy, then press Check my files again.",
+    "too_large": "Your {label} file is larger than 1 MB, which is far more than a prompt or a set of test cases needs. Choose the right file, or shorten it, then press Check my files again.",
+    "not_text": "Your {label} file does not look like a plain text file. It may be a Word document, or it may be saved as Unicode. Save it as a plain text or Markdown file (UTF-8), then choose it again.",
+    "empty": "Your {label} file is empty. Add your {label} to it, save the file, and press Check my files again.",
+    "no_criteria": "The app could not find any criteria in your test cases file. Write each criterion as a heading such as “### C1: Length”, with a Requirement line and a Threshold line under it. A table with a Threshold column also works. Then press Check my files again.",
+    "few_criteria": "Your test cases file has {count} of the {min} criteria the app needs. Add {missing} more, each with a Requirement and a Threshold, then press Check my files again.",
+    "no_content_criterion": "None of your criteria checks what the answer says. They only measure size or shape, or they depend on judgment. Add at least one criterion whose threshold names the terms, labels or facts the answer must include, for example “Passes if all of these appear:” followed by your own list. Then press Check my files again.",
+    "destination_exists": "Your project folder already has a different {name}, and the app never replaces your files. Choose a new project folder, or move that file away, then press Check my files again."
+  },
+  "warnings": {
+    "project_exists": "This project folder already holds your saved progress, so the app will pick it up as it is and will not import these files. To import different files, choose a new project folder.",
+    "not_utf8": "Your {label} file is not saved as UTF-8, so some characters may look wrong. The app copies it as it is. To be safe, re-save it as UTF-8 in your editor.",
+    "missing_threshold": "{id} {name} has no Threshold line. Add one that says exactly what makes an answer pass, so the checker knows what to test.",
+    "untraced": "{id} {name} has no Requirement line, and your prompt does not seem to mention it. Add a Requirement line that says where it comes from, or add the matching instruction to your prompt.",
+    "vague": "{id} {name}: the threshold uses {words}, which a checker cannot judge. This criterion will show as NOT CHECKED and count as not covered. To make it checkable, rewrite the threshold using a number, a list of terms you choose, or a label."
+  },
+  "labels": {
+    "prompt": "prompt",
+    "test_cases": "test cases"
+  }
+}

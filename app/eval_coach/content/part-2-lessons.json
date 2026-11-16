@@ -1,0 +1,363 @@
+{
+  "version": 1,
+  "mission": "Understand how to turn what you need from an answer into clear criteria, give each one a pass or fail threshold a script could decide, and write them down as test cases.",
+  "step_checks": [
+    {
+      "id": "sc-draft",
+      "step": "draft",
+      "prompt": "Every criterion on your worksheet sits beside a requirement. Why?",
+      "options": [
+        {"id": "a", "text": "So no criterion is only your own taste", "correct": true, "feedback": "Right. A requirement you can point to keeps a criterion from being your taste in disguise."},
+        {"id": "b", "text": "So the worksheet can fill every empty row", "correct": false, "feedback": "Rows do not need to be full. The requirement is there so each criterion rests on something the task asked for."},
+        {"id": "c", "text": "So every criterion ends up checking only format", "correct": false, "feedback": "A requirement can be about format or about content. It is there so each criterion rests on something the task asked for."},
+        {"id": "d", "text": "So the threshold can be left out later", "correct": false, "feedback": "Every criterion still needs a threshold, which you add next. The requirement shows where the criterion came from."}
+      ]
+    },
+    {
+      "id": "sc-thresholds",
+      "step": "thresholds",
+      "prompt": "You gave every criterion a threshold. What did the script test ask of each one?",
+      "options": [
+        {"id": "a", "text": "Could a script decide it with no judgment?", "correct": true, "feedback": "Right. If a script could not decide it, the threshold needs tightening into a number, a term or a label."},
+        {"id": "b", "text": "Is the number in it a round one?", "correct": false, "feedback": "Round numbers do not matter. What matters is whether a script could decide the threshold with no human judgment."},
+        {"id": "c", "text": "Would a reader enjoy an answer that passes?", "correct": false, "feedback": "Enjoyment is a judgment. The script test asks whether a script could decide the threshold alone."},
+        {"id": "d", "text": "Does it reuse the words of the prompt?", "correct": false, "feedback": "Matching words is not the test. It asks whether a script could decide the threshold with no human judgment."}
+      ]
+    },
+    {
+      "id": "sc-test-file",
+      "step": "test-file",
+      "prompt": "A threshold points at a list. Why does that list live in the same file?",
+      "options": [
+        {"id": "a", "text": "So the check can run from the file alone", "correct": true, "feedback": "Right. With the list in the file, anything that reads the file has everything the check needs."},
+        {"id": "b", "text": "So the file looks a lot longer and fuller", "correct": false, "feedback": "Length is not the reason. The list is there so the check can run from the file alone."},
+        {"id": "c", "text": "Because lists cannot be saved in any other place", "correct": false, "feedback": "A list could be saved elsewhere, but then the file would no longer hold everything the check needs."},
+        {"id": "d", "text": "So nobody ever has to read it at all", "correct": false, "feedback": "Someone will read it, and that is good. Keeping it in the file means the check can run from the file alone."}
+      ]
+    },
+    {
+      "id": "sc-reference",
+      "step": "reference",
+      "prompt": "You compared your criteria with an example set. What does a different criterion that still works show?",
+      "options": [
+        {"id": "a", "text": "More than one good rule set exists", "correct": true, "feedback": "Right. Different criteria can serve the same requirements. What matters is that each one traces to a requirement and a script could decide it."},
+        {"id": "b", "text": "Your own criteria were wrong all along", "correct": false, "feedback": "A different criterion that works is not a mistake. Several sets of rules can serve the same requirements."},
+        {"id": "c", "text": "Only the example set can be right", "correct": false, "feedback": "The example is one good set, not the only one. A criterion that works and traces to a requirement is fine."},
+        {"id": "d", "text": "Rules never need to be reviewed again", "correct": false, "feedback": "You can improve rules whenever you learn something. The comparison is one way to do that."}
+      ]
+    }
+  ],
+  "placement": [],
+  "lessons": [
+    {
+      "id": "p2-mission",
+      "title": "Your mission",
+      "win": "You can explain in one sentence what you will do in Part 2 and why you write the rules before you look at any answer.",
+      "minutes": 3,
+      "skippable": false,
+      "body": "**The goal: turn \"that looks good\" into clear rules that a script could check, and write them down as test cases.**\n\n**Where Part 1 left off.** Real work does not come with a card of requirements. So how do you know the second answer is better? You write down what good means, before you look at any answer.\n\n**In plain words.** This series teaches you to judge the work AI gives you, and to trust it because you checked it, not because it looked right. It does not ask you for blind trust or blind distrust. Here you turn what you know about a good answer into criteria: each one a single thing a good answer must do. Then you give each one a pass or fail rule, such as a word count or a label that must appear. Nothing is run in this Part. Running the rules on real answers starts in Part 3. You do not need any technical background.\n\n**Why it matters.**\n\n- AI sounds sure of itself even when it is wrong, so \"it looks fine\" lets mistakes through.\n- \"Better\" is only an opinion until you measure it against rules written down first.\n- Words such as \"clear\" mean different things to different readers, until each becomes a number, a term or a label.\n\n**The method.** Ask clearly, know what you need, turn it into rules, score the result, improve, and keep a record. This Part covers the middle: know what you need, and turn it into rules.\n\n**Where this course fits.** It is Part 2 of a six-part series, and each Part builds on the one before. The pin marks where you are now:\n\n```you-are-here\ndone | 1 | Structured prompting | I tell the AI clearly what I need, so it guesses less and gives steadier answers.\nhere | 2 | Defining evaluation criteria | I turn \"that looks good\" into clear pass or fail rules.\nnext | 3 | Running evals and baseline | I check five AI answers against my rules and record a starting score.\nnext | 4 | Iterating with evaluation-driven development | I change my prompt, check again with the same rules and see whether the score moved.\nnext | 5 | Load-bearing audit and packaging | I keep only the instructions that earn their place and package my work so someone else can use it.\nnext | 6 | Your own task | I use the method on a task from my own job.\n```\n\nThe Northwind update you will work with is a made-up example. Northwind is for practice only and is never a task you can submit.",
+      "activities": [],
+      "retrieval": [],
+      "sources": [
+        {"label": "The rough notes (learning example)", "ref": "kit:part1/rough-notes.txt"}
+      ],
+      "primary_source": {
+        "label": "The rough notes (learning example)",
+        "ref": "kit:part1/rough-notes.txt",
+        "why": "These are the notes the Northwind update is written from, so you can see what your rules will apply to."
+      },
+      "related": {
+        "lessons": ["p2-criteria"],
+        "glossary": ["Criterion", "Worksheet"]
+      }
+    },
+    {
+      "id": "p2-criteria",
+      "title": "From requirements to criteria",
+      "win": "You can say what makes a good criterion, tell format from content, and spot two criteria that check the same thing.",
+      "minutes": 6,
+      "skippable": false,
+      "body": "**In the method.** Know what you need. Before an answer can be scored, you decide what a good one must do.\n\n**The idea.** A criterion is one thing a good answer must do. Each one traces to a requirement you can point to, so it is never your taste in disguise. Write at least three, and cover both kinds:\n\n- **Format** is how an answer looks, such as its length or its headings. Example: the update is under 150 words.\n- **Content** is what an answer says, such as the facts it must contain. Example: the update names the blocker and says what you need.\n\nNo two criteria should check the same thing. \"Under 150 words\" and \"No more than 149 words\" are one check worded twice, so keep one.\n\n**Why both kinds.** An answer can look perfect and still miss the point. Picture an update that is short, neatly labelled and silent about the real blocker. If every criterion is about format, it passes. Content criteria catch it. This is the polished but wrong test, and it returns in Part 3.\n\n**Two examples to read.** The worked examples show the two criteria above, each with a passing and a failing text. They are the only ones written out for you. Finding the rest is your job in the next step.\n\n**How this course does it.** You list your criteria on a worksheet, one row each, with the requirement it traces to and its type. Another way is a plain list in any document. Other approaches work too.\n\nThe questions are for you, so answer them or move on.",
+      "activities": [
+        {
+          "id": "crit-sort",
+          "type": "sort",
+          "prompt": "These criteria are for a different task: a short summary of a team meeting. Sort each one into format, which is how the summary looks, or content, which is what it says.",
+          "buckets": [
+            {"id": "format", "label": "Format: how it looks"},
+            {"id": "content", "label": "Content: what it says"}
+          ],
+          "items": [
+            {"id": "c1", "text": "The summary is under 100 words", "bucket": "format", "feedback": "A word count is about how the summary looks, not about what it says."},
+            {"id": "c2", "text": "Every decision from the meeting is listed", "bucket": "content", "feedback": "Which decisions appear is about what the summary says."},
+            {"id": "c3", "text": "The headings Decisions, Risks and Next steps all appear", "bucket": "format", "feedback": "Fixed headings describe the shape of the summary. That is format."},
+            {"id": "c4", "text": "Each decision names the person who owns it", "bucket": "content", "feedback": "Naming an owner is part of what the summary says."},
+            {"id": "c5", "text": "The summary is plain text with no tables", "bucket": "format", "feedback": "Plain text with no tables describes how the summary looks."},
+            {"id": "c6", "text": "The date of the next meeting is stated", "bucket": "content", "feedback": "A date is a fact the summary must contain, so it is about content."},
+            {"id": "c7", "text": "There are no more than five bullet points", "bucket": "format", "feedback": "A limit on bullet points is about shape, not about what is said."},
+            {"id": "c8", "text": "Every action item from the notes is included", "bucket": "content", "feedback": "Whether each action item appears is about what the summary says."}
+          ]
+        },
+        {
+          "id": "crit-trace",
+          "type": "choice",
+          "prompt": "A meeting summary has three stated requirements: it is under 100 words, it lists every decision with its owner, and it uses the headings Decisions, Risks and Next steps. One criterion below traces to none of them. Which one?",
+          "options": [
+            {"id": "a", "text": "The summary opens with a funny joke", "correct": true, "feedback": "Right. No requirement asks for a joke, so this criterion would be your own taste. Each criterion should trace to something the task asks for."},
+            {"id": "b", "text": "The summary has fewer than 100 words", "correct": false, "feedback": "This one traces to the length requirement. Look for the criterion that traces to nothing."},
+            {"id": "c", "text": "Each decision is listed with its owner", "correct": false, "feedback": "This one traces to the requirement to list every decision with its owner."},
+            {"id": "d", "text": "Headings Decisions, Risks and Next steps appear", "correct": false, "feedback": "This one traces to the headings requirement."}
+          ]
+        },
+        {
+          "id": "crit-same",
+          "type": "choice",
+          "prompt": "Here are pairs of criteria for the same meeting summary. Which pair checks the same thing, worded two ways?",
+          "options": [
+            {"id": "a", "text": "\"Under 100 words\" and \"Fewer than 100 words\"", "correct": true, "feedback": "Right. Both check the length against one limit. Keep one of them."},
+            {"id": "b", "text": "\"Under 100 words\" and \"Risks heading appears first\"", "correct": false, "feedback": "One checks the length and the other checks a heading. They are different checks."},
+            {"id": "c", "text": "\"Risks heading appears\" and \"Owner named for decisions\"", "correct": false, "feedback": "One checks a heading and the other checks the owners. They are different checks."},
+            {"id": "d", "text": "\"Owner named for decisions\" and \"Under 100 words\"", "correct": false, "feedback": "One checks the owners and the other checks the length. They are different checks."}
+          ]
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-crit-1",
+          "prompt": "What does it mean that a criterion traces to a requirement?",
+          "options": [
+            {"id": "a", "text": "You can name the requirement behind it", "correct": true, "feedback": "Right. Each criterion rests on something the task asked for."},
+            {"id": "b", "text": "It was copied from a trusted template", "correct": false, "feedback": "Where the wording came from does not matter. What matters is the requirement behind it."},
+            {"id": "c", "text": "Its threshold contains at least one number", "correct": false, "feedback": "A threshold can be a label or a term. Tracing is about the requirement behind the criterion."},
+            {"id": "d", "text": "It felt important when you wrote it", "correct": false, "feedback": "A feeling is your taste. Tracing means pointing to a stated requirement."}
+          ]
+        },
+        {
+          "id": "r-crit-2",
+          "prompt": "A set of criteria checks only length and headings. Which answer could still pass?",
+          "options": [
+            {"id": "a", "text": "A neat answer that misses the point", "correct": true, "feedback": "Right. Format checks cannot see what an answer says. Content criteria catch it."},
+            {"id": "b", "text": "An answer far over the length limit", "correct": false, "feedback": "The length criterion would catch it."},
+            {"id": "c", "text": "An answer that is missing every heading", "correct": false, "feedback": "The headings criterion would catch it."},
+            {"id": "d", "text": "An answer with fewer headings than required", "correct": false, "feedback": "The headings criterion would catch it."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "Worked examples: a format criterion and a content criterion", "ref": "kit:part2/worked-examples.md"}
+      ],
+      "primary_source": {
+        "label": "Worked examples: a format criterion and a content criterion",
+        "ref": "kit:part2/worked-examples.md",
+        "why": "It shows the length criterion and the blocker criterion, each with a passing and a failing text."
+      },
+      "related": {
+        "lessons": ["p2-mission", "p2-thresholds"],
+        "glossary": ["Criterion", "Format check", "Content check", "Worksheet", "Polished but wrong"]
+      }
+    },
+    {
+      "id": "p2-thresholds",
+      "title": "Rules a script could check",
+      "win": "You can turn a vague word into a number, a term or a label, and say when a rule cannot judge something.",
+      "minutes": 8,
+      "skippable": false,
+      "body": "**In the method.** Turn it into rules. Each criterion needs a threshold: a rule that says exactly when it passes.\n\n**The idea.** Use the script test: could a script decide this with no human judgment? If not, tighten it. Vague words fail the test, and each one can become a number, a term or a label:\n\n- \"short\" becomes a number: under 150 words\n- \"complete\" becomes terms: every key fact from the input appears\n- \"a clear ask\" becomes a label: the word Need: appears\n\nTwo patterns work for any task. **Structure** is the one to try first: your prompt asks for fixed labels, and the threshold checks that they appear. It ties an instruction in the prompt to a criterion. **Required term** checks that a key fact from the input shows up.\n\n**What a rule cannot check.** Some qualities, such as tone, can only be roughly checked. A list of words to avoid is a proxy: an answer can pass it and still miss the point. You write that list yourself, for your own task. When a rule cannot judge something, do not pretend. Mark it Not checked: and give a plain reason.\n\n**Try it.** In the practice lab, predict the verdict for each text before the app shows it. One text looks polished and still fails.\n\n**How this course does it.** The next step adds a threshold to each row of your worksheet. Another way is to write thresholds in any document beside your criteria. Other approaches work too.\n\nThe questions are for you, so answer them or move on.",
+      "activities": [
+        {
+          "id": "thr-sort",
+          "type": "sort",
+          "prompt": "Apply the script test to each threshold below: could a script decide it with no human judgment? Sort each one.",
+          "buckets": [
+            {"id": "decide", "label": "A script can decide this"},
+            {"id": "tighten", "label": "Tighten it first"}
+          ],
+          "items": [
+            {"id": "t1", "text": "Under 100 words", "bucket": "decide", "feedback": "A script counts words and gets the same answer every time."},
+            {"id": "t2", "text": "Sounds clear and professional", "bucket": "tighten", "feedback": "\"Clear\" and \"professional\" need a human reader. Turn them into a number, a term or a label."},
+            {"id": "t3", "text": "The label Next steps: appears", "bucket": "decide", "feedback": "A script can look for an exact label."},
+            {"id": "t4", "text": "Covers the key facts well", "bucket": "tighten", "feedback": "\"Well\" needs judgment. Name the facts as terms and check that each one appears."},
+            {"id": "t5", "text": "No more than five bullet points", "bucket": "decide", "feedback": "A script can count bullet points."},
+            {"id": "t6", "text": "Easy to read", "bucket": "tighten", "feedback": "\"Easy\" needs a human reader. A number, such as a word count, can stand in for it."},
+            {"id": "t7", "text": "Every term on my list appears", "bucket": "decide", "feedback": "A script can check a list of terms one by one."},
+            {"id": "t8", "text": "Reads naturally", "bucket": "tighten", "feedback": "\"Naturally\" needs judgment. If no rule can judge it, mark it Not checked."}
+          ]
+        },
+        {
+          "id": "thr-lab",
+          "type": "rule_lab",
+          "prompt": "Read the two rules and the three texts. For every text and rule pair, predict PASS or FAIL before you run it. A word is any text between spaces.",
+          "samples": [
+            {"id": "s-specific", "label": "Short and specific", "text": "Blocker: waiting on client test data access since Thursday. Need: access granted before Monday so testing can continue."},
+            {"id": "s-polished", "label": "Polished but empty", "text": "Everything is on track and the team is working hard on the main project. The client has been kept fully informed. We expect to finish soon."},
+            {"id": "s-long", "label": "Specific but long", "text": "Blocker: waiting on client test data access since Thursday morning, which stopped all testing for half a day. Need: access granted before Monday so the whole team can return to testing and finish the planned work on schedule."}
+          ],
+          "rules": [
+            {"id": "r-length", "label": "Word count under 30", "explain": "Passes when the text has fewer than 30 words. This lab uses 30 so the texts stay short. A text with exactly 30 words fails. Count every piece of text between spaces as one word.", "kind": "word_count_under", "params": {"limit": 30}},
+            {"id": "r-labels", "label": "Both Blocker: and Need: appear", "explain": "Passes only when the text contains both labels, Blocker: and Need:, each with its colon and the same capital letters. They can appear anywhere. If one is missing, it fails.", "kind": "all_labels", "params": {"labels": ["Blocker:", "Need:"]}}
+          ],
+          "cases": [
+            {"sample": "s-specific", "rule": "r-length", "expected": "pass"},
+            {"sample": "s-specific", "rule": "r-labels", "expected": "pass"},
+            {"sample": "s-polished", "rule": "r-length", "expected": "pass"},
+            {"sample": "s-polished", "rule": "r-labels", "expected": "fail"},
+            {"sample": "s-long", "rule": "r-length", "expected": "fail"},
+            {"sample": "s-long", "rule": "r-labels", "expected": "pass"}
+          ]
+        },
+        {
+          "id": "thr-pattern",
+          "type": "choice",
+          "prompt": "Your prompt tells the AI to end every answer with the labels Summary: and Next step:. Which threshold uses the structure pattern?",
+          "options": [
+            {"id": "a", "text": "Both labels Summary: and Next step: appear", "correct": true, "feedback": "Right. The prompt asks for fixed labels, and the threshold checks that they appear. That ties an instruction in the prompt to a criterion."},
+            {"id": "b", "text": "The answer reads as helpful and complete", "correct": false, "feedback": "\"Helpful\" and \"complete\" need judgment, so a script cannot decide this one."},
+            {"id": "c", "text": "A key fact from the input appears", "correct": false, "feedback": "That is the required-term pattern. The structure pattern checks the labels the prompt asked for."},
+            {"id": "d", "text": "The answer feels well organised to readers", "correct": false, "feedback": "\"Well organised\" needs judgment. The structure pattern checks for labels a script can find."}
+          ]
+        },
+        {
+          "id": "thr-explain-tech",
+          "type": "choice",
+          "prompt": "A technical colleague asks why a list of words to avoid checks tone only roughly. Which answer is best?",
+          "options": [
+            {"id": "a", "text": "It tests for words, not for the quality itself", "correct": true, "feedback": "Right. A word list is a proxy. An answer can avoid every listed word and still miss the point."},
+            {"id": "b", "text": "It runs too slowly on answers of any length", "correct": false, "feedback": "Speed is not the problem. The problem is that words stand in for a quality they cannot fully measure."},
+            {"id": "c", "text": "It only works when the prompt names fixed labels", "correct": false, "feedback": "A word list does not depend on labels. The limit is that words stand in for the quality."},
+            {"id": "d", "text": "It needs a model to read each answer first", "correct": false, "feedback": "A word list needs no model. A script checks it. The limit is that words stand in for the quality."}
+          ]
+        },
+        {
+          "id": "thr-explain-plain",
+          "type": "reflection",
+          "prompt": "Write two or three sentences for a colleague who is not technical. Explain why a word like \"clear\" cannot be checked as it stands, and what you could write instead.",
+          "min_words": 20
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-thr-1",
+          "prompt": "What question does the script test ask of a threshold?",
+          "options": [
+            {"id": "a", "text": "Could a script decide it with no judgment?", "correct": true, "feedback": "Right. If not, tighten the threshold into a number, a term or a label."},
+            {"id": "b", "text": "Is it short enough to fit one line?", "correct": false, "feedback": "Length is not the test. The test is whether a script could decide it."},
+            {"id": "c", "text": "Would a manager agree that it truly matters?", "correct": false, "feedback": "Opinions are not the test. The test is whether a script could decide it."},
+            {"id": "d", "text": "Does it match a published rule template exactly?", "correct": false, "feedback": "Templates are not the test. The test is whether a script could decide it."}
+          ]
+        },
+        {
+          "id": "r-thr-2",
+          "prompt": "A rule cannot judge a quality. What is the honest thing to write?",
+          "options": [
+            {"id": "a", "text": "Not checked, with a plain reason", "correct": true, "feedback": "Right. Saying so is better than a rule that only looks like a check."},
+            {"id": "b", "text": "Pass, so the score stays high", "correct": false, "feedback": "A pass you did not earn makes the score dishonest."},
+            {"id": "c", "text": "Fail, since it is safer anyway", "correct": false, "feedback": "A made-up fail is just as dishonest. Mark it as not checked."},
+            {"id": "d", "text": "Nothing, because the criterion simply disappears", "correct": false, "feedback": "The gap stays real. Marking it keeps it visible."}
+          ]
+        },
+        {
+          "id": "r-thr-3",
+          "prompt": "Which pattern checks that a key fact from the input appears in the answer?",
+          "options": [
+            {"id": "a", "text": "The required-term pattern", "correct": true, "feedback": "Right. A key fact becomes a term that must appear."},
+            {"id": "b", "text": "The structure pattern", "correct": false, "feedback": "The structure pattern checks for the fixed labels the prompt asked for."},
+            {"id": "c", "text": "The length pattern", "correct": false, "feedback": "A length check counts words. It does not look for a fact."},
+            {"id": "d", "text": "The proxy pattern", "correct": false, "feedback": "A proxy stands in for a quality that no rule can judge directly."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "Worked examples: a format criterion and a content criterion", "ref": "kit:part2/worked-examples.md"}
+      ],
+      "primary_source": {
+        "label": "Worked examples: a format criterion and a content criterion",
+        "ref": "kit:part2/worked-examples.md",
+        "why": "Read the two thresholds and see why a script can decide each one."
+      },
+      "related": {
+        "lessons": ["p2-criteria", "p2-testfile"],
+        "glossary": ["Threshold", "Script test", "Proxy", "NOT CHECKED"]
+      }
+    },
+    {
+      "id": "p2-testfile",
+      "title": "Writing your rules down",
+      "win": "You can lay out a test case file and explain why writing the rules first keeps a score honest.",
+      "minutes": 5,
+      "skippable": false,
+      "body": "**In the method.** Turn it into rules, and keep a record. A rule written down before any answer is judged cannot bend to fit the answer you see.\n\n**The idea.** A test case file holds everything a checker needs, in three parts:\n\n- **Test input.** The input your prompt works from.\n- **Criteria.** Each with an ID, the requirement it traces to, its type and its threshold.\n- **Supporting lists.** A threshold such as \"none of the words on my list\" points at a list. The list lives in the same file, so the check can run from the file alone. You write the list for your own task.\n\nOne criterion looks like this:\n\n```\n### C1: Length\n- Requirement: It must be under 150 words\n- Type: Format\n- Threshold: Word count under 150 passes\n```\n\nWriting the rules first keeps the score honest. Rules written after reading an answer drift toward whatever that answer did.\n\n**Where it goes next.** In Part 3, an AI agent turns a file like this into a checker and runs it on real answers. The file is saved in your project folder. A script or a promptfoo file can hold the same rules.\n\n**How this course does it.** You build the file from your worksheet, edit it and save it as test-cases.md. The bundled template shows the blank layout. Another way is any document that holds the same three parts. Other approaches work too.\n\n**Practice only.** The Northwind update is a learning example and cannot be submitted. Your own work is different: think of a task that repeats, has clear requirements and could be checked by rules. One question asks which. The questions are for you, so answer them or move on.\n\n**Stage 3 note (optional).** The Evaluations that Stage 3 asks for need at least three different rules with clear pass or fail limits. Scripts, promptfoo files and written test cases are all accepted. The program's own instructions decide what to submit, and nothing in this note is needed to finish this Part.",
+      "activities": [
+        {
+          "id": "tf-sort",
+          "type": "sort",
+          "prompt": "Each piece below belongs in one part of the test case file. Sort each one into its part.",
+          "buckets": [
+            {"id": "input", "label": "Test input"},
+            {"id": "criteria", "label": "Criteria"},
+            {"id": "lists", "label": "Supporting lists"}
+          ],
+          "items": [
+            {"id": "p1", "text": "The seven rough notes the prompt works from", "bucket": "input", "feedback": "The input the prompt works from is the test input."},
+            {"id": "p2", "text": "A line saying the type is Format", "bucket": "criteria", "feedback": "The type belongs to a criterion, beside its requirement and threshold."},
+            {"id": "p3", "text": "A list of words the answer must avoid", "bucket": "lists", "feedback": "A list a threshold points to is a supporting list, kept in the same file."},
+            {"id": "p4", "text": "The pass or fail rule for one criterion", "bucket": "criteria", "feedback": "A threshold belongs to its criterion."},
+            {"id": "p5", "text": "A list of terms that must appear", "bucket": "lists", "feedback": "A list of terms that a threshold points to is a supporting list."},
+            {"id": "p6", "text": "The requirement a criterion traces to", "bucket": "criteria", "feedback": "The requirement is written under the criterion it supports."}
+          ]
+        },
+        {
+          "id": "tf-why",
+          "type": "choice",
+          "prompt": "Why do you write the rules down before any answer is judged?",
+          "options": [
+            {"id": "a", "text": "So the rules cannot bend toward an answer", "correct": true, "feedback": "Right. Rules fixed in advance cannot drift toward whatever an answer did, so the score stays honest."},
+            {"id": "b", "text": "So the file looks longer and more complete", "correct": false, "feedback": "Length is not the reason. Fixing the rules first keeps the score honest."},
+            {"id": "c", "text": "So answers can be written much more quickly", "correct": false, "feedback": "Speed is not the reason. Fixing the rules first keeps the score honest."},
+            {"id": "d", "text": "So you never need to change them again", "correct": false, "feedback": "You can improve rules later. The point is not to bend them to a result you have already seen."}
+          ]
+        },
+        {
+          "id": "tf-own",
+          "type": "reflection",
+          "prompt": "Optional. Which task of your own repeats, has clear requirements and could be checked by rules? Write it here.",
+          "min_words": 8
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-tf-1",
+          "prompt": "A threshold points at a list. Where does that list live?",
+          "options": [
+            {"id": "a", "text": "In the same test case file", "correct": true, "feedback": "Right. Keeping it there means the check can run from the file alone."},
+            {"id": "b", "text": "In the prompt the AI reads", "correct": false, "feedback": "The prompt is for the AI. The list belongs with the rules, in the test case file."},
+            {"id": "c", "text": "In a separate note on paper", "correct": false, "feedback": "A checker cannot read paper. The list belongs in the test case file."},
+            {"id": "d", "text": "In the answer that is scored", "correct": false, "feedback": "The answer is what gets scored. The list belongs in the test case file."}
+          ]
+        },
+        {
+          "id": "r-tf-2",
+          "prompt": "What happens to a file like this in Part 3?",
+          "options": [
+            {"id": "a", "text": "An agent turns it into a checker", "correct": true, "feedback": "Right. The checker then runs your rules on real answers."},
+            {"id": "b", "text": "It is deleted once the Part ends", "correct": false, "feedback": "The file stays in your project folder. Part 3 builds on it."},
+            {"id": "c", "text": "It is rewritten as the prompt itself", "correct": false, "feedback": "The prompt and the rules are separate. The rules are used to score answers."},
+            {"id": "d", "text": "It is stored but never used again", "correct": false, "feedback": "It is used. Part 3 builds the checker from it."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "Blank test case template", "ref": "kit:part2/test-case-template.md"},
+        {"label": "Worked examples: a format criterion and a content criterion", "ref": "kit:part2/worked-examples.md"}
+      ],
+      "primary_source": {
+        "label": "Blank test case template",
+        "ref": "kit:part2/test-case-template.md",
+        "why": "It shows the layout of the file you will build, with each part left empty."
+      },
+      "related": {
+        "lessons": ["p2-thresholds"],
+        "glossary": ["Test case", "Supporting list", "test-cases.md", "Markdown"]
+      }
+    }
+  ]
+}

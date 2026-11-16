@@ -1,0 +1,23 @@
+docs/temp/
+
+# Build output
+dist/
+
+# Python and Node caches
+__pycache__/
+*.pyc
+node_modules/
+tests/frontend/.tmp/
+
+# Generated test and harness scratch (keep the harness itself)
+e2e-work/*
+!e2e-work/harness/
+
+# Phase 0 spikes: private runtimes, downloads, caches and transcripts (transcripts hold an account email)
+spikes/*/transcripts/
+spikes/*/work/
+spikes/*/logs/
+spikes/phase0-preflight/downloads/
+spikes/phase0-preflight/npm-cache/
+spikes/phase0-preflight/runtime/
+spikes/phase0-preflight/sandbox-home/

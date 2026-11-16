@@ -1,0 +1,53 @@
+{
+  "generated": "2026-11-08",
+  "platform": "windows-x64",
+  "paths_relative_to": "spikes/phase0-preflight/",
+  "python": {
+    "recommended": true,
+    "distribution": "python.org Windows embeddable package (64-bit)",
+    "version": "3.13.17",
+    "url": "https://www.python.org/ftp/python/3.13.17/python-3.13.17-embed-amd64.zip",
+    "sha256": "9e35319bffedab8b36ad44d8f377cb4f1733bcec257a0b6d04d94f01486ddb38",
+    "checksum_source_url": "https://www.python.org/api/v2/downloads/release_file/?release=1167",
+    "checksum_source_note": "sha256_sum field of the release_file record for this exact URL",
+    "download_bytes": 11441267,
+    "extracted_subfolder": "runtime/python-embed-3.13.17",
+    "executable": "runtime/python-embed-3.13.17/python.exe",
+    "install_bytes": 22640861,
+    "post_extract": "Optional: delete python313._pth so sibling imports and PYTHONPATH work. Tested on a copy at runtime/python-embed-3.13.17-nopth (22640781 bytes)."
+  },
+  "python_alternative": {
+    "recommended": false,
+    "distribution": "python-build-standalone install_only (Astral, third party)",
+    "version": "3.13.18+20261026",
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-x86_64-pc-windows-msvc-install_only.tar.gz",
+    "sha256": "ebe90cc1dce2dd2d7afa1f0aa9b6c269c7c0174aeabdc6a801381602b7283424",
+    "checksum_source_url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/SHA256SUMS",
+    "download_bytes": 48077770,
+    "extracted_subfolder": "runtime/python-pbs-3.13.18/python",
+    "executable": "runtime/python-pbs-3.13.18/python/python.exe",
+    "install_bytes": 152074886,
+    "install_bytes_note": "Measured right after extraction, before __pycache__ growth from running it."
+  },
+  "node": {
+    "recommended": true,
+    "distribution": "nodejs.org Windows x64 zip",
+    "version": "26.13.0",
+    "lts_codename": "Lithium",
+    "npm_version": "11.20.0",
+    "url": "https://nodejs.org/dist/v26.13.0/node-v26.13.0-win-x64.zip",
+    "sha256": "dcc60d59a0746999f99064a01c020445d54d84228c691cdbf25b49ac3b59150a",
+    "checksum_source_url": "https://nodejs.org/dist/v26.13.0/SHASUMS256.txt",
+    "download_bytes": 41157375,
+    "extracted_subfolder": "runtime/node-v26.13.0-win-x64",
+    "executable": "runtime/node-v26.13.0-win-x64/node.exe",
+    "npx": "runtime/node-v26.13.0-win-x64/npx.cmd",
+    "install_bytes": 112910764
+  },
+  "promptfoo": {
+    "version": "0.125.1",
+    "engines_node": ">=22.22.0",
+    "registry_integrity": "sha512-nogBhixdp69icwkg1EI0syZ4zAmAjJyWeLcqxAkTldbHi0qirOslwHvkUQhQmg65lQLrIKyMOMLXlBlSc6LRrg==",
+    "npm_cache_bytes": 1050855363
+  }
+}

@@ -1,0 +1,69 @@
+schema: spec-driven
+githubCopilot:
+  cloudAgent: false
+
+context: |
+  eval-coach is a standalone Windows learning app: a stdlib-only Python local web server with a no-build static UI that wraps the participant's own AI CLI in an embedded terminal. Read AGENTS.md first; docs/SPEC.md, docs/DESIGN.md and docs/IMPLEMENTATION-PLAN.md are the existing (pre-OpenSpec) specs and still apply where no OpenSpec spec covers an area.
+  Constraints that artifacts and code must respect:
+  - Python standard library only at runtime, Python 3.9-compatible syntax. The browser UI has no build step.
+  - Never parse terminal output to decide anything; decide from files and by running the checker. The app never answers a CLI prompt and never calls a model.
+  - No answer key exists until predictions are locked; progress.json never holds answer keys, fixture text or course answers.
+  - Every word participants see lives in content/*.json. Plain language: say "Part", never session; no presenter, facilitator, room, handout or "contact someone" wording (sole exception: the Part 6 office hours and AIR discussion note in baseline-why; the Series map's Part 6 row may also say, as information only, that Part 6 is a live meeting and what it is about, without office hours, the AIR discussion or any person, place, contact detail, link or schedule); "Script track" and "promptfoo track".
+  - Interface changes (web/, content/lesson-ui.json, step ui blocks) need the user's explicit authorization, recorded in the change's proposal.
+  - Never overwrite or delete participant files; never modify the OneDrive source materials.
+  - The repo is not under git. Do not initialize one or commit unless the user asks.
+
+rules:
+  proposal:
+    - State what is out of scope.
+    - For interface changes, record the authorization and its scope.
+  specs:
+    - Describe participant-visible behavior only; use "Part", never session, and plain language.
+    - Name the rule or document a requirement comes from when it comes from AGENTS.md or docs/SPEC.md.
+  design:
+    - List every file location and storage key touched and say whether it is kept or cleared.
+    - End with Open Questions the user must confirm, each with the assumed default.
+  tasks:
+    - Each task states its verification command; tests and docs land in the same group as the code.
+    - Use the repo's commands from AGENTS.md (unittest, Playwright, build_pyz --smoke, harness).
+
+operations:
+  apply:
+    guidance:
+      - Use the stand-in CLI (e2e-work/harness/fake_cli.py); never run a real CLI without the user's approval.
+      - Run the two backend suites one after the other, never at the same time.
+      - Update docs/SPEC.md and the master task table in docs/IMPLEMENTATION-PLAN.md in the same change.
+  archive:
+    guidance:
+      - Summarize which docs/SPEC.md sections are now superseded by the archived specs.
+
+# Project context (optional)
+# Add only constraints that should guide OpenSpec artifacts and workflows.
+# Include constraints an agent cannot infer by reading the code.
+# Keep general project documentation and discoverable codebase facts out.
+# Example:
+#   context: |
+#     Designs and tasks must cover Windows, macOS, and Linux
+#     Write all artifacts in Spanish
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always state what is out of scope
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

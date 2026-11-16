@@ -1,0 +1,57 @@
+# Stand-in end-to-end harness
+
+Stand-in only: the CLI is `fake_cli.py`, never a real CLI. Lesson stages refuse to run unless `E2E_PROFILE=standin`.
+
+## Run everything
+
+```
+node e2e-work\harness\run-all.js --fresh                      # Script track
+node e2e-work\harness\run-all.js --fresh --track promptfoo    # promptfoo track
+node e2e-work\harness\run-all.js --fresh --both               # Script pass, then promptfoo pass
+```
+
+`--fresh` builds a private archive of the current `app\` (`e2e-work\eval-coach-e2e.pyz`, so a rebuild of `dist\` mid-run cannot change
+what is tested), deletes the pass's stand-in home, project and state, then runs each stage in its own process. Other options:
+`--from <stage>`, `--only <stage>`, `--track script|promptfoo`, `--both`. Write its output to a file (`> out.txt 2>&1`) rather than a pipe: the app server a stage starts is
+detached, and on Windows a detached child can hold a pipe open.
+
+The promptfoo pass has its own home, project, state and logs (`standin-home-pf`, `standin-project-pf`, `harness-state-standin-pf.json`, `logs-standin-pf`; set `E2E_TRACK=promptfoo` when running `run.js` by hand). It runs the REAL pinned promptfoo 0.125.1: before the pass `run-all.js` links the spike's private Node (`spikes\phase0-preflight\runtime\node-v26.13.0-win-x64`) and npm cache (`spikes\phase0-preflight\npm-cache`) into the stand-in home as `runtime\node` and `npm-cache` (junctions, never copies), so preflight finds and runs them and the app's eval runs offline. The junctions are removed on their own (never recursively) before the home is deleted and again after the pass, so the spike's files are never touched. Only the CLI is a stand-in; the config the stand-in CLI writes is a real `promptfooconfig.yaml` with the `echo` provider (`standin-promptfooconfig.yaml` is its reference text).
+
+By hand: set `E2E_PROFILE=standin` (and `E2E_PYZ` to use another archive, `E2E_TRACK=promptfoo` for the promptfoo track), then `node e2e-work\harness\run.js <stage>` in this order (the promptfoo track adds `fixtures-config` after `fixtures`):
+
+| Stage | What it covers | Driver |
+|---|---|---|
+| `mission` | Course gating before preflight, the question-free mission page (no activities, no retrieval, no placement, completable at once, nothing scheduled for review), kit viewer and traversal rejection, no answers in responses, restart persistence before a project exists | API |
+| `setup` | The setup wizard page by page (no sidebar beside it, Next waiting for each check) through to the project folder | browser |
+| `hook` | Gating, silent run (screen shows a result, no file: nothing saved), three separate CLI processes, results from `output.txt` only, plain text, no flags, no answered prompts, both questions (`hook-compare`, `hook-explain`) answered | API + stand-in |
+| `several-runs` | Skip refused, gating of `generate`, trial-and-error answering, completion schedules its reviews | API |
+| `generate` | Collect your answers: five blind runs | browser + stand-in |
+| `rules` | Gating of `build`, skip refused, the rule labs, the sorts and questions, the `build-try` practice run (stand-in CLI, saved from the file), the reflection and rule labs kept across an app restart in the middle of the lesson | API + stand-in |
+| `restart` | Quit and restart, progress kept | browser |
+| `build` | Build step | browser + stand-in |
+| `trust` | Skip refused, gating of `fixtures`, no key in lesson or kit viewer | API |
+| `fixtures` | Fixtures step. On the Script track it covers the Northwind recovery path: the stand-in (mode file `no-fixtures`) writes nothing usable, the page explains the example's fixtures, the button waits and the route is refused while the CLI runs, the normal gate fails, then after Stop the example button writes exactly the two kit fixtures (byte for byte, no key anywhere, nothing in the project yet), a second press without `replace` is refused, and the normal gate passes. The promptfoo track keeps the ordinary stand-in fixtures session | browser + stand-in |
+| `fixtures-config` | Promptfoo track only: the exact typed line, neither fixture is a test yet, the stand-in CLI adds the two tests and nothing else, the gate names the missing tests then passes, no key anywhere, the CLI is stopped | API + stand-in |
+| `readback`, `predict`, `key` | Existing steps (on the promptfoo track the readback line names `promptfooconfig.yaml` and the key is still made in `key-work` only) | browser + stand-in |
+| `surprise` | Gating of `run`, no key before the run, the sorts and questions, the `fix-try` practice run (stand-in CLI); `fix` has no lesson in front of it | API + stand-in |
+| `run` | Existing step | browser |
+| `fix` | Existing step; opens right after `run` | browser + stand-in |
+| `baseline-why` | Last lesson, now gating the baseline step (locked before it, the only active item after it), learning records | API |
+| `baseline` | The baseline step (both tracks; the line and the checks file differ): the exact typed line with the saved model, the model name forced to one line, an empty model blocks Send (`no_model`), the stand-in writes `iteration-log.md` in the skill format from the real checker output (once with one count too low), the app's own run (one call on all five runs on the Script track; the real eval plus summary on the promptfoo track) equals an independent run of the reference checks, the gate names the criterion and both numbers, the log is never edited by the app, then a matching log passes; the page shows the same counts. Ends with the review queue (scheduling, 1/3/7 days, retire, postpone) once the course is finished | API + browser + stand-in |
+| `live` | Promptfoo track only, after `baseline`: the optional live-mode step. The course is finished and the step is offered outside `steps` and `course`; the page shows the warning and the unticked acknowledgement; Start and Send are refused (no process is launched) until the box is ticked and a CLI is chosen; only the listed CLIs can be chosen; the app has no way to run the live config; with `devin` chosen (the CLI whose helper turns on auto mode) the exact typed line is sent once, the process gets no flags and no prompt is answered by the app; the stand-in writes `agent-provider.js` (byte for byte the bundled one) and a plausible `promptfooconfig.live.yaml` (the helper as the only provider, the main config's checks copied unchanged); the main config, the log and the runs are unchanged; no live results file exists; the gate passes and the step is done without changing `steps`, `course` or `progress.done` | API + browser + stand-in |
+| `part1` | Part 1 end to end on the stand-in, run after `baseline` (it reads Part 1's state with `?part=part-1`, so Part 3 is not disturbed): the nine items in order with Part 1's words and group headings, a locked `cold` step naming `p1-mission`, the sample prompts refused until the `rescore` step, Start refused with no saved prompt, Save writing only the participant's words, the CLI run in `<home>\part1\cold` with only `prompt.md` (words, divider, rough notes), the exact typed line, no flags, every prompt answered by the participant, the answer saved from `output.txt` and never from the screen, the score counted from the participant's answers, every lesson solved, `rewrite` blocked until the frameworks lesson, then one stand-in run for each of the three label sets (the stand-in answers a prompt with label lines better than one without) with the last run checked, both scores and the compare (`went up by 2`), the samples now open, the own step, and the project folder holding exactly the six Part 1 files with no key, output or notes in `progress.json` | API + stand-in |
+| `part2` | Part 2 end to end, run after `part1` (state read with `?part=part-2`): no CLI is started at any point. The eight items in order with Part 2's words, a locked `draft` step naming `p2-criteria`, the reference step opening as an empty preview, every lesson solved, the worksheet saved and checked (two rows fail with named messages, three pass), the `thresholds` step changing only the threshold column with a note on a vague word, the test case file built from the worksheet (the confirm before replacing saved text, the participant's own words kept, no Northwind list in the supporting lists), the file checks, the reference shown only now with its four choices and the example's own list, the file edited again in `reference`, the finished screen, the project folder holding exactly `worksheet.json` and `test-cases.md`, Part 3's `test-cases.md` unchanged, and no worksheet, file or reference text in `progress.json` | API |
+| `migrate` | A `progress.json` written before lessons existed loads and keeps its completed steps, including one with no `baseline` entry, where `baseline` is the next step (second app on a temp home). On the promptfoo pass this also shows that old progress with no `track` is read as the Script track | API |
+| `quit` | Quit from the page | browser |
+
+The app exposes no clock. The review checks move the saved due times into the past while the app is stopped, then reopen it.
+
+`fake_cli.py` also writes `e2e-work\fake-cli-events.jsonl` (launches, arguments, typed lines, approvals). The harness reads it to prove the
+app added no flags, typed nothing but the activity's line, and answered no prompt. It also prints a decoy result on screen only.
+
+For the `baseline` stage the stand-in answers the run + log line by running the project's own `check.py` on `runs/run-1.txt` to `run-5.txt` and
+writing `iteration-log.md` in the exact format of the build skill's Mode 3 (the stand-in computes the counts, a real CLI would too). With
+`e2e-work\fake-cli-mode.txt` set to `wrong-count` it logs the first criterion that has a pass one pass too low, so the gate's failure message is
+exercised. On the promptfoo track the stand-in also builds the config (`standin-promptfooconfig.yaml`: `echo` provider, `javascript` checks, the same C1 to C6 rules as the reference checker), adds the two fixture tests on the `fixtures-config` line, explains it on the readback line, tightens the C3 assertion on the fix line, and writes the log from the independent reference checks (`pf-independent-check.py`, generated by the harness, never read by the app). The stand-in session budget is 27 (it was 18, 20, 22, 23, then 26; the course restructure removed the rules demo and two of the four lesson practice runs, leaving `build-try` and `fix-try`). The baseline stage uses 2 sessions, the promptfoo track's `fixtures-config` stage 1 and its `live` stage 1, and the `part1` stage 4 (the cold run and one rewrite run for each of the three label sets), which makes 27 on that pass. The real-CLI budget is unchanged (15 of 17 used); Part 1 needs two real sessions (the cold run and the rewrite run) and the user's approval before Phase 6.
+
+`classifier-check.js` is unchanged: `node e2e-work\harness\classifier-check.js`.

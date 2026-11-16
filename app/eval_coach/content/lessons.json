@@ -1,0 +1,753 @@
+{
+  "version": 1,
+  "mission": "Understand how to turn the test cases, criteria and thresholds from Part 2 into reusable parts, and how those parts fit into an evaluated AI process.",
+  "step_checks": [
+    {
+      "id": "sc-generate",
+      "step": "generate",
+      "prompt": "Your five answers are saved in your project. What made them fair to score?",
+      "options": [
+        {"id": "a", "text": "Each came from a new chat that never saw your tests", "correct": true, "feedback": "Right. Each run was blind and separate, so none could be written to fit your criteria and none could repeat an earlier answer. That keeps your rate for each criterion honest."},
+        {"id": "b", "text": "Each came from a retry that replaced a much weaker answer", "correct": false, "feedback": "A retry hides the variation you are trying to measure. Each run happens once, and a weak answer is part of the result."},
+        {"id": "c", "text": "Each came from one long chat that remembered all earlier answers", "correct": false, "feedback": "A shared chat carries earlier answers forward. Each run needs to stand alone, so each one used a new chat."},
+        {"id": "d", "text": "Each came from a chat that could read your test cases", "correct": false, "feedback": "That would let the answers be written to fit your criteria, and the score would look better than it is. The folder held only your prompt."}
+      ]
+    },
+    {
+      "id": "sc-build",
+      "step": "build",
+      "prompt": "Your build listed interpretation choices. Who made those decisions?",
+      "options": [
+        {"id": "a", "text": "The agent made them while turning your sentences into rules", "correct": true, "feedback": "Right. Your sentences left gaps, and the agent filled them. The list shows you where, so you can agree or change the sentence."},
+        {"id": "b", "text": "You made them when you first pressed the Send button", "correct": false, "feedback": "Pressing Send only started the build. The decisions were made by the agent, and the list is how you find out what it decided."},
+        {"id": "c", "text": "Nobody chose them because every rule has only one reading", "correct": false, "feedback": "Most thresholds can be read in more than one way. That is why the build lists the readings it picked."},
+        {"id": "d", "text": "Your test cases file listed them before the build began", "correct": false, "feedback": "Your file holds the sentences only. The agent listed the choices while it built the rules."}
+      ]
+    },
+    {
+      "id": "sc-fixtures",
+      "step": "fixtures",
+      "prompt": "You now have two fixtures. What is the polished but wrong one for?",
+      "options": [
+        {"id": "a", "text": "To show a rule can pass while missing the point", "correct": true, "feedback": "Right. It reads well and meets your thresholds as written, yet it breaks a requirement in substance. It tests whether your rules catch what matters."},
+        {"id": "b", "text": "To give the checker one easy answer to pass cleanly", "correct": false, "feedback": "It is built to fail something that matters. An easy pass would test nothing."},
+        {"id": "c", "text": "To replace the first saved answer from your five runs", "correct": false, "feedback": "Your five runs stay exactly as they were saved. The fixtures are separate material for testing the checker."},
+        {"id": "d", "text": "To measure how fast the checker runs on long text", "correct": false, "feedback": "Speed is not what fixtures test. They test whether the verdicts match what you asked for."}
+      ]
+    },
+    {
+      "id": "sc-readback",
+      "step": "readback",
+      "prompt": "A read back finds a mismatch between your thresholds and the checker. What happens to it?",
+      "options": [
+        {"id": "a", "text": "It is reported as a finding and not quietly fixed", "correct": true, "feedback": "Right. The chat reports the mismatch and leaves the checker alone, so you see the gap instead of having it hidden."},
+        {"id": "b", "text": "It is fixed straight away so the report stays clean", "correct": false, "feedback": "A quiet fix would hide the very thing the read back is for. Mismatches are reported, not repaired."},
+        {"id": "c", "text": "It is ignored because the checker has already run once", "correct": false, "feedback": "Running once only proves the checker runs. The read back looks for places where it differs from your sentences."},
+        {"id": "d", "text": "It is saved for later and never shown to you", "correct": false, "feedback": "Findings are shown to you. They are part of what you read before you predict."}
+      ]
+    },
+    {
+      "id": "sc-predict",
+      "step": "predict",
+      "prompt": "You committed to a prediction for every criterion. What does a prediction show you?",
+      "options": [
+        {"id": "a", "text": "Where your picture of the code differs from it", "correct": true, "feedback": "Right. Each wrong prediction is a place where your picture of the checker and the checker disagree, and that is where to look first."},
+        {"id": "b", "text": "Which fixture the checker is likely to read first", "correct": false, "feedback": "The checker reads whatever file it is given. A prediction is about the verdicts, not the order."},
+        {"id": "c", "text": "How many words each fixture should contain in total", "correct": false, "feedback": "Word counts are one kind of threshold. A prediction covers the verdict for every criterion on both fixtures."},
+        {"id": "d", "text": "Whether your CLI wrote the answer key too early", "correct": false, "feedback": "No answer key exists yet. It is written only after your predictions are locked."}
+      ]
+    },
+    {
+      "id": "sc-key",
+      "step": "key",
+      "prompt": "You locked your predictions before the answer key was written. Why?",
+      "options": [
+        {"id": "a", "text": "So the key could not influence what you predicted", "correct": true, "feedback": "Right. A prediction made after seeing the key would only copy it. Locking first shows where your picture of the checker differs from what it really does."},
+        {"id": "b", "text": "So the key could be much shorter and quicker", "correct": false, "feedback": "Length and speed are not the reason. The order protects your predictions."},
+        {"id": "c", "text": "So the checker could read your predictions before running", "correct": false, "feedback": "The checker never reads your predictions. It only reads the saved file it is given."},
+        {"id": "d", "text": "So fixtures could be rewritten after seeing the key", "correct": false, "feedback": "The fixtures were already written and stay as they are. Rewriting them after the key would hide a gap rather than reveal it."}
+      ]
+    },
+    {
+      "id": "sc-run",
+      "step": "run",
+      "prompt": "After your run you sort each surprise before changing anything. Why?",
+      "options": [
+        {"id": "a", "text": "The kind of surprise tells you which file to change", "correct": true, "feedback": "Right. A loose threshold means the sentence changes. A script that reads it differently means the agent fixes the code to match the sentence. A wrong prediction means neither changes."},
+        {"id": "b", "text": "The kind of surprise sets how many runs to repeat", "correct": false, "feedback": "The kind does not change how many runs you do. It tells you where the problem lives."},
+        {"id": "c", "text": "The kind of surprise tells you which score to log", "correct": false, "feedback": "Nothing is logged yet. Sorting comes first so that you fix the right thing before you ever record a score."},
+        {"id": "d", "text": "The kind of surprise removes the need to read reasons", "correct": false, "feedback": "The reason on each line is the best evidence you have. Read it before you decide the kind."}
+      ]
+    },
+    {
+      "id": "sc-fix",
+      "step": "fix",
+      "prompt": "When you change a threshold sentence in test-cases.md, what should your CLI update next?",
+      "options": [
+        {"id": "a", "text": "Only the rules whose threshold sentence changed", "correct": true, "feedback": "Right. The markdown is the spec, so the sentence changes first and only the matching rules follow it. Everything else stays as it was."},
+        {"id": "b", "text": "Every rule, rebuilt from a blank file", "correct": false, "feedback": "Rebuilding everything would change rules you did not touch, so you could no longer tell what your edit did."},
+        {"id": "c", "text": "Only the answer key, to match it", "correct": false, "feedback": "The answer key describes how the fixtures were built to fail. It does not drive the checker."},
+        {"id": "d", "text": "Nothing, because the old rules already fit", "correct": false, "feedback": "A changed sentence means the old rule no longer matches your spec. The rule for it needs to follow the new wording."}
+      ]
+    },
+    {
+      "id": "sc-baseline",
+      "step": "baseline",
+      "prompt": "Your baseline is logged as Iteration 0. What does it record?",
+      "options": [
+        {"id": "a", "text": "A pass rate for each criterion across five runs", "correct": true, "feedback": "Right. The model varies from run to run, so the baseline is a rate such as 4 of 5 for each criterion, not one score."},
+        {"id": "b", "text": "The single best score taken from your five runs", "correct": false, "feedback": "A best run hides the variation you are measuring. The baseline counts passes across all five runs."},
+        {"id": "c", "text": "The score from your first look at run one", "correct": false, "feedback": "The first look was before your thresholds were settled, so it is not your baseline."},
+        {"id": "d", "text": "The average length of your five saved answers overall", "correct": false, "feedback": "Length is only one threshold. The baseline records passes for every checked criterion."}
+      ]
+    }
+  ],
+  "placement": [],
+  "lessons": [
+    {
+      "id": "mission",
+      "title": "Your mission",
+      "win": "You can explain in one sentence how your Part 2 test cases become reusable parts, and where those parts sit in an evaluated AI process.",
+      "minutes": 3,
+      "skippable": false,
+      "body": "**The goal: understand how to turn the test cases, criteria and thresholds you wrote in Part 2 into reusable parts, and how those parts fit into an evaluated AI process.**\n\n**In plain words.** This series teaches you to judge the work AI gives you, and to trust it because you checked it, not because it looked right. It does not ask you for blind trust or blind distrust. In Part 2 you captured what a good answer looks like. Here those rules become a small program, a checker, that applies them the same way every time, plus a starting score to compare against later. You do not need to code, because your AI tool writes the program. Your job is to decide what good means and to check that the program means the same thing.\n\n**Why it matters.**\n\n- AI sounds sure of itself even when it is wrong, so \"it looks fine\" lets mistakes through.\n- \"Better\" is only an opinion until you measure it.\n- Answers change from one try to the next, so one answer proves little.\n\n**The method.** Ask clearly, know what you need, turn it into rules, score the result, improve, and keep a record. You use the same method on every task.\n\n**Where this course fits.** It is Part 3 of a six-part series, and each Part builds on the one before. The pin marks where you are now:\n\n```you-are-here\ndone | 1 | Structured prompting | I tell the AI clearly what I need, so it guesses less and gives steadier answers.\ndone | 2 | Defining evaluation criteria | I turn \"that looks good\" into clear pass or fail rules.\nhere | 3 | Running evals and baseline | I check five AI answers against my rules and record a starting score.\nnext | 4 | Iterating with evaluation-driven development | I change my prompt, check again with the same rules and see whether the score moved.\nnext | 5 | Load-bearing audit and packaging | I keep only the instructions that earn their place and package my work so someone else can use it.\nnext | 6 | Your own task | I use the method on a task from my own job.\n```\n\nSome lessons use a made-up client called Northwind as a practice example. Northwind is for practice only and is never a task you can submit.",
+      "activities": [],
+      "retrieval": [],
+      "sources": [
+        {"label": "The checker skill", "ref": "kit:skills/build-eval-script/SKILL.md"},
+        {"label": "Northwind test cases (learning example)", "ref": "kit:northwind/northwind-test-cases-reference.md"},
+        {"label": "Northwind prompt (learning example)", "ref": "kit:northwind/northwind-prompt-v0.md"}
+      ],
+      "primary_source": {"label": "Northwind test cases (learning example)", "ref": "kit:northwind/northwind-test-cases-reference.md", "why": "It shows what a Part 2 test case file looks like, which is the raw material your checker is built from."},
+      "related": {"lessons": ["several-runs", "baseline-why"], "glossary": ["Checker", "Baseline (Iteration 0)", "The loop"]}
+    },
+    {
+      "id": "hook",
+      "title": "One update, three grades",
+      "win": "You have three grades of the same update, from three separate runs, ready to compare side by side.",
+      "minutes": 6,
+      "skippable": false,
+      "body": "**In the method.** Turn it into rules. A fixed rule gives the same verdict every time, and an AI's opinion may not.\n\n**The idea.** Before you build a checker, try the alternative: ask an AI to do the grading. A score is only useful if whatever produces it gives the same answer when it is asked the same question again. This experiment shows whether it does.\n\n**The experiment.** You ask your own AI tool to grade one short status update against six requirements, three times. The update is part of the Northwind learning example. Each run is a brand new chat with no memory of the one before. When all three results are on screen, compare the score, the pass or fail, and the reasoning. A short check follows. It is for you, so answer it or move on.\n\n**How this course does it.** Press Start, then Send, for each run. If your CLI asks for approvals, answer them in the terminal. This is one way to run the experiment, and other approaches work too.",
+      "activities": [
+        {
+          "id": "hook-compare",
+          "type": "cli_compare",
+          "runs": 3,
+          "line": "Read update.txt and requirements.md. Score the update from 1 to 10 against the requirements, say pass or fail, and give one sentence of reasoning. Save only that to output.txt. Do nothing else.",
+          "files": [
+            {"name": "update.txt", "source": "kit:northwind/fixture-polished-but-wrong.txt"},
+            {"name": "requirements.md", "source": "kit:lessons/hook/requirements.md"}
+          ],
+          "question": {
+            "id": "hook-compare-q",
+            "prompt": "Compare your three results side by side. If the scores match, compare the reasons too. Which conclusion holds whatever your three results show?",
+            "options": [
+              {"id": "a", "text": "Three matching scores prove the grader is reliable now", "correct": false, "feedback": "Three agreeing runs are a small sample, and matching numbers can rest on different reasons. Look at the reasoning before you settle on this."},
+              {"id": "b", "text": "One grade from one run cannot promise the next", "correct": true, "feedback": "Right. Even when three grades agree, nothing guarantees that the fourth will, and the reasons behind them may differ. A checker built from your criteria gives the same verdict every time. That is what you build next."},
+              {"id": "c", "text": "Averaging the three scores gives you the true grade", "correct": false, "feedback": "An average is still built from opinions that can change on the next run. It does not give you a fixed rule you can inspect."},
+              {"id": "d", "text": "A higher score means the update is really better", "correct": false, "feedback": "All three runs graded the very same file, so the update did not change between them. A number alone cannot show what the grader paid attention to."}
+            ]
+          }
+        },
+        {
+          "id": "hook-explain",
+          "type": "choice",
+          "prompt": "A colleague who has never used AI tools asks why you built a checker instead of asking the AI to grade. Which reply is clearest?",
+          "options": [
+            {"id": "a", "text": "A checker follows written rules, so the same answer scores the same", "correct": true, "feedback": "Right. You are not claiming the checker is smarter. You are saying it is steady, so a change in the score means the answer changed."},
+            {"id": "b", "text": "An AI grader is slower, so a checker saves us some time", "correct": false, "feedback": "Speed is a side benefit. The real reason is that an AI grader can answer differently each time, and a colleague needs to hear that."},
+            {"id": "c", "text": "An AI grader is often wrong, so a checker is always right", "correct": false, "feedback": "A checker can be wrong too, if the rules are wrong. That is why you test it before you trust it."},
+            {"id": "d", "text": "A checker understands the meaning of every single answer better than people", "correct": false, "feedback": "A checker understands nothing. It applies the rules you wrote, which is exactly what makes it predictable."}
+          ]
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-hook-1",
+          "prompt": "In the opening exercise, why was each of the three grades given in a new chat?",
+          "options": [
+            {"id": "a", "text": "So the update file could change between runs", "correct": false, "feedback": "The file stayed exactly the same for all three runs. Keeping it the same is what makes a comparison possible."},
+            {"id": "b", "text": "So the app could pick the best grade", "correct": false, "feedback": "The app only showed the three results. It did not rank them or choose one."},
+            {"id": "c", "text": "So the grader could read your test cases", "correct": false, "feedback": "The grader saw only the update and the requirements. Your own test cases were not in that folder."},
+            {"id": "d", "text": "So no run could remember the earlier grades", "correct": true, "feedback": "Right. A new chat means each grade stands alone, so the comparison is fair."}
+          ]
+        },
+        {
+          "id": "r-hook-2",
+          "prompt": "What is the main difference between an AI grader and a checker built from your criteria?",
+          "options": [
+            {"id": "a", "text": "The checker applies the same rules every time", "correct": true, "feedback": "Right. An AI grader can give a different verdict each time. A checker built from your criteria does not."},
+            {"id": "b", "text": "The AI grader always gives a stricter grade", "correct": false, "feedback": "Strictness is not the difference that matters here. A grader that is sometimes strict and sometimes lenient is still a problem."},
+            {"id": "c", "text": "The checker judges meaning better than the AI", "correct": false, "feedback": "A checker does not judge meaning at all. That is why some thresholds can only be proxies, or cannot be checked by rule."},
+            {"id": "d", "text": "The AI grader can never explain its reasons", "correct": false, "feedback": "An AI grader will happily give reasons. Having reasons is different from giving the same answer twice."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "The requirements the grader was given", "ref": "kit:lessons/hook/requirements.md"},
+        {"label": "Northwind test cases (learning example)", "ref": "kit:northwind/northwind-test-cases-reference.md"},
+        {"label": "The checker skill", "ref": "kit:skills/build-eval-script/SKILL.md"}
+      ],
+      "primary_source": {"label": "The requirements the grader was given", "ref": "kit:lessons/hook/requirements.md", "why": "Read the requirements and rough notes that your three grades were judged against."},
+      "related": {"lessons": ["several-runs", "rules"], "glossary": ["Deterministic", "Checker", "CLI"]}
+    },
+    {
+      "id": "several-runs",
+      "title": "One answer proves little",
+      "win": "You can explain why one AI answer proves little, and what makes several answers a fair test.",
+      "minutes": 3,
+      "skippable": true,
+      "body": "**In the method.** Score the result. A score is honest only when it comes from several answers, not from one.\n\n**The idea.** AI answers change from one try to the next. Judging one answer is judging a single draw, like judging a person by one meeting. Several answers from the same prompt show how often each rule passes, such as 4 out of 5. That rate is what lets you say later whether a change helped.\n\nTwo things keep the score fair. The answers must be written without the writer seeing the rules that score them, because a writer who can see the rules bends to them and the score flatters the prompt. And each answer is kept as it came, with no second tries, so the weak ones stay in the result.\n\nAlso record which model produced the answers. A score belongs to one prompt on one model, so the record needs both.\n\n**How this course does it.** You collect five answers, each from a new chat that sees only your prompt, on a mid-tier model. Five is what this course uses, because it gives a steady rate without taking long. It is one way of working, and other approaches work too.\n\nA short check follows. It is for you, so answer it or move on.",
+      "activities": [
+        {
+          "id": "generate-spot",
+          "type": "choice",
+          "prompt": "A teammate keeps prompt.md and test-cases.md together in one folder and opens their CLI there. They run the prompt in five new chats, and all five answers look very good. What is the problem?",
+          "options": [
+            {"id": "a", "text": "Five runs are too few to be worth anything", "correct": false, "feedback": "Five runs give a rate such as 4 of 5 for each criterion. The problem is in the setup around these runs."},
+            {"id": "b", "text": "Each run needed the same chat for better consistency", "correct": false, "feedback": "Sharing a chat would carry earlier answers forward. Each run needs to stand alone, so new chats were the right call."},
+            {"id": "c", "text": "Strong answers mean the prompt needs no further testing", "correct": false, "feedback": "Good-looking answers are exactly what a spoiled setup would produce too. Look at what was sitting in that folder."},
+            {"id": "d", "text": "The model could read the test cases while answering", "correct": true, "feedback": "Right. If the model could open test-cases.md, it could write to the criteria. The answers look strong, but the score would be flattering and misleading."}
+          ]
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-generate-1",
+          "prompt": "What happens if a model can read your test cases while it writes an answer?",
+          "options": [
+            {"id": "a", "text": "It refuses to answer until the criteria are removed", "correct": false, "feedback": "Nothing stops it from answering. The harm is quieter than that."},
+            {"id": "b", "text": "It rewrites your test cases to match its answers", "correct": false, "feedback": "It does not need to touch your files for this to go wrong."},
+            {"id": "c", "text": "It quietly writes to them and scores look better", "correct": true, "feedback": "Right. The score then looks better than it really is, and you would have no way of knowing."},
+            {"id": "d", "text": "It produces the same answer on every single run", "correct": false, "feedback": "Models vary from run to run. Being able to read your files does not change that."}
+          ]
+        },
+        {
+          "id": "r-generate-2",
+          "prompt": "Why is the score built from five runs and not one?",
+          "options": [
+            {"id": "a", "text": "The checker varies, so several runs average it out", "correct": false, "feedback": "The checker gives the same verdict for the same file every time. Something else is the part that varies."},
+            {"id": "b", "text": "The checker needs five files before it will start", "correct": false, "feedback": "A checker runs happily on a single file. You saw that on your first look."},
+            {"id": "c", "text": "The model varies, so one answer cannot show that", "correct": true, "feedback": "Right. A rate across runs shows how often the prompt meets each criterion, which one answer cannot do."},
+            {"id": "d", "text": "Five answers let you keep only the best one", "correct": false, "feedback": "All five answers count. Keeping only your favorite would hide the variation you came to measure."}
+          ]
+        },
+        {
+          "id": "r-generate-3",
+          "prompt": "Why do you record the name of the model you used?",
+          "options": [
+            {"id": "a", "text": "The checker changes its rules for each model", "correct": false, "feedback": "The checker's rules come from your test cases. It does not know or care which model wrote the text."},
+            {"id": "b", "text": "The log records which model produced the score", "correct": true, "feedback": "Right. A score belongs to one prompt on one model, so the log keeps both."},
+            {"id": "c", "text": "The prompt only works on the model named", "correct": false, "feedback": "A prompt can be tried on any model. The name is recorded for a different reason."},
+            {"id": "d", "text": "The answer key depends on the model chosen", "correct": false, "feedback": "The answer key is written from your test cases and fixtures. The model behind your runs plays no part in it."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "The checker skill: Mode 3, run and log", "ref": "kit:skills/build-eval-script/SKILL.md"},
+        {"label": "Northwind prompt (learning example)", "ref": "kit:northwind/northwind-prompt-v0.md"}
+      ],
+      "primary_source": {"label": "The checker skill: Mode 3, run and log", "ref": "kit:skills/build-eval-script/SKILL.md", "why": "It shows the log entry your runs will end up in, including the line for the model name."},
+      "related": {"lessons": ["hook", "baseline-why"], "glossary": ["Run", "Blind folder", "Mid-tier model", "prompt-v0.md", "runs/run-1.txt to run-5.txt"]}
+    },
+    {
+      "id": "rules",
+      "title": "From \"looks good\" to a rule",
+      "win": "You can turn \"looks good\" into a pass or fail rule, spot where a sentence can be read two ways, and say what a rule cannot check.",
+      "minutes": 15,
+      "skippable": false,
+      "body": "**In the method.** Turn it into rules. \"Looks good\" is an opinion. A rule is a sentence a computer can check as pass or fail.\n\n**The idea.** A criterion is one thing a good answer must do. A threshold is the pass or fail sentence under it, such as \"under 150 words\" or \"both labels appear\". The same threshold can be written many ways, as a test case or as code. The criterion is the work, and how it is captured is a detail. A rule gives the same verdict every time it sees the same text, which is what makes a score steady.\n\n**A sentence can be read two ways.** Turning words into a rule means deciding things the sentence did not settle. Does \"refund\" count inside \"non-refundable\"? Does \"Dear\" match \"dear\"? Must a label start a line? These are interpretation choices. If one is not what you meant, change the sentence, not the code.\n\n**What a rule cannot check.** Some qualities, such as whether advice is accurate or a tone suits the reader, need a person's judgment. A rule must not pretend to cover them. Report them as NOT CHECKED so the gap stays visible, until you can write them as a number, a list of terms or a label. A keyword check is only a proxy: it can pass an answer that misses the point.\n\n**How this course does it.** Your AI tool builds the checker from your test cases by following a skill, a plain-text instruction file. Judgment criteria never go to an AI grader here. It is one way of working, and other approaches work too.\n\nPredict the verdicts in the labs, then try the practice runs. A short check follows. They are for you, so answer them or move on.",
+      "activities": [
+        {
+          "id": "rules-lab",
+          "type": "rule_lab",
+          "prompt": "Read the two rules and the three notes. For every note and rule pair, predict PASS or FAIL before you run it. A word is any text between spaces.",
+          "samples": [
+            {"id": "s-short", "label": "Short note, both labels", "text": "Blocker: waiting on a login. Need: access by Friday."},
+            {"id": "s-missing", "label": "Short note, one label", "text": "Blocker: waiting on a login. We need access soon."},
+            {"id": "s-twenty", "label": "A longer note", "text": "Blocker: waiting on a login for the test system since Tuesday morning. Need: access granted before the end of Friday."}
+          ],
+          "rules": [
+            {
+              "id": "r-length",
+              "label": "Word count under 20",
+              "explain": "Passes when the note has fewer than 20 words. A note with exactly 20 words fails. Count every piece of text between spaces as one word.",
+              "kind": "word_count_under",
+              "params": {"limit": 20}
+            },
+            {
+              "id": "r-labels",
+              "label": "Both Blocker: and Need: appear",
+              "explain": "Passes only when the note contains both labels, Blocker: and Need:, each with its colon and the same capital letters. They can appear anywhere in the note. If one is missing, it fails.",
+              "kind": "all_labels",
+              "params": {"labels": ["Blocker:", "Need:"]}
+            }
+          ],
+          "cases": [
+            {"sample": "s-short", "rule": "r-length", "expected": "pass"},
+            {"sample": "s-short", "rule": "r-labels", "expected": "pass"},
+            {"sample": "s-missing", "rule": "r-length", "expected": "pass"},
+            {"sample": "s-missing", "rule": "r-labels", "expected": "fail"},
+            {"sample": "s-twenty", "rule": "r-length", "expected": "fail"},
+            {"sample": "s-twenty", "rule": "r-labels", "expected": "pass"}
+          ]
+        },
+        {
+          "id": "build-sort",
+          "type": "sort",
+          "prompt": "Could a rule decide each of these thresholds, or would the checker report NOT CHECKED?",
+          "buckets": [
+            {"id": "rule", "label": "A rule can check this"},
+            {"id": "nc", "label": "NOT CHECKED: it needs judgment"}
+          ],
+          "items": [
+            {"id": "t1", "text": "Passes if the word count is under 120", "bucket": "rule", "feedback": "Counting words and comparing with a limit is the simplest kind of rule."},
+            {"id": "t2", "text": "Passes if the summary is clear and easy to read", "bucket": "nc", "feedback": "Clear is a judgment word. Nothing here says what a rule should look for."},
+            {"id": "t3", "text": "Passes if none of guarantee, promise or definitely appear", "bucket": "rule", "feedback": "Banned words are a list, and a list can be checked term by term."},
+            {"id": "t4", "text": "Passes if the tone is professional", "bucket": "nc", "feedback": "Professional is a judgment word. A rule would need a list of terms you chose."},
+            {"id": "t5", "text": "Passes if every number in the output also appears in the test input", "bucket": "rule", "feedback": "This sounds like it needs understanding, but it is a comparison of numbers, which a rule can do."},
+            {"id": "t6", "text": "Passes if the advice is accurate", "bucket": "nc", "feedback": "Accurate needs the text to be understood. A rule cannot tell whether a claim is true."},
+            {"id": "t7", "text": "Passes if the output starts with the exact text Hello team,", "bucket": "rule", "feedback": "Exact wording at the start of the text can be compared directly."},
+            {"id": "t8", "text": "Passes if at least 2 of budget, timeline and owner appear", "bucket": "rule", "feedback": "At least k of a list is a counting rule, even though it reads like a judgment."}
+          ]
+        },
+        {
+          "id": "build-explain",
+          "type": "choice",
+          "prompt": "Your manager asks what NOT CHECKED means in your report. Which answer is the clearest and most honest?",
+          "options": [
+            {"id": "a", "text": "That rule needs judgment, so the checker never scored it", "correct": true, "feedback": "Right. It says what happened without hiding it. The rule was not measured, so it is neither a pass nor a fail."},
+            {"id": "b", "text": "That rule failed badly, so the answer is simply wrong", "correct": false, "feedback": "A failure is a different verdict. NOT CHECKED means nothing was measured at all."},
+            {"id": "c", "text": "That rule passed quietly, so you can safely ignore it", "correct": false, "feedback": "Ignoring it would hide a gap. A criterion nobody measured is exactly what a reader needs to see."},
+            {"id": "d", "text": "That rule broke, so the checker needs a repair now", "correct": false, "feedback": "Nothing is broken. The threshold depends on judgment, and a rule cannot decide that."}
+          ]
+        },
+        {
+          "id": "build-try",
+          "type": "cli_practice",
+          "line": "Read skills/build-eval-script/SKILL.md. Do not write any code. For each criterion in test-cases.md, say whether a rule can check its threshold or it would be reported as NOT CHECKED, with one sentence of reasoning. Save only that to output.txt. Do nothing else.",
+          "folder_label": "A practice folder with three test cases and the checker skill",
+          "files": [
+            {"name": "test-cases.md", "source": "kit:lessons/build/test-cases.md"},
+            {"name": "skills/build-eval-script/SKILL.md", "source": "kit:skills/build-eval-script/SKILL.md"}
+          ],
+          "question": {
+            "id": "build-try-q",
+            "prompt": "Look at what your CLI saved. Which practice criterion could a rule not decide?",
+            "options": [
+              {"id": "a", "text": "C3: Tone, because \"professional and confident\" is only a judgment", "correct": true, "feedback": "Right. No count or list can say whether something sounds professional, so the checker would report NOT CHECKED and suggest a rewrite."},
+              {"id": "b", "text": "C1: Length, because counting the words is far too hard", "correct": false, "feedback": "Counting words is exactly what a rule does well, and it gives the same answer every time."},
+              {"id": "c", "text": "C2: Blocker and ask, because labels are hard to find", "correct": false, "feedback": "Looking for two labels is a plain text search, so a rule can decide it."},
+              {"id": "d", "text": "None of them. A rule can decide every single one", "correct": false, "feedback": "One threshold depends on a judgment. Read the three thresholds again."}
+            ]
+          }
+        },
+        {
+          "id": "choices-lab",
+          "type": "rule_lab",
+          "prompt": "Read the two rules and the six notes. These rules follow the skill's defaults, explained under each rule. For every note and rule pair, predict PASS or FAIL.",
+          "samples": [
+            {"id": "s-proud", "label": "A plain claim", "text": "We are proud of this release."},
+            {"id": "s-proudly", "label": "A longer word", "text": "The team proudly shipped the release on Friday."},
+            {"id": "s-caps", "label": "Capital letters", "text": "PROUD moment for the whole team."},
+            {"id": "s-plain", "label": "Neutral wording", "text": "The release shipped on Friday with two known issues."},
+            {"id": "s-risk-mid", "label": "A label mid-sentence", "text": "Two items are open. Main Risk: the test system is still offline."},
+            {"id": "s-risk-low", "label": "A lower-case label", "text": "Two items are open. risk: the test system is still offline."}
+          ],
+          "rules": [
+            {
+              "id": "no-proud",
+              "label": "Contains none of: proud",
+              "explain": "Passes only when the word proud does not appear anywhere. It ignores capital letters, and it also finds proud inside a longer word, such as proudly. If it finds the word even once, the note fails.",
+              "kind": "none_present",
+              "params": {"terms": ["proud"]}
+            },
+            {
+              "id": "risk-label",
+              "label": "The label Risk: appears",
+              "explain": "Passes when the exact label Risk: appears anywhere in the note, with a capital R and the colon. A different spelling, such as risk: in lower case, does not count.",
+              "kind": "all_labels",
+              "params": {"labels": ["Risk:"]}
+            }
+          ],
+          "cases": [
+            {"sample": "s-proud", "rule": "no-proud", "expected": "fail"},
+            {"sample": "s-proudly", "rule": "no-proud", "expected": "fail"},
+            {"sample": "s-caps", "rule": "no-proud", "expected": "fail"},
+            {"sample": "s-plain", "rule": "no-proud", "expected": "pass"},
+            {"sample": "s-risk-mid", "rule": "risk-label", "expected": "pass"},
+            {"sample": "s-risk-low", "rule": "risk-label", "expected": "fail"}
+          ]
+        },
+        {
+          "id": "choices-find",
+          "type": "choice",
+          "prompt": "A threshold says: passes if the word refund appears. A reply saying \"this order is non-refundable\" passes. Which interpretation choice decided that?",
+          "options": [
+            {"id": "a", "text": "Whether upper case letters count the same as lower", "correct": false, "feedback": "Case is a real interpretation choice, but every letter in this reply is lower case already. Something else let it through."},
+            {"id": "b", "text": "Whether the sentence around the word is really accurate", "correct": false, "feedback": "A rule cannot judge whether a sentence is accurate. It only looks for text."},
+            {"id": "c", "text": "Whether the word appears inside a label or heading", "correct": false, "feedback": "There is no label or heading in this reply. Look at the word itself."},
+            {"id": "d", "text": "Whether a match can sit inside a longer word", "correct": true, "feedback": "Right. refund sits inside non-refundable. If that is not what you meant, the sentence should say whole word."}
+          ]
+        },
+        {
+          "id": "choices-explain-tech",
+          "type": "choice",
+          "prompt": "A developer reviewing your checker asks why refund matched inside non-refundable. Which reply gives the precise reason and the fix?",
+          "options": [
+            {"id": "a", "text": "Matching is by substring by default, so say whole word", "correct": true, "feedback": "Right. It names the default and the exact wording that changes it. To a non-technical colleague you would say the same thing more simply: it looks for the letters, not for whole words."},
+            {"id": "b", "text": "Matching ignores punctuation by default, so say that hyphen counts", "correct": false, "feedback": "Punctuation is not the cause. The word sat inside a longer word, and a hyphen does not change that."},
+            {"id": "c", "text": "Matching is case sensitive by default, so say ignore case", "correct": false, "feedback": "The default already ignores case, and every letter here is lower case. Case played no part."},
+            {"id": "d", "text": "Matching needs an exact label by default, so say anywhere", "correct": false, "feedback": "That rule is about labels that end in a colon. This was a plain word, not a label."}
+          ]
+        },
+        {"id": "choices-own", "type": "reflection", "prompt": "Open your own test-cases.md and pick one threshold. Write the sentence out, then describe two different ways a rule could read it. Which reading did you actually mean?", "min_words": 25}
+      ],
+      "retrieval": [
+        {
+          "id": "r-rules-1",
+          "prompt": "A threshold says under 150 words. An answer has exactly 150 words. What does the checker say?",
+          "options": [
+            {"id": "a", "text": "PASS, because 150 words is within the limit", "correct": false, "feedback": "Look at what the word under means. A limit written with under treats its own number differently from at most."},
+            {"id": "b", "text": "NOT CHECKED, because the count is too close", "correct": false, "feedback": "Counting is exactly what a rule can do, however close the number is."},
+            {"id": "c", "text": "FAIL, because under does not include 150 itself", "correct": true, "feedback": "Right. Under and over are strict, unless the threshold says at most or at least."},
+            {"id": "d", "text": "FAIL, because the checker rounds every count up", "correct": false, "feedback": "The checker does not round. It compares the exact count with the limit."}
+          ]
+        },
+        {
+          "id": "r-rules-2",
+          "prompt": "You run the same checker on the same file twice. What should happen?",
+          "options": [
+            {"id": "a", "text": "Both runs give the same verdict for everything", "correct": true, "feedback": "Right. Same input, same verdict, every time. That is what deterministic means."},
+            {"id": "b", "text": "The second run catches what the first missed", "correct": false, "feedback": "A checker has no memory and learns nothing between runs."},
+            {"id": "c", "text": "The verdicts can differ because the AI varies", "correct": false, "feedback": "The AI that writes the answers varies, but no AI is involved when the checker runs."},
+            {"id": "d", "text": "The checker asks an AI to confirm it", "correct": false, "feedback": "The checker never calls an AI model. It only applies rules."}
+          ]
+        },
+        {
+          "id": "r-build-2",
+          "prompt": "A criterion comes back as NOT CHECKED. What does that mean?",
+          "options": [
+            {"id": "a", "text": "It failed, so the prompt needs to be changed", "correct": false, "feedback": "NOT CHECKED is a different thing from FAIL. Nothing has been measured yet, so the prompt is not implicated."},
+            {"id": "b", "text": "It crashed, so the agent must rebuild the checker", "correct": false, "feedback": "Nothing is broken. The checker is reporting exactly what it was built to report."},
+            {"id": "c", "text": "It passed, but the checker could not confirm that", "correct": false, "feedback": "It is not a pass of any kind. It would be a mistake to count it as one."},
+            {"id": "d", "text": "It is not covered until you rewrite the threshold", "correct": true, "feedback": "Right. The threshold needs judgment, so rewrite it as a number, a list of terms or a label."}
+          ]
+        },
+        {
+          "id": "r-choices-1",
+          "prompt": "You disagree with an interpretation choice the agent listed. What should you do?",
+          "options": [
+            {"id": "a", "text": "Change the sentence in your test cases file", "correct": true, "feedback": "Right. The markdown is the spec, so the agent follows the new sentence."},
+            {"id": "b", "text": "Edit the matching line inside check.py by hand", "correct": false, "feedback": "Editing the code leaves your spec out of step with what the checker does."},
+            {"id": "c", "text": "Ignore it, because defaults are always the safest", "correct": false, "feedback": "A default is only a guess about what you meant. It is your job to say whether the guess was right."},
+            {"id": "d", "text": "Ask the agent to quietly choose another option", "correct": false, "feedback": "Quietly is the problem. Every decision needs to stay visible to you."}
+          ]
+        },
+        {
+          "id": "r-choices-2",
+          "prompt": "What is an interpretation choice?",
+          "options": [
+            {"id": "a", "text": "A threshold the agent could not decide by rule", "correct": false, "feedback": "That describes a different entry in the build report. An interpretation choice is about something else."},
+            {"id": "b", "text": "A decision the agent made turning words into rules", "correct": true, "feedback": "Right. They are decisions made on your behalf, and they are listed so that you can review them."},
+            {"id": "c", "text": "A setting you choose to make the checker stricter", "correct": false, "feedback": "There are no strictness settings. Whatever the checker does comes from your sentences and the agent's reading of them."},
+            {"id": "d", "text": "A model the agent selects for your five runs", "correct": false, "feedback": "The agent does not pick the model for your runs, and this concerns the rules, not the runs."}
+          ]
+        },
+        {
+          "id": "r-choices-3",
+          "prompt": "Under the skill's defaults, does a term from a list match inside a longer word?",
+          "options": [
+            {"id": "a", "text": "No, terms must always match as whole words", "correct": false, "feedback": "Whole-word matching is only used when the threshold asks for it."},
+            {"id": "b", "text": "Yes, but only when the term is capitalized", "correct": false, "feedback": "List terms are matched in any case, so capitals make no difference."},
+            {"id": "c", "text": "No, unless the agent is told to guess", "correct": false, "feedback": "The agent is told not to guess. Defaults are written into the skill and listed for you."},
+            {"id": "d", "text": "Yes, unless the threshold says whole word only", "correct": true, "feedback": "Right. A list term matches anywhere in the text, inside longer words included, in any case."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "The checker skill: Threshold patterns, NOT CHECKED and Defaults", "ref": "kit:skills/build-eval-script/SKILL.md"},
+        {"label": "The promptfoo skill: Threshold patterns", "ref": "kit:skills/build-promptfoo-config/SKILL.md"}
+      ],
+      "primary_source": {"label": "The checker skill: Threshold patterns", "ref": "kit:skills/build-eval-script/SKILL.md", "why": "The table lists every kind of threshold that can become a rule, so you can hold the agent to it."},
+      "related": {"lessons": ["hook", "trust", "surprise"], "glossary": ["Checker", "Threshold", "Criterion", "Deterministic", "NOT CHECKED", "Interpretation choice", "Agent skill", "First look", "promptfoo", "Markdown"]}
+    },
+    {
+      "id": "trust",
+      "title": "Test the checker before you trust it",
+      "win": "You can explain why a checker needs its own test, what polished but wrong means, and why you predict before you run.",
+      "minutes": 4,
+      "skippable": true,
+      "body": "**In the method.** Score the result, but first test the thing that scores. A checker that was never tested may only look right.\n\n**The idea.** A first run proves the checker runs, not that it is right. It needs its own test, with outputs whose right verdict you already know. Make two: one clearly bad, which must fail, and one polished but wrong, which reads well and meets your rules as written but breaks a requirement in substance. If the polished one passes everything, one of your checks is only for show.\n\nHave the test outputs written by someone who has not seen the checker, so they test what you asked for and not what the code happens to do.\n\nThen predict before you run. For each rule on each test output, say pass, fail or not checked. Commit before you see any result, because a prediction shows where your picture of the checker differs from the checker. A guess made after the result teaches nothing.\n\n**How this course does it.** Four steps carry this. A new chat writes the two test outputs, another reads your checker back to you, you lock your predictions, and only then is the answer key written, so nothing can shape your guesses. Other approaches work too.\n\nA short check follows. It is for you, so answer it or move on.",
+      "activities": [
+        {
+          "id": "verify-polished",
+          "type": "choice",
+          "prompt": "Made-up task: write up a recipe from someone's notes, which say the oven is 180 degrees. Requirement: give the correct oven temperature. Threshold: passes if a number followed by degrees appears. Which output is polished but wrong?",
+          "options": [
+            {"id": "a", "text": "A short recipe that says to bake until golden brown", "correct": false, "feedback": "This has no number followed by degrees, so the threshold would catch it. A polished-but-wrong output gets past the rule."},
+            {"id": "b", "text": "A neat, well-written recipe stating 400 degrees for the oven", "correct": true, "feedback": "Right. It reads well and satisfies the threshold, and it breaks the requirement. Passing the rule proved nothing about the substance."},
+            {"id": "c", "text": "A messy, rambling recipe with no oven temperature at all", "correct": false, "feedback": "That is a clearly bad output. It fails the rule and it fails the reader."},
+            {"id": "d", "text": "A neat, well-written recipe stating 180 degrees for the oven", "correct": false, "feedback": "This one is simply correct, so there is nothing wrong with it to catch."}
+          ]
+        },
+        {
+          "id": "verify-unsure",
+          "type": "choice",
+          "prompt": "You are filling in your predictions and you are not sure about one cell. What is the best move?",
+          "options": [
+            {"id": "a", "text": "Run the checker first and copy what it says", "correct": false, "feedback": "Then you would be measuring the checker against itself. The value of predicting is lost the moment you have seen the result."},
+            {"id": "b", "text": "Ask your CLI which verdict is the correct one", "correct": false, "feedback": "That replaces your own picture of the code with the agent's. Predicting is meant to expose the difference between the two."},
+            {"id": "c", "text": "Leave the cell blank until you can be sure", "correct": false, "feedback": "A blank cell cannot be compared with anything, and the grid will not lock with one."},
+            {"id": "d", "text": "Commit to your best guess and lock it in", "correct": true, "feedback": "Right. A wrong guess is useful. It shows where your idea of the code differs from the code."}
+          ]
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-verify-1",
+          "prompt": "What makes a fixture polished but wrong?",
+          "options": [
+            {"id": "a", "text": "It reads badly and breaks most of the requirements", "correct": false, "feedback": "That describes the other fixture, the clearly bad one."},
+            {"id": "b", "text": "It reads well but breaks a requirement in substance", "correct": true, "feedback": "Right. It looks fine and may pass the rules as written, and it is still wrong."},
+            {"id": "c", "text": "It reads well and meets every one of them", "correct": false, "feedback": "An output with nothing wrong with it would not be a useful test."},
+            {"id": "d", "text": "It is one of your five real saved runs", "correct": false, "feedback": "Fixtures are made up on purpose. Your five real runs are a different thing."}
+          ]
+        },
+        {
+          "id": "r-trust-2",
+          "prompt": "Why do you write your predictions before you run the checker?",
+          "options": [
+            {"id": "a", "text": "It shows where your picture differs from the checker", "correct": true, "feedback": "Right. A prediction made before the result shows where your idea of the checker differs from the checker itself."},
+            {"id": "b", "text": "It lets the checker use them to score itself", "correct": false, "feedback": "The checker never reads your predictions. They are for you, so you can see where your idea of it was off."},
+            {"id": "c", "text": "It gives the checker more time to finish running", "correct": false, "feedback": "The checker runs in seconds. The order matters because a guess made after the result cannot show anything."},
+            {"id": "d", "text": "It stops you from reading the rules again afterwards", "correct": false, "feedback": "You can read your rules whenever you like. The point is to commit to a guess before you see the result."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "The fixtures skill", "ref": "kit:skills/make-eval-fixtures/SKILL.md"},
+        {"label": "The checker skill: Mode 2, explain", "ref": "kit:skills/build-eval-script/SKILL.md"}
+      ],
+      "primary_source": {"label": "The fixtures skill: Input", "ref": "kit:skills/make-eval-fixtures/SKILL.md", "why": "Read the Input section to see that the fixtures are written only from your test cases and your prompt, without ever opening the checker."},
+      "related": {"lessons": ["rules", "surprise"], "glossary": ["Fixture", "Polished but wrong", "Answer key", "fixtures/"]}
+    },
+    {
+      "id": "surprise",
+      "title": "Reading a surprise",
+      "win": "You can sort a surprise into one of three kinds and say why the fix goes in the written rules, not in the checker.",
+      "minutes": 7,
+      "skippable": false,
+      "body": "**In the method.** Improve, starting with understanding why a result surprised you.\n\n**The idea.** A surprise is any place where your prediction and the checker disagree. Every surprise is one of three kinds:\n\n- **The rule is vague or too loose.** Your sentence allowed more than you meant.\n- **The checker reads the rule differently.** Your sentence was fine, and the code does something else.\n- **You predicted wrong.** The sentence and the checker agree, and your guess was off.\n\nRead the reason on the result before you decide. Which kind it is tells you what to fix.\n\n**Fix the spec, never the checker.** The written rules are the spec, and the checker is one translation of them. If you change only the code, the two drift apart and you can no longer say what the checker means. Change the sentence and let the checker follow. Never edit the checker to make a failing answer pass, because a failing result is the information. If the checker crashes and gives no verdicts, fix the crash and change no rule.\n\n**Fixes narrow the gap. They do not close it.** A tightened keyword check is still a proxy, and an answer can include the word and miss the point.\n\n**How this course does it.** Your checker prints PASS, FAIL or NOT CHECKED for each rule and ends with an exit code. A code of 1 is normal while any rule fails. Other approaches work too.\n\nSort a few surprises, then rewrite a vague rule yourself. A short check follows. It is for you, so answer it or move on.",
+      "activities": [
+        {
+          "id": "compare-sort",
+          "type": "sort",
+          "prompt": "Each surprise comes from a made-up task: writing a short customer reply. Sort each one by its kind. Read the reason carefully.",
+          "buckets": [
+            {"id": "loose", "label": "The threshold is vague or too loose"},
+            {"id": "script", "label": "The script reads it differently"},
+            {"id": "wrong", "label": "I predicted wrong"}
+          ],
+          "items": [
+            {"id": "s1", "text": "Threshold: under 80 words. You predicted PASS. The checker says FAIL, 83 words. You count again and it really is 83.", "bucket": "wrong", "feedback": "The sentence and the code agree, and the count is right. The only thing that was off is the guess."},
+            {"id": "s2", "text": "Threshold: passes if the word refund appears. A reply saying we cannot offer a refund passes. You predicted FAIL.", "bucket": "loose", "feedback": "The checker did exactly what the sentence says. The sentence allowed more than was meant."},
+            {"id": "s3", "text": "Threshold: at most 3 list items. A reply with exactly 3 list items fails, and the reason says 3 items, limit under 3.", "bucket": "script", "feedback": "At most includes 3, and the reason shows the code treated it as under 3. The code does not match the sentence."},
+            {"id": "s4", "text": "Threshold: under 120 words. You predicted NOT CHECKED because you thought length needs judgment. The checker says PASS, 96 words.", "bucket": "wrong", "feedback": "Counting words needs no judgment, so the code was right to give a verdict."},
+            {"id": "s5", "text": "Threshold: contains all of price and date. The reason says found: price. It passed, and the word date is nowhere in the reply.", "bucket": "script", "feedback": "The sentence says all of the list. The code passed with one term, so it is not doing what the sentence says."},
+            {"id": "s6", "text": "Threshold: contains at least 1 of thanks or appreciate. A rude reply saying no thanks passes. You predicted FAIL.", "bucket": "loose", "feedback": "The code did what the sentence says. The sentence let a passing mention count."}
+          ]
+        },
+        {
+          "id": "fix-scenario",
+          "type": "choice",
+          "prompt": "Your bad fixture passes the length criterion. The threshold in your markdown says under 1500 words, but you meant 150. Your CLI offers to change 1500 to 150 inside check.py. What do you do?",
+          "options": [
+            {"id": "a", "text": "Accept the edit, since the checker result would then be correct", "correct": false, "feedback": "The verdict would look right for now, but the sentence in your spec would still say something else. Think about what the agent would read next time."},
+            {"id": "b", "text": "Delete the length criterion so that the surprise goes away completely", "correct": false, "feedback": "Removing a check hides the problem, and you would lose a criterion you still care about."},
+            {"id": "c", "text": "Change the threshold in test-cases.md, then let the agent update check.py", "correct": true, "feedback": "Right. The sentence was wrong, so the sentence changes. The agent then updates the code to match it."},
+            {"id": "d", "text": "Leave both files alone, because a passing result is always good", "correct": false, "feedback": "A bad fixture that passes is the warning you were looking for. Passing is not good in itself."}
+          ]
+        },
+        {
+          "id": "fix-sort",
+          "type": "sort",
+          "prompt": "Decide where each fix belongs.",
+          "buckets": [
+            {"id": "spec", "label": "Change test-cases.md, then update the checker"},
+            {"id": "crash", "label": "Ask your CLI to fix the crash, thresholds untouched"},
+            {"id": "keep", "label": "Keep it: the result is the information"}
+          ],
+          "items": [
+            {"id": "loose", "text": "The bad fixture passes a criterion it should fail, because the sentence was too loose.", "bucket": "spec", "feedback": "A loose sentence is a spec problem, so the sentence is what changes."},
+            {"id": "polished", "text": "The polished fixture passes everything, and you can name the requirement it breaks.", "bucket": "spec", "feedback": "You found a check that was window dressing. Tighten the sentence that should have caught it."},
+            {"id": "whole", "text": "Read back shows the checker matched part of a word, and you meant a whole word.", "bucket": "spec", "feedback": "The sentence left that open. Saying whole word in the spec settles it for this version of the code and any later one."},
+            {"id": "error", "text": "check.py stops with an error message and prints no verdicts.", "bucket": "crash", "feedback": "Nothing was measured, so the thresholds are not the issue. The script needs repairing, with every threshold left alone."},
+            {"id": "real", "text": "One of your real runs fails a criterion, and when you read it you agree it should fail.", "bucket": "keep", "feedback": "The checker did its job. That failure is exactly what a baseline is meant to show."},
+            {"id": "nc", "text": "A criterion is still NOT CHECKED after your 3 minutes on the rewrite.", "bucket": "keep", "feedback": "It stays visible as not covered, and you do not loosen a threshold just to get a verdict."}
+          ]
+        },
+        {
+          "id": "fix-try",
+          "type": "cli_practice",
+          "line": "Read test-cases.md. Rewrite the Threshold line of C2 so that a rule can check it, and change nothing else. Save only the rewritten C2 block to output.txt. Do nothing else.",
+          "folder_label": "A practice folder with one test cases file",
+          "files": [
+            {"name": "test-cases.md", "source": "kit:lessons/fix/test-cases.md"}
+          ],
+          "question": {
+            "id": "fix-try-q",
+            "prompt": "Suppose you copied that new sentence into your own test-cases.md. What should happen to the checker next?",
+            "options": [
+              {"id": "a", "text": "Your CLI updates only the function whose threshold changed", "correct": true, "feedback": "Right. The sentence is the spec, and the script follows it. Only the function for the changed threshold should be touched."},
+              {"id": "b", "text": "You open check.py and then edit it by hand", "correct": false, "feedback": "Editing the code yourself lets the spec and the script drift apart. Change the sentence and let the agent follow it."},
+              {"id": "c", "text": "Nothing. The checker reads the markdown itself each run", "correct": false, "feedback": "The checker is a script. It does not read your markdown when it runs, so it has to be updated."},
+              {"id": "d", "text": "Delete check.py and build it all again from scratch", "correct": false, "feedback": "Rebuilding everything throws away functions that were already right. Only the changed threshold needs a new function."}
+            ]
+          }
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-compare-2",
+          "prompt": "What are the three kinds of surprise?",
+          "options": [
+            {"id": "a", "text": "Vague threshold, script reads it differently, or I predicted wrong", "correct": true, "feedback": "Right. Each one points to a different thing to do next."},
+            {"id": "b", "text": "Bad model, bad prompt, or a bug in the app", "correct": false, "feedback": "A surprise is about your prediction and the checker disagreeing. The model and the prompt are not part of that comparison."},
+            {"id": "c", "text": "Answer too long, too short, or on the wrong topic", "correct": false, "feedback": "Those are reasons a single answer might fail a criterion. A surprise is something else."},
+            {"id": "d", "text": "A slow model, a busy service, or a network error", "correct": false, "feedback": "Those are operating problems with your CLI, and they have nothing to do with comparing predictions."}
+          ]
+        },
+        {
+          "id": "r-compare-3",
+          "prompt": "Why does it matter which kind of surprise you are looking at?",
+          "options": [
+            {"id": "a", "text": "It proves the prompt needs to be rewritten now", "correct": false, "feedback": "Nothing here is about the prompt yet. You are still testing the checker."},
+            {"id": "b", "text": "It raises your overall score for that one criterion", "correct": false, "feedback": "Classifying a surprise changes nothing in your score."},
+            {"id": "c", "text": "It tells you which thing to go and fix", "correct": true, "feedback": "Right. A vague sentence, a wrong script and a wrong guess all need different responses."},
+            {"id": "d", "text": "It tells the checker to ignore that surprise later", "correct": false, "feedback": "The checker has no memory of your surprises and does not change until the rules do."}
+          ]
+        },
+        {
+          "id": "r-fix-1",
+          "prompt": "A result is wrong because of how a threshold was written. Which file should change first?",
+          "options": [
+            {"id": "a", "text": "The prompt file, because the AI wrote it", "correct": false, "feedback": "A threshold problem has nothing to do with the prompt."},
+            {"id": "b", "text": "The check.py file, because it makes the verdict", "correct": false, "feedback": "The code only follows the sentence. Changing the code alone leaves the sentence saying something else."},
+            {"id": "c", "text": "The fixture file, because it caused the surprise", "correct": false, "feedback": "A fixture is the test, not the thing being tested. Changing it would hide what it found."},
+            {"id": "d", "text": "The test-cases.md file, because it is the spec", "correct": true, "feedback": "Right. Change the sentence, and the agent updates the checker to match."}
+          ]
+        },
+        {
+          "id": "r-fix-2",
+          "prompt": "Why does tightening a keyword check never fully close the gap?",
+          "options": [
+            {"id": "a", "text": "It is still a proxy for what you meant", "correct": true, "feedback": "Right. Deterministic checks narrow the gap between a rule and what you meant. They do not close it."},
+            {"id": "b", "text": "The checker starts to vary after too many changes", "correct": false, "feedback": "A checker gives the same verdict every time, however many changes it has been through."},
+            {"id": "c", "text": "Keyword checks can only search the output's first line", "correct": false, "feedback": "A keyword check searches the whole output, unless a threshold says otherwise."},
+            {"id": "d", "text": "The agent is not allowed to change it twice", "correct": false, "feedback": "A threshold can be changed as often as it needs to be."}
+          ]
+        },
+        {
+          "id": "r-fix-3",
+          "prompt": "When is it right to ask your CLI to change check.py with no change to any threshold?",
+          "options": [
+            {"id": "a", "text": "When a verdict looks too harsh to feel fair", "correct": false, "feedback": "A harsh verdict is information. If the rule is wrong, it is the sentence that changes."},
+            {"id": "b", "text": "When the polished fixture passes too many of them", "correct": false, "feedback": "That points at a threshold, so editing the code alone would not address it."},
+            {"id": "c", "text": "When check.py crashes and prints no verdicts at all", "correct": true, "feedback": "Right. A crash is a bug in the script, so nothing about your thresholds needs to change."},
+            {"id": "d", "text": "When you would like a higher overall pass rate", "correct": false, "feedback": "Editing the checker to raise a score hides the very thing you are measuring."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "The checker skill: Mode 1 and Mode 3", "ref": "kit:skills/build-eval-script/SKILL.md"},
+        {"label": "The fixtures skill: Answer key", "ref": "kit:skills/make-eval-fixtures/SKILL.md"}
+      ],
+      "primary_source": {"label": "The checker skill: Mode 3, step 3", "ref": "kit:skills/build-eval-script/SKILL.md", "why": "Step 3 of Mode 3 is the rule the agent follows when a result looks wrong, so you can hold it to the rule."},
+      "related": {"lessons": ["trust", "rules", "baseline-why"], "glossary": ["Exit code", "Verdict", "Spec", "Proxy", "Polished but wrong"]}
+    },
+    {
+      "id": "baseline-why",
+      "title": "Your baseline, and what comes next",
+      "win": "You can explain what a pass rate across answers tells you and what it does not, and you know what to keep for Part 4.",
+      "minutes": 6,
+      "skippable": false,
+      "body": "**In the method.** Keep a record, so every change can be compared with where you started.\n\n**The idea.** A baseline is your starting score: for each rule, how many of your five answers passed, such as 4 of 5, or 80%. It must be a pass rate, because one answer tells you only about itself. A rule that could not be judged stays in the record as NOT CHECKED, outside the total.\n\nRecord it after your rules are settled, because changing a rule later would change what the logged numbers mean.\n\n**What a score tells you.** It describes how one prompt did against one set of rules. It does not guarantee every future answer, and it says nothing about qualities no rule checks.\n\n**What comes next.** In Part 4 you change the prompt, check again with the same rules and compare with this score. If the score did not move, the change did not help. Part 5 removes the instructions that do no work.\n\n**Your own work.** The same method fits any task that repeats, has clear requirements and can be checked by rules, such as a message after a client call, a summary of a long thread or a job description. In Part 6 you pick your own. It is live: bring ideas to office hours or the AIR discussion. Northwind is practice only.\n\n**How this course does it.** Pick your best answer as your known-good output. Your checker should score it 95% or more; if not, look at the checker, not the prompt. Other approaches work too.\n\n**How this fits the Stage 3 certification.** Stage 3 asks for three things: the Prompt, the Evaluations and the Log. Your prompt file is the start of the Prompt. Your test cases, your checker and the fixtures that tested it are the start of the Evaluations. Iteration 0 is the first entry of the Log, which needs at least two rounds of improvement. Part 4 adds those rounds and checks that a known-good answer scores 95% or more. Part 5 checks that every instruction in your prompt earns its place. Scripts, promptfoo files and written test cases are all accepted, and the file names and layout here are only this course's way of organizing the work. This note is for orientation only. The program's own instructions decide what to submit, and nothing here is needed to finish this course.",
+      "activities": [
+        {
+          "id": "baseline-total",
+          "type": "choice",
+          "prompt": "Your test cases have 6 criteria, and one of them is NOT CHECKED. Across your 5 runs, the other five criteria pass 20 times in total. What goes on the Overall line of your log?",
+          "options": [
+            {"id": "a", "text": "20 passes out of 30 total results", "correct": false, "feedback": "A criterion that was never scored has no results to count. Check what you multiplied to get the number on the right."},
+            {"id": "b", "text": "20 passes out of 20 checked results", "correct": false, "feedback": "That only counts what passed, which would make every baseline look perfect."},
+            {"id": "c", "text": "20 passes out of 25 checked results", "correct": true, "feedback": "Right. Five checked criteria across five runs gives 25 possible passes, and the NOT CHECKED criterion stays listed separately."},
+            {"id": "d", "text": "5 passes out of 6 checked criteria", "correct": false, "feedback": "That is a count of criteria, not of passes across runs, and it skips the runs altogether."}
+          ]
+        },
+        {
+          "id": "baseline-settled",
+          "type": "choice",
+          "prompt": "You logged Iteration 0 last night. This morning you reworded a threshold to make it stricter. What is true of the numbers in your log?",
+          "options": [
+            {"id": "a", "text": "They still stand, because the prompt itself has not changed", "correct": false, "feedback": "The prompt is only half of what the numbers depend on. Think about what the numbers were measured against."},
+            {"id": "b", "text": "They improve, because any stricter threshold always raises the score", "correct": false, "feedback": "A stricter threshold makes it harder to pass, not easier, and logged numbers do not update themselves."},
+            {"id": "c", "text": "They used the earlier wording, so replace or add one", "correct": true, "feedback": "Right. The logged numbers used the earlier thresholds, so you either replace Iteration 0 or add a new entry and say which is which."},
+            {"id": "d", "text": "They become wrong, so the whole project restarts from scratch", "correct": false, "feedback": "Nothing needs to start again. Only the entry that was measured against the old wording is affected."}
+          ]
+        },
+        {"id": "baseline-reflect", "type": "reflection", "prompt": "You do not need any results to answer this. Pick one criterion from your own test-cases.md. In a few sentences, say what a pass rate across five runs could show you about that criterion that a single run could not.", "min_words": 30},
+        {
+          "id": "baseline-explain",
+          "type": "choice",
+          "prompt": "Your manager asks what 4 of 5, or 80%, means for one criterion in your log. Which reply is clearest?",
+          "options": [
+            {"id": "a", "text": "Across five separate tries, this rule held up four times", "correct": true, "feedback": "Right. It is a count of passes across separate runs, for one criterion. It is a starting point to beat, not a grade for the prompt."},
+            {"id": "b", "text": "The prompt is eighty percent good and is nearly done", "correct": false, "feedback": "A pass rate belongs to one criterion, not to the whole prompt, and it does not say how close you are to finished."},
+            {"id": "c", "text": "The first answer passed, and the other four did not", "correct": false, "feedback": "That reverses the meaning. Four of the five runs passed, and the rate says nothing about which ones."},
+            {"id": "d", "text": "The checker is eighty percent sure about this one rule", "correct": false, "feedback": "The checker is never unsure. Every run is a pass or a fail, and the percentage is only a count of them."}
+          ]
+        },
+        {"id": "baseline-explain-write", "type": "reflection", "prompt": "Write two or three sentences for a manager who has never used AI tools. Say what your baseline is and why you record it before changing the prompt. Use no jargon.", "min_words": 30},
+        {"id": "baseline-stage3", "type": "reflection", "prompt": "Optional. For each of the three Stage 3 items in the note above, name the file in your project that comes closest to it today, or say what is still missing.", "min_words": 20}
+      ],
+      "retrieval": [
+        {
+          "id": "r-baseline-1",
+          "prompt": "What is your baseline?",
+          "options": [
+            {"id": "a", "text": "Your score on run one from the first look", "correct": false, "feedback": "The first look happens before your thresholds are settled, so it cannot be this."},
+            {"id": "b", "text": "Your score on both fixtures after the spec fix", "correct": false, "feedback": "Fixtures test the checker. They are never logged as a score for your prompt."},
+            {"id": "c", "text": "Your pass rate per criterion across the five runs", "correct": true, "feedback": "Right. It is recorded as Iteration 0, and Part 4 tries to beat it."},
+            {"id": "d", "text": "Your score on the one answer you liked best", "correct": false, "feedback": "A baseline uses every run, including the ones you would rather not keep."}
+          ]
+        },
+        {
+          "id": "r-baseline-2",
+          "prompt": "Before Part 4, what do you do with your five runs?",
+          "options": [
+            {"id": "a", "text": "Pick the best one as your known-good output", "correct": true, "feedback": "Right. Your checker should score it 95% or more."},
+            {"id": "b", "text": "Delete them so the next runs start clean", "correct": false, "feedback": "Keep your whole project folder. Part 4 builds on all of it."},
+            {"id": "c", "text": "Merge them into one long file for checking", "correct": false, "feedback": "Each run is scored on its own. Merging them would destroy what a pass rate measures."},
+            {"id": "d", "text": "Rewrite them until the checker passes them all", "correct": false, "feedback": "The runs record what the prompt produced. Rewriting them would make your baseline meaningless."}
+          ]
+        },
+        {
+          "id": "r-baseline-3",
+          "prompt": "The output you picked as known-good scores below 95% on your checker. What does that point to?",
+          "options": [
+            {"id": "a", "text": "Something about the prompt, not about the checker", "correct": false, "feedback": "This output is one you chose because you believe it is good, so the prompt that wrote it has already done its job."},
+            {"id": "b", "text": "Something about the checker, not about the prompt", "correct": true, "feedback": "Right. If an output you trust scores low, look at the checker."},
+            {"id": "c", "text": "The model got worse since you ran it", "correct": false, "feedback": "The file has not changed since you saved it, so the model is not involved."},
+            {"id": "d", "text": "The five runs sit in the wrong folder", "correct": false, "feedback": "Where the files are kept does not change how the checker scores one of them."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "The checker skill: Mode 3, run and log", "ref": "kit:skills/build-eval-script/SKILL.md"}
+      ],
+      "primary_source": {"label": "The checker skill: Mode 3, run and log", "ref": "kit:skills/build-eval-script/SKILL.md", "why": "It shows the exact format of Iteration 0 and what happens if a threshold changes after it is logged."},
+      "related": {"lessons": ["several-runs", "rules", "surprise"], "glossary": ["Baseline (Iteration 0)", "Known-good output", "iteration-log.md"]}
+    }
+  ]
+}

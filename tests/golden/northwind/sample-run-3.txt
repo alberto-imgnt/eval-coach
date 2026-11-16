@@ -1,0 +1,10 @@
+**Northwind**
+- Held two client meetings on the new reporting feature and built it Mon–Tue
+- Successfully ran the demo Wed and fixed feedback issues Fri
+- Blocked Thu for half a day waiting on client test data access. Ask: please get access granted before Monday.
+
+**Contoso**
+- Reviewed the estimate Fri
+
+**Internal**
+- Onboarded a new teammate Wed; attended the AI lunch & learn Thu; worked on documentation Thu
