@@ -1,0 +1,20 @@
+Subject: Weekly Update - Really Productive Week!
+
+Dear [Lead],
+
+I'm thrilled to share a summary of my amazing week!
+
+Monday: I successfully attended the standup and had two incredible client meetings with Northwind about the new reporting feature. I also started working on the Northwind reporting feature, which I continued on Tuesday.
+
+Tuesday: I crushed the Northwind reporting feature development and made excellent progress.
+
+Wednesday: I helped onboard a new teammate and then prepared and ran the Northwind demo, which went great!
+
+Thursday: Unfortunately I was a little delayed waiting on some client access, so I worked on documentation instead. I also attended the internal AI lunch & learn, which was awesome.
+
+Friday: I fixed all of the issues from the demo feedback and reviewed a Contoso estimate.
+
+Overall it was a very successful week and I am proud of what I accomplished. Please let me know if you have any questions.
+
+Regards,
+[Name]

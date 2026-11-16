@@ -1,0 +1,61 @@
+{
+  "recipes": [
+    {
+      "id": "copilot",
+      "name": "GitHub Copilot CLI",
+      "cli_command": "copilot",
+      "shell": "cmd",
+      "command": "winget install GitHub.Copilot",
+      "needs_mb": 400,
+      "source": "GitHub's official Copilot CLI documentation",
+      "requires": {"command": "pwsh", "name": "PowerShell 6 or later", "recipe": "powershell", "detail": "GitHub Copilot CLI needs PowerShell 6 or later. Windows only includes PowerShell 5.1, so install PowerShell first with the option below."}
+    },
+    {
+      "id": "claude-installer",
+      "name": "Claude Code (installer script)",
+      "cli_command": "claude",
+      "shell": "cmd",
+      "command": "curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd",
+      "needs_mb": 400,
+      "source": "Anthropic's official Claude Code documentation"
+    },
+    {
+      "id": "claude-winget",
+      "name": "Claude Code (winget)",
+      "cli_command": "claude",
+      "shell": "cmd",
+      "command": "winget install Anthropic.ClaudeCode",
+      "needs_mb": 400,
+      "source": "Anthropic's official Claude Code documentation"
+    },
+    {
+      "id": "devin",
+      "name": "Devin CLI",
+      "cli_command": "devin",
+      "shell": "powershell",
+      "command": "irm https://static.devin.ai/cli/setup.ps1 | iex",
+      "needs_mb": 400,
+      "source": "Devin's official CLI documentation"
+    },
+    {
+      "id": "powershell",
+      "name": "PowerShell (needed by GitHub Copilot CLI)",
+      "cli_command": "",
+      "shell": "cmd",
+      "command": "winget install Microsoft.PowerShell",
+      "needs_mb": 400,
+      "source": "Microsoft's official PowerShell documentation",
+      "hidden": true
+    },
+    {
+      "id": "other",
+      "name": "Another CLI",
+      "cli_command": "",
+      "shell": "none",
+      "command": "",
+      "needs_mb": 0,
+      "source": "",
+      "note": "Install your own agentic CLI the way its vendor recommends, then enter the command above and press Check this command. It must be able to read files, write files and run commands."
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+# Tasks
+
+Commands run from the repo root on Windows (see AGENTS.md "Verification commands"). Run the two backend suites one after the other, never together. Use the stand-in CLI only. Group 1 writes tests that fail until the later groups land; each later group lands its own docs.
+
+## 1. Guard tests first
+
+- [x] 1.1 In `tests/test_learning_priorities.py`, replace the `CRITERIA` phrases with the Prompt, Evaluations and Log structure (design D4), drop the "as of June 2026" assertion, and add: the Stage 3 note is at most 150 words; it says scripts, promptfoo files and written test cases are all accepted; it says file names and layout here are this course's; it names Part 4 and Part 5. Verify: `python -m unittest tests.test_learning_priorities` fails on exactly these new assertions.
+- [x] 1.2 Add a term-guard test that scans every string in `content/*.json`, the two Northwind catch-up files and the Part-number strings in `web/js/views.js` and `markdown.js`, and fails on `\bsession\b` outside an exact, size-asserted allow list (CLI session wording in `preflight.json`, `WT_SESSION` in `terminal-hints.json`, the "session ends" feedback). Verify: it fails and lists about 25 content hits and the three interface hits.
+- [x] 1.3 Add lesson-shape tests in `tests/test_lessons.py`: the seven lesson ids in order; the ten removed activity ids absent; every kept activity id present under its new lesson (design D8); each lesson has an activity or review question; word caps (300, `baseline-why` 400, mission 450); "How this course does it" appears only after the lesson's first concept paragraph and each labelled passage group is at most 120 words and each topic at most 60; the absolutist phrases from design D11 absent from lessons, steps and glossary; glossary course terms start "In this course,"; every glossary `lesson`, `related` and `sources` reference resolves; every bundled lesson file is cited. Update the mission-sentence constant to "Part 2". Verify: these tests fail on the current content.
+- [x] 1.4 Add mission and `baseline-why` content tests per spec `series-intent-framing` (purpose with "judge" and "blind trust or blind distrust"; the three reasons; six map rows with the intent's Part names and exactly one `here` row; score limit; "did not move"; three own-work examples; the three Part 6 fit conditions; no new Continue-blocking activity). Verify: they fail before group 4.
+- [x] 1.5 Add an old-progress test in `tests/test_course.py`: a `progress.json` written with the old lesson ids (`loop`, `generate-why`, `build-why`, `choices`, `verify`, `compare`, `fix-why`) and steps through `build` done loads without error, keeps the steps, drops the old records, and records `several-runs` and `rules` as skipped and migrated; `pending-lessons.json` with only `mission` merges as before. Verify: the test fails before group 2.
+
+## 2. Course model
+
+- [x] 2.1 Change `COURSE` in `app/eval_coach/state.py` to the new order (spec `course-structure`), and make progress and pending-lesson load drop unknown lesson ids. Keep `STEP_IDS`, the promptfoo extra step and every gate. Verify: `python -m unittest tests.test_course tests.test_http_course` passes after the tests are updated in 2.3, and 1.5 passes.
+- [x] 2.2 Update `lessons.py` and `engine.py` only where they name a removed lesson id or a removed activity (for example the `cli_demo` and `cli_compare` lesson mapping); keep the `cli_demo` type supported. Verify: `python -m unittest tests.test_lessons` passes the schema and parity tests.
+- [x] 2.3 Update the tests and drivers that name lesson ids: `tests/test_course.py`, `test_http_course.py`, `test_review.py`, `test_setup_gate.py`, `tests/frontend/mock_course.py`, `e2e-work/harness/lesson-stages.js` and `run-all.js` (remove drivers for removed activities, add none). Verify: `python -m unittest discover -s tests` passes except the content tests that wait for groups 3 to 7.
+- [x] 2.4 Update `docs/SPEC.md` "Course and lessons" (course order, lesson list, activity list, migration note). Verify: the lesson and step ids in the doc equal `state.COURSE`.
+
+## 3. Lessons: concept first, tiers 1 and 2
+
+- [x] 3.1 Rewrite the mission per specs `series-intent-framing` and `course-structure`: purpose, the three "why it matters" reasons, the method chain in one line, six-row map with the intent's Part names, "Part 2" in the mission sentence and `win`; drop "How you will work" and "What to bring"; at most 450 words, no activities. Verify: `python -m unittest tests.test_learning_priorities tests.test_lessons` mission checks pass.
+- [x] 3.2 Write `hook` (kept, lightly edited: opening line names its method link) and `several-runs` (one answer proves little; the model and the prompt belong in the record; five is what this course uses and what Stage 3 asks for a baseline, said as a reason; no roles or blind-folder detail). Keep `generate-spot`. Verify: lesson-shape tests pass for both.
+- [x] 3.3 Write `rules` from `rules`, `build-why` and `choices`: from "looks good" to a rule; a sentence can be read two ways; what a rule cannot check and NOT CHECKED; proxies. Keep the eight activities in design D8; remove `rules-demo`, `rules-anatomy`, `build-first-look`. One labelled passage on how the course builds the checker, at most 120 words. Verify: lesson-shape tests pass.
+- [x] 3.4 Write `trust` from `verify` (test the checker; polished but wrong; predict before you run, with the reason). Keep `verify-polished` and `verify-unsure`; remove `verify-order`, `verify-try`. Write `surprise` from `compare` and `fix-why` (three kinds of surprise; fix the spec, never the checker, with the reason that a failing result is the information). Keep `compare-sort`, `fix-scenario`, `fix-sort`, `fix-try`; remove `compare-exit`. Verify: lesson-shape and principle tests pass.
+- [x] 3.5 Extend `baseline-why` with the score-limits passage, the "score did not move" sentence and the own-work bridge; keep all six activities; at most 400 words including the Stage 3 note (task 5.1). Re-home retrieval questions that still test a concept; delete those that test only mechanics. Verify: `python -m unittest tests.test_lessons tests.test_course tests.test_review` pass.
+- [x] 3.6 Re-point `related`, `sources` and `primary_source` in every lesson to existing lessons and cited bundled files, set each `minutes` from the new word count, and delete bundled lesson files no longer cited (design Open Question 7). Verify: the dangling-reference and orphan-file tests pass.
+
+## 4. Steps carry the procedure
+
+- [x] 4.1 In `content/steps.json`, write each step's `why` so the concept comes first and the course's procedure follows with its reason: `generate` (the two chats, blind folder, number of runs, mid-tier model, plus the one sentence that this is this course's way and that Stage 3 accepts scripts, promptfoo files and written test cases), `build` (the skill file, the first look is not the baseline), `fixtures` to `key` (fixture order, answer-key timing), `run` (exit code 1 is normal, in one sentence), `fix`, `baseline` (known-good output, keep the project folder). Do not touch any step `ui` block, gate or id. Verify: `python -m unittest tests.test_content_and_resources tests.test_troubleshooting_coverage tests.test_baseline_step tests.test_promptfoo_track` pass and the absolutist-phrase test passes.
+- [x] 4.2 Rewrite the glossary: "In this course," on course-specific terms with the idea behind each; tool-neutral meanings for general ideas; a `kind` (`idea` or `course`) on every term; `lesson` refs re-pointed. Verify: the glossary tests and the reference-page data test pass.
+
+## 5. Tier 3 and the plan
+
+- [x] 5.1 Replace the Stage 3 note in `baseline-why` with the design D4 text plus one sentence that the file names and layout here are this course's. Keep `baseline-stage3` optional. Verify: `python -m unittest tests.test_learning_priorities` passes, including "named only in the last lesson" and "no submission steps".
+- [x] 5.2 Rewrite the "Stage 3 alignment map" and the Coverage rows for tiers 1 to 3 in `docs/IMPLEMENTATION-PLAN.md` to the Prompt, Evaluations and Log structure and the seven-lesson course, citing `docs/SERIES-INTENT.md` and `docs/STAGE3-TASK-SPEC.md`; add task 3.46 (this change) to the 3F table and the master table; add an "Audit 2026-11-14" note under "Learning priorities" listing the findings and stating the reading of "priority order". Verify: the plan-and-lesson test passes and the two task tables agree.
+
+## 6. Terminology
+
+- [x] 6.1 Replace "Session N" with "Part N" in `content/*.json` (lessons, steps, glossary), reading each sentence so it still makes sense. Verify: the 1.2 guard test passes for content.
+- [x] 6.2 Change only the comment lines in `kit/northwind/northwind-prompt-v0.md` and `northwind-test-cases-reference.md` from "Session 1/2" to "Part 1/2". Verify: `python -m unittest tests.test_content_banned_words tests.test_example_fixtures` pass and the bodies below the comments are unchanged.
+- [x] 6.3 Part strings from content (authorized 2026-11-14): add `ui.brand_sub`, `ui.map_title` and `ui.map_aria` to `lesson-ui.json` ("Part 3 · Running evals and baseline", "Part {n}: ", "Course map. You are at Part {n} of {total}.") and make `views.js` and `markdown.js` read them, with no other behavior change. Update `tests/frontend/ui.spec.js` for the Part 3 title. Verify: the Playwright suite passes and the 1.2 guard test passes for `web/js`.
+
+## 7. Interface alignment (authorized 2026-11-14, items U1 to U6 and U8; see spec `interface-alignment`)
+
+- [x] 7.1 U1 course-list groups: add `ui.course_groups` to `lesson-ui.json` (design D12), render heading rows in `renderCourseNav` in `lessons.js`, add one heading style rule to `web/styles.css` using existing tokens, and keep the connector line, numbering and keyboard order. Add a content test that every `COURSE` item and the `live` step belong to exactly one contiguous group, and Playwright tests for the headings (order, not a button, both themes, largest text size, narrow drop-down). Verify: the new content test and the Playwright suite pass.
+- [x] 7.2 U2 wording: replace "parts complete", "steps complete" and the lock messages with content keys that say "lessons and steps" (design D13). Verify: a Playwright expectation reads "N of M lessons and steps done" and the term-guard test finds no "parts of the course" in interface copy.
+- [x] 7.3 U4 and U5 reference and glossary: rewrite the `reference` block, add the method section in `reference.js`, add `kind` to every term in `glossary.json`, require it in `lessons.validate_glossary`, and render "Ideas" and "In this course" groups in `overlays.js` and the reference page (design D14). Verify: `python -m unittest tests.test_lessons tests.test_http_course` (reference data route, glossary validation) and the Playwright reference and glossary tests pass, and the printed reference card still fits one page.
+- [x] 7.4 U6 and U8 titles and finished text: reword step titles and goals in `steps.json` (design D15; `generate` becomes "Collect your answers") and `finished_body` (design D16). Update the tests and harness lookups that use the old titles. Verify: `python -m unittest tests.test_content_and_resources tests.test_promptfoo_track`, the Playwright suite and `node e2e-work\harness\run-all.js --fresh` pass.
+
+## 8. Docs
+
+- [x] 8.1 Update `AGENTS.md` "Where to look" with `docs/SERIES-INTENT.md` and `docs/STAGE3-TASK-SPEC.md`, and correct "Graphite and Iris" to "Graphite and Lime" on its design-system row; correct the same name in `docs/IMPLEMENTATION-PLAN.md` line 7. Update `docs/COURSE-CONTEXT.md` (point at both documents, the intent's Part names, the course-structure note), `docs/PHASE3.md` (lesson table and line 19 mission wording), `docs/SPEC.md` where it quotes "Session 4" or describes the course list, glossary and reference card, and `docs/DESIGN.md` for the group headings and the glossary groups. Verify: `Select-String -Path docs\*.md,AGENTS.md -Pattern 'Session [0-9]|Graphite and Iris'` lists only source-material names or quoted sources, each with a reason, and the lesson ids in `PHASE3.md` equal `state.COURSE`.
+
+## 9. Integration checks
+
+- [x] 9.1 Backend tests on the system Python, then (separately) on embedded 3.13: `python -m unittest discover -s tests`, then `spikes\phase0-preflight\runtime\python-embed-3.13.17-nopth\python.exe -m unittest discover -s tests`. Verify: both pass with the same 2 skips by design as before (rerun the timing-sensitive conpty test once if needed).
+- [x] 9.2 Interface tests: `node tests/frontend/.tmp/node_modules/@playwright/test/cli.js test --config tests/frontend/playwright.config.js`. Verify: they pass, and the only changed or added expectations are those listed in spec `interface-alignment`.
+- [x] 9.3 Rebuild and smoke test: `python tools\build_pyz.py --smoke`. Verify: it succeeds and the archive holds the new lessons and interface.
+- [x] 9.4 Stand-in end to end through the lessons on both tracks: `node e2e-work\harness\run-all.js --fresh --both` with output written to a file. Verify: every stage passes with the seven-lesson course.
+- [x] 9.5 Re-read the mission, the seven lessons, the step text and the rendered interface (course list, reference card, glossary, finished screen) against `docs/SERIES-INTENT.md` and `docs/STAGE3-TASK-SPEC.md`, and tick each audit finding in proposal.md. Verify: every finding maps to a changed line or to an explicit "checked, no change" entry, and no course practice reads as the only way.
+
+## 10. Part 6 note (added 2026-11-15)
+
+- [x] 10.1 Extend "Your own work" in `baseline-why` with "It is live: bring ideas to office hours or the AIR discussion." and shorten two sentences so the body stays at 400 words or fewer (design D17). Verify: `python -m unittest discover -s tests` passes, including the word-cap test.
+- [x] 10.2 Add `test_part_six_is_informational_and_points_to_office_hours_and_the_air_discussion` in `tests/test_learning_priorities.py` (spec `series-intent-framing`, scenario "Part 6 is live"). Verify: the full backend suite passes (1152 tests, 2 skipped by design).
+- [x] 10.3 Record the rule 10 exception in `AGENTS.md`, `docs/SPEC.md`, `docs/IMPLEMENTATION-PLAN.md` and `openspec/config.yaml`; record "work task recommended, not required" and "Part 6 is live, informational only" in `docs/COURSE-CONTEXT.md` and `docs/SERIES-INTENT.md`. Verify: each location names the same single sentence in `baseline-why` as the only exception.
+- [x] 10.4 Rebuild the archive. Verify: `python tools\build_pyz.py --smoke` exits 0.
+
+## Workflow follow-up
+
+- Review the rendered mission and each lesson for length and plain language before archive.
+- Archive the change and summarize which `docs/SPEC.md` and plan sections are now superseded by the archived specs.

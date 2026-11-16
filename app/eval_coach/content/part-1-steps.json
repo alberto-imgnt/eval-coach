@@ -1,0 +1,320 @@
+{
+  "steps": {
+    "cold": {
+      "kind": "write_and_run",
+      "title": "Write it your way",
+      "goal": "Write a prompt in your own words, run it once, and keep the answer as your starting point.",
+      "why": [
+        "Your first answer shows what happens when you ask the way you usually ask. You can only see what a better prompt adds by comparing it with where you started.",
+        "You run it once and keep whatever comes back. A second try would replace the very thing you want to look at.",
+        "This course runs your CLI in a folder that holds only your prompt, so the answer depends only on what the prompt says. This is this course's way of working. Other approaches work too.",
+        "Use your everyday model and write its name down. You use the same model for the next run, because a fair comparison changes one thing at a time."
+      ],
+      "instructions": [
+        "Read the scenario and the rough notes below. The five things in the list are in your head, not in the notes.",
+        "Write a prompt in your own words that asks for the end-of-week update. There is no right way to do it, and there are no hints here. You do not need to paste the notes, because the app adds them under your words.",
+        "Press Save my prompt. The preview shows exactly what your CLI will read.",
+        "Press Start my CLI. In the terminal, ask which model it is using (type /model and press Enter, or ask \"Which model are you using?\"), then write the model name in the box.",
+        "When your CLI is ready, press Send to CLI. The app types the line for you. Do not add anything.",
+        "The app waits for output.txt, saves it as your answer and closes the CLI. Then press Check my work."
+      ],
+      "line": "Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.",
+      "folder_label": "Folder with only your prompt and the rough notes",
+      "divider": "--- Rough notes (added by the app) ---",
+      "scenario": {
+        "intro": "It is Friday afternoon and you need to send your project lead a short end-of-week update. You will use your AI tool to turn your rough notes into the update.",
+        "requirements": [
+          {"id": "r1", "label": "It is sent as a Teams message, not an email"},
+          {"id": "r2", "label": "It is under 150 words"},
+          {"id": "r3", "label": "The work is grouped by client (Northwind, Contoso, Internal), not by day"},
+          {"id": "r4", "label": "It calls out the blocker and what you need to resolve it"},
+          {"id": "r5", "label": "The tone is factual, not self-promotional"}
+        ],
+        "task": "Your task: write a prompt in your own words that asks for the end-of-week update. Run it once and keep the answer."
+      },
+      "troubleshooting": [
+        {"problem": "Your CLI asks you a question before it writes the update.", "fix": "Reply: go ahead with your best guess. That keeps this a single run."},
+        {"problem": "Your CLI reports a temporary error, such as a busy service or a network problem.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Stop, then Start my CLI."},
+        {"problem": "Nothing happens after you press Send to CLI.", "fix": "Look at the terminal. If your CLI is set to ask for approval, it may be waiting for you. Answer it there."},
+        {"problem": "The run never finishes.", "fix": "The app needs a file called output.txt with text in it. If your CLI printed the answer but saved nothing, press Stop, then Start my CLI, and send the line again."},
+        {"problem": "The CLI will not start.", "fix": "Open Settings, go to the Setup group and check the command. Type the same command in a normal terminal to confirm that it works."}
+      ],
+      "gate": {
+        "prompt": {"label": "Prompt saved", "ok": "", "fail": "Write your prompt and press Save my prompt."},
+        "output": {"label": "Answer saved", "ok": "", "fail": "Run your CLI so the app can save its answer."},
+        "model": {"label": "Model name recorded", "ok": "", "fail": "Write the model name in the box."},
+        "nudge_prompt_changed": {"text": "You changed your saved prompt after the run, so the answer may not match it. That is fine, but keep it in mind when you score."}
+      },
+      "messages": {
+        "prompt_missing": "Save your prompt first. The app adds the rough notes under it when you start.",
+        "start_blocked": "Save your prompt first, then start your CLI.",
+        "bad_text": "That text could not be saved.",
+        "cli_not_running": "Start your CLI first."
+      },
+      "ui": {
+        "scenario_heading": "The scenario",
+        "requirements_heading": "What you know (it is not in the notes)",
+        "editor_heading": "Your prompt",
+        "editor_label": "Your prompt, in your own words",
+        "editor_hint": "The app adds the rough notes under your words when you start, so you do not need to paste them.",
+        "save": "Save my prompt",
+        "saving": "Saving…",
+        "saved": "Your prompt is saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "preview_heading": "What your CLI will read",
+        "preview_note": "Your saved prompt, a divider line and the rough notes. This is the whole of prompt.md.",
+        "preview_empty": "Save your prompt to see the preview.",
+        "notes_heading": "The rough notes",
+        "notes_hint": "This is what your AI tool will turn into the update. The app adds these notes under your prompt, so you do not need to paste them.",
+        "model_label": "Model name",
+        "model_hint": "The name of the model your CLI is using. You use the same model for the next run.",
+        "output_heading": "What your CLI saved",
+        "output_empty": "Nothing saved yet. Start your CLI, then press Send to CLI.",
+        "output_note": "Shown as plain text, exactly as your CLI saved it.",
+        "unsaved_check": "You have changes that are not saved yet. Press Save my prompt first, then check your work."
+      }
+    },
+    "score": {
+      "kind": "score_form",
+      "source_step": "cold",
+      "requirements_from": "cold",
+      "title": "Score what you got",
+      "goal": "Check the answer against the five things you knew, and name one thing it missed.",
+      "why": [
+        "A score gives you something to compare against. Without one, a second answer is only a different answer.",
+        "You are the judge here. There is no answer key, and the app does not read the answer to decide for you.",
+        "Counting how many of the five were met is quick, and it needs no technical skill."
+      ],
+      "instructions": [
+        "Read the answer on the page next to the five things you knew.",
+        "For each of the five, choose Yes if the answer did it and No if it did not.",
+        "Write one thing the answer got wrong or missed.",
+        "Say whether that was in your prompt: Yes, No or Not sure.",
+        "Press Check my work."
+      ],
+      "fields": ["gap", "in_prompt"],
+      "troubleshooting": [
+        {"problem": "You are not sure whether the answer met one of the five.", "fix": "Choose the closest answer and move on. This is your own judgment, and the app does not grade it."},
+        {"problem": "The answer is missing or looks wrong.", "fix": "Go back to the earlier step to look at your prompt and the answer the app saved. The answer shown here is exactly what your CLI saved."}
+      ],
+      "gate": {
+        "rows": {"label": "Five answers given", "ok": "", "fail": "{count} of 5 are answered. Choose Yes or No for each one."},
+        "gap": {"label": "One missed thing written", "ok": "", "fail": "Write one thing the answer got wrong or missed."},
+        "in_prompt": {"label": "Prompt question answered", "ok": "", "fail": "Say whether that was in your prompt."}
+      },
+      "messages": {"bad_answers": "Those answers are not in the form this step expects."},
+      "ui": {
+        "output_heading": "The answer to score",
+        "output_empty": "The saved answer could not be found.",
+        "rows_heading": "Did the answer do each of these?",
+        "yes": "Yes",
+        "no": "No",
+        "score_text": "{yes} of {total}",
+        "score_label": "Your score:",
+        "gap_label": "One thing the answer got wrong or missed",
+        "gap_label_all_yes": "What did your prompt include that helped the answer meet all five?",
+        "in_prompt_label": "Was that in your prompt?",
+        "in_prompt_options": [
+          {"id": "yes", "label": "Yes"},
+          {"id": "no", "label": "No"},
+          {"id": "not_sure", "label": "Not sure"}
+        ],
+        "score_pending": "Answer all five to see your score."
+      }
+    },
+    "rewrite": {
+      "kind": "write_and_run",
+      "title": "Try a framework",
+      "goal": "Write the same request again with labels, run it once in a new chat, and keep the answer.",
+      "why": [
+        "Labels give each kind of need a place, so it is harder to leave one out.",
+        "A new chat means nothing from the first run carries over, so any difference comes from the new prompt.",
+        "You use the same rough notes and the same model as before, so only the prompt changes. This course runs your CLI in a folder that holds only your prompt. Other approaches work too.",
+        "The frameworks here are samples, and you can use labels of your own. Use whichever reads clearest to you."
+      ],
+      "instructions": [
+        "Choose a set of labels: RTCC, RISE or your own.",
+        "Press Insert labels to put that set in the editor, then fill in each label in your own words. You can change the labels if they do not fit.",
+        "Press Save my prompt. The preview shows what your CLI will read, with the same rough notes as before.",
+        "Press Start my CLI. This is a new chat, so nothing from your first run carries over. Use the same model as before and write its name in the box.",
+        "When your CLI is ready, press Send to CLI. The app types the line for you.",
+        "The app waits for output.txt, saves it as your answer and closes the CLI. Then press Check my work."
+      ],
+      "line": "Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.",
+      "folder_label": "Folder with only your prompt and the rough notes",
+      "divider": "--- Rough notes (added by the app) ---",
+      "labels": [
+        {
+          "id": "rtcc",
+          "label": "RTCC",
+          "description": "Four labels: Role, Task, Context and Constraints. Fill in each in your own words.",
+          "skeleton": "Role: who the AI acts as\nTask: what to produce\nContext: the background it needs\nConstraints: limits and format"
+        },
+        {
+          "id": "rise",
+          "label": "RISE",
+          "description": "Four labels: Role, Input, Steps and Expectation. Fill in each in your own words.",
+          "skeleton": "Role: who the AI acts as\nInput: the background it needs, with the notes added below\nSteps: how to work through it\nExpectation: what a good result looks like"
+        },
+        {
+          "id": "own",
+          "label": "My own labels",
+          "description": "Labels you pick for your task's needs. Fill in each in your own words.",
+          "skeleton": "Who the AI acts as: \nWhat to produce: \nBackground: \nLimits and format: \nWhat a good result looks like: "
+        }
+      ],
+      "troubleshooting": [
+        {"problem": "Your CLI asks you a question before it writes the update.", "fix": "Reply: go ahead with your best guess. That keeps this a single run."},
+        {"problem": "Your CLI reports a temporary error, such as a busy service or a network problem.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Stop, then Start my CLI."},
+        {"problem": "Nothing happens after you press Send to CLI.", "fix": "Look at the terminal. If your CLI is set to ask for approval, it may be waiting for you. Answer it there."},
+        {"problem": "The run never finishes.", "fix": "The app needs a file called output.txt with text in it. If your CLI printed the answer but saved nothing, press Stop, then Start my CLI, and send the line again."},
+        {"problem": "Your labels do not seem to fit what you need.", "fix": "That is fine. Change the labels, or choose My own labels, and keep each one filled in with a line of your own."}
+      ],
+      "gate": {
+        "framework": {"label": "Labels chosen", "ok": "", "fail": "Choose RTCC, RISE or My own labels."},
+        "prompt": {"label": "Prompt saved", "ok": "", "fail": "Write your prompt and press Save my prompt."},
+        "differs": {"label": "Prompt changed from your first one", "ok": "", "fail": "Your prompt is the same as your first one. Change it before you run it."},
+        "output": {"label": "Answer saved", "ok": "", "fail": "Run your CLI so the app can save its answer."},
+        "model": {"label": "Model name recorded", "ok": "", "fail": "Write the model name in the box."},
+        "nudge_model": {"text": "You used a different model from your first run. That makes the comparison less fair, so keep it in mind when you compare."},
+        "nudge_prompt_changed": {"text": "You changed your saved prompt after the run, so the answer may not match it. That is fine, but keep it in mind when you score."}
+      },
+      "messages": {
+        "prompt_missing": "Save your prompt first. The app adds the rough notes under it when you start.",
+        "start_blocked": "Save your prompt first, then start your CLI.",
+        "bad_text": "That text could not be saved.",
+        "bad_framework": "That is not one of the label sets on this page.",
+        "cli_not_running": "Start your CLI first."
+      },
+      "ui": {
+        "labels_heading": "Choose your labels",
+        "labels_hint": "None is selected for you. Each set covers what the AI needs.",
+        "cold_heading": "Your first prompt, for reference",
+        "editor_heading": "Your prompt",
+        "editor_label": "Your prompt, with labels",
+        "editor_hint": "Fill in each label in your own words. The app adds the same rough notes under your prompt.",
+        "insert_labels": "Insert labels",
+        "insert_confirm_title": "Replace your text?",
+        "insert_confirm_body": "The editor already has text. Inserting the labels replaces it. Your saved prompt does not change until you press Save my prompt.",
+        "insert_confirm": "Replace with labels",
+        "insert_cancel": "Keep my text",
+        "insert_need_choice": "Choose a set of labels first.",
+        "save": "Save my prompt",
+        "saving": "Saving…",
+        "saved": "Your prompt is saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "preview_heading": "What your CLI will read",
+        "preview_note": "Your saved prompt, a divider line and the same rough notes as before. This is the whole of prompt.md.",
+        "preview_empty": "Save your prompt to see the preview.",
+        "model_label": "Model name",
+        "model_hint": "Use the same model as your first run.",
+        "model_note_heading": "A note on fairness",
+        "output_heading": "What your CLI saved",
+        "output_empty": "Nothing saved yet. Start your CLI, then press Send to CLI.",
+        "output_note": "Shown as plain text, exactly as your CLI saved it.",
+        "unsaved_check": "You have changes that are not saved yet. Press Save my prompt first, then check your work."
+      }
+    },
+    "rescore": {
+      "kind": "score_form",
+      "source_step": "rewrite",
+      "requirements_from": "cold",
+      "compare_with": "score",
+      "title": "Score it again",
+      "goal": "Score the second answer on the same five things, then compare your two runs.",
+      "why": [
+        "The same five things make the two scores fair to compare.",
+        "Putting both runs side by side shows what the labels changed, and what they did not.",
+        "One run each is a quick look, not proof. It cannot show how much answers vary from one try to the next."
+      ],
+      "instructions": [
+        "Read the second answer next to the five things you knew.",
+        "For each of the five, choose Yes if the answer did it and No if it did not.",
+        "Look at your two runs side by side.",
+        "Write what your labels made you add, and what made the second answer better. If it was not better, write which part of the prompt is still missing.",
+        "Press Check my work."
+      ],
+      "fields": [],
+      "reflections": [
+        {"id": "added", "label": "What did your labels make you add?"},
+        {"id": "better", "label": "What made the second answer better? If it was not, which part of the prompt is still missing?"}
+      ],
+      "troubleshooting": [
+        {"problem": "The second score is not higher than the first.", "fix": "That can happen. Look at which of the five the second answer missed and ask which part of the prompt is still missing."}
+      ],
+      "gate": {
+        "rows": {"label": "Five answers given", "ok": "", "fail": "{count} of 5 are answered. Choose Yes or No for each one."},
+        "added": {"label": "Added things written", "ok": "", "fail": "Write what your labels made you add."},
+        "better": {"label": "Comparison written", "ok": "", "fail": "Write what made the second answer better, or what is still missing."}
+      },
+      "messages": {"bad_answers": "Those answers are not in the form this step expects."},
+      "compare": {
+        "heading": "Your two runs side by side",
+        "first_heading": "First run: your own words",
+        "second_heading": "Second run: with labels",
+        "prompt_label": "Prompt",
+        "output_label": "Answer",
+        "score_label": "Score",
+        "score_empty": "Not scored yet",
+        "change_up": "Your score went up by {n}.",
+        "change_same": "Your score stayed the same.",
+        "change_down": "Your score went down by {n}.",
+        "variation_note": "One run each cannot show how much answers vary from one try to the next. Part 3 measures that.",
+        "worse_note": "A lower second score can happen. Ask which part of the prompt is still missing, rather than blaming the labels."
+      },
+      "ui": {
+        "output_heading": "The second answer to score",
+        "output_empty": "The saved answer could not be found.",
+        "rows_heading": "Did the second answer do each of these?",
+        "yes": "Yes",
+        "no": "No",
+        "score_text": "{yes} of {total}",
+        "score_label": "Your score:",
+        "reflections_heading": "In your own words",
+        "score_pending": "Answer all five to see your score."
+      }
+    },
+    "own": {
+      "kind": "write_pair",
+      "title": "Use it on your own work",
+      "goal": "Rewrite one real prompt from your own work with labels, and keep both versions.",
+      "why": [
+        "The skill only sticks when you use it on work that matters to you.",
+        "Keeping the before and after side by side shows what the labels added, and the after version is ready to reuse.",
+        "No AI is run in this step. It is a writing exercise, so you can take your time."
+      ],
+      "instructions": [
+        "Choose one real prompt from your own work. If you do not have one, choose a task you repeat and write the prompt you would use for it.",
+        "Leave out anything confidential. The text stays on this computer, in your project folder.",
+        "Paste or write it in the first box as it is.",
+        "Rewrite it with labels, from a framework or labels of your own, in the second box.",
+        "Say which labels you used, then press Save my work and Check my work."
+      ],
+      "troubleshooting": [
+        {"problem": "You do not have a real prompt to use.", "fix": "Pick a task you repeat, such as a weekly message or a summary, and write the prompt you would use today. Then rewrite it."},
+        {"problem": "Your prompt holds private details.", "fix": "Replace the private parts with general words before you paste it. The text stays on this computer, but leaving the details out is safer."}
+      ],
+      "gate": {
+        "before": {"label": "Original prompt saved", "ok": "", "fail": "Paste your original prompt and press Save my work."},
+        "after": {"label": "Rewritten prompt saved", "ok": "", "fail": "Write your rewritten prompt and press Save my work."},
+        "labels": {"label": "Labels named", "ok": "", "fail": "Say which labels you used and press Save my work."},
+        "differs": {"label": "The two prompts differ", "ok": "", "fail": "The two prompts are the same. Rewrite the second one with labels."}
+      },
+      "messages": {"bad_text": "That text could not be saved."},
+      "ui": {
+        "privacy_note": "Leave out anything confidential. The text stays on this computer, in your project folder.",
+        "before_label": "Your original prompt",
+        "before_hint": "A real prompt from your own work, or a task you repeat.",
+        "after_label": "Your prompt rewritten with labels",
+        "after_hint": "Use a framework's labels or labels of your own.",
+        "labels_label": "Which labels did you use?",
+        "labels_hint": "For example: RTCC, RISE or the names of your own labels.",
+        "save": "Save my work",
+        "saving": "Saving…",
+        "saved": "Your work is saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "unsaved_check": "You have changes that are not saved yet. Press Save my work first, then check your work."
+      }
+    }
+  }
+}

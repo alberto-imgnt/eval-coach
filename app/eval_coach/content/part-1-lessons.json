@@ -1,0 +1,367 @@
+{
+  "version": 1,
+  "mission": "Understand why a structured prompt gets better results, and that you can use a ready-made structure or build your own.",
+  "step_checks": [
+    {
+      "id": "sc-cold",
+      "step": "cold",
+      "prompt": "Your first prompt and its answer are saved. Why did you run it only once?",
+      "options": [
+        {"id": "a", "text": "A second try would hide where you started", "correct": true, "feedback": "Right. One run with no second tries keeps your starting point honest, so you can see later what changed."},
+        {"id": "b", "text": "Running twice would use up your daily allowance", "correct": false, "feedback": "Allowances are not the reason. A second try would replace the very thing you want to look at, your starting point."},
+        {"id": "c", "text": "The second answer is always worse than first", "correct": false, "feedback": "A second answer can be better or worse. The point of one run is to keep your starting point as it was."},
+        {"id": "d", "text": "Prompts must be run once to be saved", "correct": false, "feedback": "Saving does not depend on running once. One run keeps your starting point honest."}
+      ]
+    },
+    {
+      "id": "sc-score",
+      "step": "score",
+      "prompt": "You scored your answer by hand. What did the score show?",
+      "options": [
+        {"id": "a", "text": "How many of your five known needs it met", "correct": true, "feedback": "Right. The score counts how many of the five things you knew but never said ended up in the answer."},
+        {"id": "b", "text": "How clever the AI is compared with other models", "correct": false, "feedback": "The score says nothing about other models. It counts how many of your five needs this one answer met."},
+        {"id": "c", "text": "Whether your prompt had perfect spelling and good grammar", "correct": false, "feedback": "Spelling and grammar were not on the card. The score counts the five things you knew but never said."},
+        {"id": "d", "text": "The exact number of words the AI wrote today", "correct": false, "feedback": "Length was only one of the five things. The score counts how many needs the answer met, not its size."}
+      ]
+    },
+    {
+      "id": "sc-rewrite",
+      "step": "rewrite",
+      "prompt": "Your second prompt used labels. Why did you start a new chat for it?",
+      "options": [
+        {"id": "a", "text": "So nothing from the first run carried over", "correct": true, "feedback": "Right. A new chat cannot remember your first try, so the second answer depends only on the new prompt."},
+        {"id": "b", "text": "Because labels do not work in old chats", "correct": false, "feedback": "Labels work anywhere. The new chat keeps the first run from leaking into the second."},
+        {"id": "c", "text": "To get a longer answer from the model", "correct": false, "feedback": "Length has nothing to do with it. A new chat keeps the first run from leaking into the second."},
+        {"id": "d", "text": "To change the model without telling the app", "correct": false, "feedback": "Keeping the same model is part of a fair comparison. A new chat only stops the first run from carrying over."}
+      ]
+    },
+    {
+      "id": "sc-rescore",
+      "step": "rescore",
+      "prompt": "Your two runs are side by side. What can one run of each not show?",
+      "options": [
+        {"id": "a", "text": "How much answers vary from run to run", "correct": true, "feedback": "Right. One run each cannot show how much answers change from one try to the next. Part 3 measures that."},
+        {"id": "b", "text": "Which prompt you wrote first of the two", "correct": false, "feedback": "You know which came first. What one run each cannot show is how much answers vary from try to try."},
+        {"id": "c", "text": "How many words each prompt contained in total", "correct": false, "feedback": "You can count words in each prompt. What one run each cannot show is how much answers vary."},
+        {"id": "d", "text": "Which of the two answers is longer overall", "correct": false, "feedback": "You can see which is longer. What one run each cannot show is how much answers vary from try to try."}
+      ]
+    },
+    {
+      "id": "sc-own",
+      "step": "own",
+      "prompt": "You rewrote a real prompt of your own. What makes it easy to reuse?",
+      "options": [
+        {"id": "a", "text": "The same labels work again with new input", "correct": true, "feedback": "Right. The structure stays and only the input changes, so the next task starts from a prompt that already covers what the AI needs."},
+        {"id": "b", "text": "It never needs any changes after the rewrite", "correct": false, "feedback": "Prompts usually need small changes for new input. The labels make it clear where to make them."},
+        {"id": "c", "text": "Only its author can ever understand the labels", "correct": false, "feedback": "Labels are what let a teammate follow your prompt too. That is part of why they are reusable."},
+        {"id": "d", "text": "It is tied to exactly one single model", "correct": false, "feedback": "A prompt with labels is not tied to one model. The structure carries over."}
+      ]
+    }
+  ],
+  "placement": [],
+  "lessons": [
+    {
+      "id": "p1-mission",
+      "title": "Your mission",
+      "win": "You can explain in one sentence what you will do in Part 1 and why you start with a prompt written in your own words.",
+      "minutes": 3,
+      "skippable": false,
+      "body": "**The goal: understand why a structured prompt gets better results, and that you can use a ready-made structure or build your own.**\n\n**In plain words.** This series teaches you to judge the work AI gives you, and to trust it because you checked it, not because it looked right. It does not ask you for blind trust or blind distrust. It starts here, with the thing every later Part builds on: the prompt. You write one prompt your own way, see what the AI gets wrong and work out why, then write it again with a structure and compare the two. You do not need any technical background.\n\n**Why it matters.**\n\n- AI sounds sure of itself even when it is wrong, so \"it looks fine\" lets mistakes through.\n- \"Better\" is only an opinion until you measure it.\n- Answers change from one try to the next, so one answer proves little.\n\n**The method.** Ask clearly, know what you need, turn it into rules, score the result, improve, and keep a record. You use the same method on every task. This Part is the first link: asking clearly.\n\n**How this Part works.** You write a prompt in your own words first, with no coaching, and run it once. You score the answer against five things you knew but never said. Only then do the ideas come in, as names for what you found. You rewrite the prompt, run it once more and compare. You finish with one real prompt from your own work.\n\n**Where this course fits.** It is Part 1 of a six-part series, and each Part builds on the one before. The pin marks where you are now:\n\n```you-are-here\nhere | 1 | Structured prompting | I tell the AI clearly what I need, so it guesses less and gives steadier answers.\nnext | 2 | Defining evaluation criteria | I turn \"that looks good\" into clear pass or fail rules.\nnext | 3 | Running evals and baseline | I check five AI answers against my rules and record a starting score.\nnext | 4 | Iterating with evaluation-driven development | I change my prompt, check again with the same rules and see whether the score moved.\nnext | 5 | Load-bearing audit and packaging | I keep only the instructions that earn their place and package my work so someone else can use it.\nnext | 6 | Your own task | I use the method on a task from my own job.\n```\n\nThe Northwind update you will work with is a made-up example. Northwind is for practice only and is never a task you can submit.",
+      "activities": [],
+      "retrieval": [],
+      "sources": [
+        {"label": "The rough notes (learning example)", "ref": "kit:part1/rough-notes.txt"}
+      ],
+      "primary_source": {
+        "label": "The rough notes (learning example)",
+        "ref": "kit:part1/rough-notes.txt",
+        "why": "These are the notes you will turn into an update, so you can see what you start with."
+      },
+      "related": {
+        "lessons": ["p1-gaps"],
+        "glossary": ["Prompt", "Scenario card"]
+      }
+    },
+    {
+      "id": "p1-gaps",
+      "title": "What your first prompt left out",
+      "win": "You can explain why each gap in your first answer was something your prompt never said, and name which of five common kinds of missing information it was.",
+      "minutes": 6,
+      "skippable": false,
+      "body": "**In the method.** Know what you need. Before you can ask clearly, you have to know what the AI needs from you.\n\n**The idea.** Every gap you found in your first answer was something the AI had no way to know, because your prompt never said it. The AI did not do a bad job. It filled the empty places with a guess. The gaps are not random. Many fit one of five common kinds of missing information. These five are an example, not a complete list. Other kinds exist, such as which sources to use or what to do when the AI is unsure.\n\n1. Who the AI should act as\n2. What exactly to produce\n3. Background it needs\n4. Limits and format\n5. What a good result looks like\n\nPeople will not always agree on which kind a gap is. What matters is that every gap fits somewhere. If one fits none of the five, it points to a kind you may need to add.\n\n**Set aside for later.** Some things you notice are real but are not missing information: an invented detail, an answer that feels dull, or an answer that changes from one try to the next. They belong to evaluation. Later Parts turn them into clear rules, so for now set them aside.\n\n**How this course does it.** The gaps in the sorting exercise come from a bundled list of typical gaps, not from other people using this app. Another way is to compare your answer with a checklist of your own, or with a colleague's. Other approaches work too.",
+      "activities": [
+        {
+          "id": "gaps-sort",
+          "type": "sort",
+          "prompt": "Sort each typical gap under the kind of missing information it shows, or set it aside for later Parts. Not everyone would choose the same kind, but each item here has one best fit.",
+          "buckets": [
+            {"id": "b1", "label": "1. Who the AI should act as"},
+            {"id": "b2", "label": "2. What exactly to produce"},
+            {"id": "b3", "label": "3. Background it needs"},
+            {"id": "b4", "label": "4. Limits and format"},
+            {"id": "b5", "label": "5. What a good result looks like"},
+            {"id": "aside", "label": "Set aside for later Parts"}
+          ],
+          "items": [
+            {"id": "g1", "text": "Sounds like I'm bragging", "bucket": "b1", "feedback": "The prompt never said whose voice to write in or how that person sounds, so the AI picked a tone."},
+            {"id": "g2", "text": "Reads like a formal report, not a quick note", "bucket": "b1", "feedback": "The prompt never said who is writing, so the AI chose a voice. That is about who the AI acts as."},
+            {"id": "g3", "text": "An email with a subject line, not a Teams message", "bucket": "b2", "feedback": "The prompt never said what kind of thing to produce, so the AI chose one."},
+            {"id": "g4", "text": "Didn't know who the update was for", "bucket": "b3", "feedback": "The reader and the situation were in your head, not in the prompt. That is background."},
+            {"id": "g5", "text": "Left out that I work on two clients plus internal work", "bucket": "b3", "feedback": "The AI had no way to know how your week is organized. That is background it needs."},
+            {"id": "g6", "text": "Way over 150 words", "bucket": "b4", "feedback": "The prompt set no length. A limit is part of limits and format."},
+            {"id": "g7", "text": "Went Monday to Friday instead of by client", "bucket": "b4", "feedback": "The prompt never gave the order or layout. That is part of limits and format."},
+            {"id": "g8", "text": "Blocker buried and no clear ask", "bucket": "b5", "feedback": "The prompt never said what the update must make clear. That describes a good result."},
+            {"id": "g9", "text": "Never said what I need from my lead", "bucket": "b5", "feedback": "The prompt never said what a useful update ends with. That describes a good result."},
+            {"id": "g10", "text": "Made up a detail about Contoso", "bucket": "aside", "feedback": "An invented detail is a question of accuracy, not missing information. Later Parts check for it, so set it aside."},
+            {"id": "g11", "text": "Just felt boring", "bucket": "aside", "feedback": "Overall quality is a judgment, not missing information. Later Parts turn it into clear rules, so set it aside."}
+          ]
+        },
+        {
+          "id": "gaps-own",
+          "type": "reflection",
+          "prompt": "Think of one gap from your own first answer. Which kind of missing information was it, and what did your prompt leave out? Write it here.",
+          "min_words": 8
+        },
+        {
+          "id": "gaps-known",
+          "type": "choice",
+          "prompt": "An answer sounded self-promotional, and the prompt never mentioned tone. Why could the AI not have avoided this?",
+          "options": [
+            {"id": "a", "text": "The prompt never said it, so the AI guessed", "correct": true, "feedback": "Right. The AI cannot know what the prompt leaves out, so it fills the gap with a guess."},
+            {"id": "b", "text": "The AI was too weak to follow tone requests", "correct": false, "feedback": "The AI can follow a tone request when there is one. Here nobody asked."},
+            {"id": "c", "text": "The rough notes already made the tone completely obvious", "correct": false, "feedback": "Notes about what happened say nothing about the tone you want. The tone was only in your head."},
+            {"id": "d", "text": "Self-promotional tone is something no prompt could ever change", "correct": false, "feedback": "A prompt can set the tone. Here it just did not."}
+          ]
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-gaps-1",
+          "prompt": "You find that an answer left out who the update was for. Which kind of missing information is that gap?",
+          "options": [
+            {"id": "a", "text": "Background the AI needs", "correct": true, "feedback": "Right. Who the update is for is background the AI had no way to know."},
+            {"id": "b", "text": "Limits on the length", "correct": false, "feedback": "Length is a limit. Who the update is for is background."},
+            {"id": "c", "text": "Who is writing it", "correct": false, "feedback": "That kind is about the voice. The reader belongs to the background."},
+            {"id": "d", "text": "What good looks like", "correct": false, "feedback": "That kind describes the result you want. The reader is part of the background."}
+          ]
+        },
+        {
+          "id": "r-gaps-2",
+          "prompt": "An answer invents a detail about a client. What do you do with that gap for now?",
+          "options": [
+            {"id": "a", "text": "Set it aside for later Parts", "correct": true, "feedback": "Right. An invented detail is about accuracy, which belongs to evaluation in later Parts."},
+            {"id": "b", "text": "Add it to the missing background", "correct": false, "feedback": "The AI did not lack background here. It made something up, which is a different kind of problem."},
+            {"id": "c", "text": "Rewrite the prompt until it disappears", "correct": false, "feedback": "Rewriting may or may not help. Spotting and checking such details is what evaluation is for."},
+            {"id": "d", "text": "Assume the notes were all wrong", "correct": false, "feedback": "The notes were fine. The AI added something that was not in them."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "Typical gaps and the kind each one is", "ref": "kit:part1/typical-gaps.md"},
+        {"label": "The rough notes (learning example)", "ref": "kit:part1/rough-notes.txt"}
+      ],
+      "primary_source": {
+        "label": "Typical gaps and the kind each one is",
+        "ref": "kit:part1/typical-gaps.md",
+        "why": "It lists the gaps people typically notice, with the kind of missing information each one is and the reason."
+      },
+      "related": {
+        "lessons": ["p1-mission"],
+        "glossary": ["Gap", "Cold prompt"]
+      }
+    },
+    {
+      "id": "p1-frameworks",
+      "title": "Frameworks: ready-made labels for what a prompt needs",
+      "win": "You can explain what a prompting framework is, and why you can use an existing one or build your own.",
+      "minutes": 5,
+      "skippable": false,
+      "body": "**In the method.** Know what you need. A framework is a ready-made checklist of what a prompt should cover, so you do not forget a part.\n\n**The idea.** People have named kinds of information a prompt needs. A set of those names is a prompting framework: a checklist of labels. You found five common kinds from your own gaps, so a framework is just names for what you already saw. Our five are an example, not a full list: other kinds exist.\n\nTwo common frameworks against our five kinds:\n\n| What the AI needs | RTCC | RISE |\n|---|---|---|\n| 1. Who the AI acts as | Role | Role |\n| 2. What to produce | Task | Steps |\n| 3. Background | Context | Input |\n| 4. Limits and format | Constraints | Expectation (partly) |\n| 5. A good result | Constraints (partly) | Expectation |\n\nRTCC stands for Role, Task, Context, Constraints. RISE stands for Role, Input, Steps, Expectation.\n\nThese are samples, not recommendations. The letters use common expansions that other sources define differently. Kinds 4 and 5 fit only partly, because each framework leans differently. Covering what your task needs matters more than the letters. Others exist, such as CO-STAR and RISEN. When none fits your task, build your own labels: start from these five and add the kinds your task needs.\n\n**Using one.** You fill in each label with a line of your own. The next step gives a skeleton for each sample. Use whichever reads clearest.\n\n**How this course does it.** You try one set of labels in a single run and compare it with your first run. Another way is to try several and keep the one that suits your task. Other approaches work too.",
+      "activities": [
+        {
+          "id": "fw-map",
+          "type": "sort",
+          "prompt": "Each label below comes from one of the two samples. Sort each label into the kind of information it mainly covers.",
+          "buckets": [
+            {"id": "b1", "label": "1. Who the AI acts as"},
+            {"id": "b2", "label": "2. What to produce"},
+            {"id": "b3", "label": "3. Background"},
+            {"id": "b4", "label": "4. Limits and format"},
+            {"id": "b5", "label": "5. A good result"}
+          ],
+          "items": [
+            {"id": "f1", "text": "Role (RTCC): who the AI acts as", "bucket": "b1",             "feedback": "Role names who is speaking. Both samples use it for kind 1."},
+                        {"id": "f2", "text": "Task (RTCC): what to produce", "bucket": "b2", "feedback": "Task says what the AI should produce, which is kind 2."},
+                        {"id": "f3", "text": "Context (RTCC): the background it needs", "bucket": "b3", "feedback": "Context holds the background, which is kind 3."},
+                        {"id": "f4", "text": "Constraints (RTCC): limits and format", "bucket": "b4", "feedback": "Constraints mainly covers limits and format. It also reaches part of what a good result looks like, so kind 5 fits only partly."},
+                        {"id": "f5", "text": "Role (RISE): who the AI acts as", "bucket": "b1", "feedback": "Role names who is speaking. Both samples use it for kind 1."},
+                        {"id": "f6", "text": "Input (RISE): notes plus background", "bucket": "b3", "feedback": "Input carries the notes and the background it needs, so it mainly covers kind 3."},
+                        {"id": "f7", "text": "Steps (RISE): how to work through it", "bucket": "b2", "feedback": "Steps spells out what to produce and how, so it mainly covers kind 2."},
+                        {"id": "f8", "text": "Expectation (RISE): what a good result looks like", "bucket": "b5", "feedback": "Expectation mainly describes a good result. It also reaches limits and format, so kind 4 fits only partly."}
+          ]
+        },
+        {
+          "id": "fw-partial",
+          "type": "choice",
+          "prompt": "Kinds 4 and 5 map only partly onto the two samples. Why?",
+          "options": [
+            {"id": "a", "text": "Each framework leans on some kinds more than others", "correct": true, "feedback": "Right. Each one groups the kinds in its own way, so some fit only partly.             Covering what your task needs matters more than the letters."},
+                        {"id": "b", "text": "Those two kinds are less important than the rest", "correct": false, "feedback": "Both matter as much as the others. The partial fit comes from how each framework groups them."},
+                        {"id": "c", "text": "The samples were written before anyone listed these kinds", "correct": false, "feedback": "These kinds come from the same gaps that people name in frameworks. The partial fit is about how each groups them."},
+            {"id": "d", "text": "A partial fit means the whole framework is broken", "correct": false, "feedback": "A partial fit is normal. A framework is a checklist, and you can adapt it."}
+          ]
+        },
+        {
+          "id": "fw-own",
+          "type": "choice",
+          "prompt": "No framework you know fits your task well. What can you do?",
+          "options": [
+            {"id": "a", "text": "Build your own labels for your task's needs", "correct": true, "feedback": "Right. The five kinds are an example, and your task may need others. Your own labels that cover what it needs work as well as any named framework."},
+            {"id": "b", "text": "Give up and write the prompt without structure", "correct": false, "feedback": "Structure is where the benefit comes from, so keep it. You can make your own."},
+            {"id": "c", "text": "Wait until someone publishes a framework for it", "correct": false,             "feedback": "You do not need to wait. You can build your own labels from the kinds your task needs."},
+                        {"id": "d", "text": "Use the closest framework and ignore your needs", "correct": false, "feedback": "Your task's needs are the point. Use a framework to cover them, and change it when it does not fit."}
+          ]
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-fw-1",
+          "prompt": "What is a prompting framework?",
+          "options": [
+            {"id": "a", "text": "A checklist of names for what a prompt needs", "correct": true, "feedback": "Right. It names the kinds of information a prompt needs, so you do not forget one."},
+            {"id": "b", "text": "A hidden program that writes all your prompts automatically", "correct": false, "feedback": "A framework is not a program. It is a set of labels you fill in yourself."},
+            {"id": "c", "text": "A strict rule that every prompt must follow exactly", "correct": false, "feedback": "A framework is a sample that you can adapt, not a rule."},
+            {"id": "d", "text": "A list of words the AI refuses to use", "correct": false, "feedback": "A framework says what to include, not what to avoid."}
+          ]
+        },
+        {
+          "id": "r-fw-2",
+          "prompt": "What matters more than the exact letters of a framework?",
+          "options": [
+            {"id": "a",             "text": "Covering everything your task needs, whatever the labels are", "correct": true, "feedback": "Right. The letters are only names. What matters is that your prompt covers what the AI needs for your task."},
+                        {"id": "b", "text": "Choosing the one framework that has the most letters", "correct": false, "feedback": "The number of letters does not matter. Covering what your task needs does."},
+                        {"id": "c", "text": "Using exactly the same labels as all your colleagues", "correct": false, "feedback": "Shared labels can help a team, but covering what your task needs matters more than any set of letters."},
+            {"id": "d", "text": "Making the prompt as short as it can be", "correct": false, "feedback": "Short is not the goal. Giving the AI what it needs is."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "Five example kinds of information and two sample frameworks", "ref": "kit:part1/frameworks-map.md"}
+      ],
+      "primary_source": {
+        "label": "Five example kinds of information and two sample frameworks",
+        "ref": "kit:part1/frameworks-map.md",
+        "why": "It shows both samples against the five example kinds, which parts fit only partly, other kinds you can add, and a skeleton for each."
+      },
+      "related": {
+        "lessons": ["p1-gaps", "p1-benefits"],
+        "glossary": ["Prompting framework", "RTCC", "RISE"]
+      }
+    },
+    {
+      "id": "p1-benefits",
+      "title": "Four ways a structured prompt helps you",
+      "win": "You can name the four benefits of a structured prompt and explain to a colleague why it helps.",
+      "minutes": 7,
+      "skippable": false,
+      "body": "**In the method.** Ask clearly, and keep what works. A structure you can reuse is how asking clearly becomes a habit.\n\n**The idea.** Your second prompt did better because it told the AI what it needed, not because of particular letters. The two sample prompts for this task, listed in the sources below, hold the same information under different labels. The benefit comes from the structure. A structured prompt gives you four benefits:\n\n- **Completeness.** The AI guesses less, because the prompt covers what it needs. Look at what your labels made you add.\n- **Better first results.** You need fewer rounds of back and forth. Compare your second answer with your first.\n- **Easier fixes.** When an answer misses, the labels show which part of the prompt to change.\n- **Repeatability.** The same structure works for the next task, and teammates can follow it. You write this update every Friday, so next Friday you swap in the new notes.\n\n**The takeaway.** Give the AI what it needs. Use a framework, or build your own.\n\n**Keep your work.** Your two prompts and two outputs are saved in your project folder. Part 2 builds on them.\n\n**How this course does it.** You compared one run of each prompt and scored them by hand against five things. That is a quick way to see a difference, not proof of one. Other approaches work too.\n\n**One question for what comes next.** Real work does not come with a card of requirements. So how do you know the second answer is better?\n\n**Stage 3 note (optional).** The Prompt that Stage 3 asks for is a structured prompt like the one you built here. The program's own instructions decide what to submit, and nothing in this note is needed to finish this Part.",
+      "activities": [
+        {
+          "id": "ben-sort",
+          "type": "sort",
+          "prompt": "Each line is something you might have seen in this Part. Sort it under the benefit it shows.",
+          "buckets": [
+            {"id": "complete", "label": "Completeness"},
+            {"id": "first", "label": "Better first results"},
+            {"id": "fixes", "label": "Easier fixes"},
+            {"id": "repeat", "label": "Repeatability"}
+          ],
+          "items": [
+            {"id": "s1", "text": "The AI no longer had to guess who the update was for", "bucket": "complete", "feedback": "Giving the background means the AI guesses less. That is completeness."},
+            {"id": "s2", "text": "My second answer needed no follow-up message", "bucket": "first", "feedback": "Needing no extra round is a better first result."},
+            {"id": "s3", "text": "I could see which label to change after a miss", "bucket": "fixes", "feedback": "Labels point to the part of the prompt to change, which makes a fix easier."},
+            {"id": "s4", "text": "I can reuse the same labels next Friday", "bucket": "repeat", "feedback": "The same structure works for the next task. That is repeatability."},
+            {"id": "s5", "text": "A teammate could follow my prompt easily", "bucket": "repeat", "feedback": "Others can follow a structure too. That is part of repeatability."},
+            {"id": "s6", "text": "Every kind of information I skipped last time was now covered", "bucket": "complete", "feedback": "A prompt that covers every kind of information is complete, so the AI has less to guess."},
+            {"id": "s7", "text": "I got a usable answer on the first try", "bucket": "first", "feedback": "A usable answer on the first try is a better first result."},
+            {"id": "s8", "text": "A missing limit pointed to one label to edit", "bucket": "fixes", "feedback": "Knowing which label to edit is what makes a fix easier."}
+          ]
+        },
+        {
+          "id": "ben-structure",
+          "type": "choice",
+          "prompt": "Both sample prompts beat a plain prompt for the same task, though their labels differ. What does that show?",
+          "options": [
+            {"id": "a", "text": "The benefit comes from the structure, not the letters", "correct": true, "feedback": "Right. Both hold the same information under different labels, so the structure is what helps."},
+            {"id": "b", "text": "Only prompts with exactly four labels get good results", "correct": false, "feedback": "Both samples happen to have four labels, but the number is not the point. Covering what the AI needs is."},
+            {"id": "c", "text": "Longer prompts always give better results than short prompts", "correct": false, "feedback": "Length alone does not help. What helps is giving the AI what it needs."},
+            {"id": "d", "text": "The AI recognizes a framework name and tries harder", "correct": false, "feedback": "The AI does not try harder for a name. It benefits from the information the labels make you add."}
+          ]
+        },
+        {
+          "id": "ben-explain-tech",
+          "type": "choice",
+          "prompt": "A technical colleague asks why the same structure works whichever labels you use. Which answer is best?",
+          "options": [
+            {"id": "a", "text": "Labels only remind you to cover each kind of need", "correct": true, "feedback": "Right. The labels work on you, not on the model. They make sure each kind of need is in the prompt."},
+            {"id": "b", "text": "The model reads each label as a hidden command word", "correct": false, "feedback": "Labels are ordinary text to the model. Their value is in the information you add under them."},
+            {"id": "c", "text": "Models only follow labels that appear in published public lists", "correct": false, "feedback": "Models do not look labels up. Your own labels work as long as they cover the needs."},
+            {"id": "d", "text": "Different labels always make the model receive completely different information", "correct": false, "feedback": "Different labels can hold the same information. That is why both samples worked."}
+          ]
+        },
+        {
+          "id": "ben-explain-plain",
+          "type": "reflection",
+          "prompt": "Write two or three sentences for a colleague who is not technical. Explain why giving the AI a structure gets better results, using what you saw in this Part.",
+          "min_words": 20
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-ben-1",
+          "prompt": "Which of these is one of the four benefits of a structured prompt?",
+          "options": [
+            {"id": "a", "text": "Easier fixes", "correct": true, "feedback": "Right. The labels show which part of the prompt to change when an answer misses."},
+            {"id": "b", "text": "Shorter prompts", "correct": false, "feedback": "A structured prompt is often longer. The benefit is that it covers what the AI needs."},
+            {"id": "c", "text": "Cheaper answers", "correct": false, "feedback": "Cost is not one of the four benefits."},
+            {"id": "d", "text": "Faster typing", "correct": false, "feedback": "Typing speed is not one of the four benefits."}
+          ]
+        },
+        {
+          "id": "r-ben-2",
+          "prompt": "Which sentence is the takeaway of this Part?",
+          "options": [
+            {"id": "a", "text": "Give the AI what it needs", "correct": true, "feedback": "Right. Give the AI what it needs. Use a framework, or build your own."},
+            {"id": "b", "text": "Always pick the longest possible prompt", "correct": false, "feedback": "Length is not the point. What the AI needs is."},
+            {"id": "c", "text": "Trust the first answer you get", "correct": false, "feedback": "This series teaches the opposite: trust an answer because you checked it."},
+            {"id": "d", "text": "Never use any named framework again", "correct": false, "feedback": "Named frameworks are useful samples. You can also build your own."}
+          ]
+        },
+        {
+          "id": "r-ben-3",
+          "prompt": "Why are the two sample prompts for the same task worth comparing?",
+          "options": [
+            {"id": "a", "text": "They hold the same information under different labels", "correct": true, "feedback": "Right. That shows the benefit comes from the structure, not from a particular set of letters."},
+            {"id": "b", "text": "They contain completely different information about the week", "correct": false, "feedback": "Both cover the same task and the same needs."},
+            {"id": "c", "text": "They prove one framework is wrong for updates", "correct": false, "feedback": "Neither is wrong. Both cover what the AI needs."},
+            {"id": "d", "text": "They show that labels are never really needed", "correct": false, "feedback": "The labels are what made you cover each kind of need."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "Sample prompt with RTCC labels", "ref": "kit:part1/sample-rtcc.md"},
+        {"label": "Sample prompt with RISE labels", "ref": "kit:part1/sample-rise.md"},
+        {"label": "Five example kinds of information and two sample frameworks", "ref": "kit:part1/frameworks-map.md"}
+      ],
+      "primary_source": {
+        "label": "Sample prompt with RTCC labels",
+        "ref": "kit:part1/sample-rtcc.md",
+        "why": "Read it next to the RISE sample. Both cover the same needs under different labels."
+      },
+      "related": {
+        "lessons": ["p1-frameworks"],
+        "glossary": ["Prompting framework", "RTCC", "RISE"]
+      }
+    }
+  ]
+}

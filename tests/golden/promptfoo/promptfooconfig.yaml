@@ -1,0 +1,60 @@
+# Golden config for the promptfoo-track parser tests. Built the way the build-promptfoo-config skill shapes it,
+# with the Northwind criteria C1 to C3 checked and C4 left as the skill's NOT CHECKED stub.
+description: Northwind end-of-week update checks
+prompts:
+  - "{{output}}"
+providers:
+  - echo
+defaultTest:
+  assert:
+    # C1: Word count under 150 passes
+    - type: word-count
+      metric: C1_length
+      value:
+        max: 149
+    # C2: Northwind, Contoso, Internal all appear as labels
+    - type: regex
+      metric: C2_grouped_by_client
+      value: '(?:^|\n)[ \t>*#_-]*Northwind[ \t*_]*(?::|\r?\n|$)'
+    - type: regex
+      metric: C2_grouped_by_client
+      value: '(?:^|\n)[ \t>*#_-]*Contoso[ \t*_]*(?::|\r?\n|$)'
+    - type: regex
+      metric: C2_grouped_by_client
+      value: '(?:^|\n)[ \t>*#_-]*Internal[ \t*_]*(?::|\r?\n|$)'
+    # C3: A "Blocker:" label and a "Need:" label both appear
+    - type: contains-all
+      metric: C3_blocker_and_ask
+      value:
+        - "Blocker:"
+        - "Need:"
+    # C4: None of "Subject:", "Dear", "Regards", "Sincerely" appear (NOT CHECKED: needs judgment; suggested rewrite: list the terms)
+    - type: javascript
+      metric: C4_teams_not_email
+      value: "({ pass: false, score: 0, reason: 'NOT CHECKED: needs judgment' })"
+    # Empty outputs must not pass "must not contain" checks
+    - type: javascript
+      metric: non_empty
+      value: output.trim().length > 0
+tests:
+  - description: fixture-bad
+    vars:
+      output: file://../northwind/fixture-bad.txt
+  - description: fixture-polished-but-wrong
+    vars:
+      output: file://../northwind/fixture-polished-but-wrong.txt
+  - description: run-1
+    vars:
+      output: file://../northwind/sample-run-1.txt
+  - description: run-2
+    vars:
+      output: file://../northwind/sample-run-2.txt
+  - description: run-3
+    vars:
+      output: file://../northwind/sample-run-3.txt
+  - description: run-4
+    vars:
+      output: file://../northwind/sample-run-4.txt
+  - description: run-5
+    vars:
+      output: file://../northwind/sample-run-5.txt

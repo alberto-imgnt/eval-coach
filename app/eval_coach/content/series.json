@@ -1,0 +1,62 @@
+{
+  "title": "Series map",
+  "parts": [
+    {"n": 1, "id": "part-1", "title": "Structured prompting", "kind": "course",
+     "outcome": "I tell the AI clearly what I need, so it guesses less and gives steadier answers.",
+     "ui": {
+       "brand_sub": "Part 1 · Structured prompting",
+       "map_title": "Part {n}: ",
+       "map_aria": "Course map. You are at Part {n} of {total}.",
+       "course_groups": [
+         {"id": "start", "label": "Start with your own words", "items": ["p1-mission", "cold", "score"]},
+         {"id": "name", "label": "Name the gaps", "items": ["p1-gaps", "p1-frameworks"]},
+         {"id": "try", "label": "Try a framework", "items": ["rewrite", "rescore"]},
+         {"id": "keep", "label": "Keep it and reuse it", "items": ["p1-benefits", "own"]}
+       ],
+       "finished_title": "You have finished Part 1",
+       "finished_body": "Your work is saved in your project folder: your two prompts, their answers and the prompt you rewrote from your own work. You can now explain why giving the AI a structure gets better results, and you can use a framework or build your own. In Part 2 you turn \"that looks good\" into clear pass or fail rules. Reviews will still appear here when they are due."
+     }},
+    {"n": 2, "id": "part-2", "title": "Defining evaluation criteria", "kind": "course",
+     "outcome": "I turn \"that looks good\" into clear pass or fail rules.",
+     "ui": {
+       "brand_sub": "Part 2 · Defining evaluation criteria",
+       "map_title": "Part {n}: ",
+       "map_aria": "Course map. You are at Part {n} of {total}.",
+       "course_groups": [
+         {"id": "need", "label": "Know what you need", "items": ["p2-mission", "p2-criteria", "draft"]},
+         {"id": "rules", "label": "Turn it into rules", "items": ["p2-thresholds", "thresholds"]},
+         {"id": "write", "label": "Write it down", "items": ["p2-testfile", "test-file"]},
+         {"id": "compare", "label": "Compare with an example", "items": ["reference"]}
+       ],
+       "finished_title": "You have finished Part 2",
+       "finished_body": "Your work is saved in your project folder: your worksheet and your test cases in part-2\\test-cases.md. You can now turn what you need from an answer into distinct criteria, give each one a pass or fail threshold a script could decide, and record them as test cases. In Part 3 an AI agent turns a file like this into a checker and runs it on real answers. The Northwind update is practice only and is not something to submit. Reviews will still appear here when they are due."
+     }},
+    {"n": 3, "id": "part-3", "title": "Running evals and baseline", "kind": "course",
+     "outcome": "I check five AI answers against my rules and record a starting score."},
+    {"n": 4, "id": "part-4", "title": "Iterating with evaluation-driven development", "kind": "soon",
+     "outcome": "I change my prompt, check again with the same rules and see whether the score moved."},
+    {"n": 5, "id": "part-5", "title": "Load-bearing audit and packaging", "kind": "soon",
+     "outcome": "I keep only the instructions that earn their place and package my work so someone else can use it."},
+    {"n": 6, "id": "part-6", "title": "Your own task", "kind": "live",
+     "outcome": "A live working meeting. You choose a task of your own that repeats, has clear requirements and can be checked by rules, and talk your ideas through with the others."}
+  ],
+  "ui": {
+    "brand_sub": "Evaluated Systems (Stage 3)",
+    "intro": "Six Parts, one method. Open a Part to work on it, or look ahead at what comes next.",
+    "list_label": "The six Parts",
+    "part_label": "Part {n}",
+    "soon": "Coming soon",
+    "live": "Live meeting",
+    "state_not_started": "Not started",
+    "state_in_progress": "In progress",
+    "state_done": "Done",
+    "count": "{done} of {total} done",
+    "start": "Start",
+    "continue": "Continue",
+    "review": "Review",
+    "open_aria": "{action} Part {n}: {title}",
+    "expand": "Show the lessons in Part {n}",
+    "collapse": "Hide the lessons in Part {n}",
+    "lessons_label": "Lessons in Part {n}"
+  }
+}

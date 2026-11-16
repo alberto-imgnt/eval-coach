@@ -1,0 +1,9 @@
+Hi, here's my end-of-week update.
+
+Mon: Standup, then two Northwind client meetings about the new reporting feature. Started building the Northwind reporting feature.
+Tue: Kept building the Northwind reporting feature.
+Wed: Helped onboard a new teammate. Prepared and ran the Northwind demo for the client.
+Thu: Blocker: lost half a day waiting on client test data access, so I worked on documentation instead. Need: access granted before Monday so testing can continue. Also attended the internal AI lunch & learn.
+Fri: Fixed the issues raised in the demo feedback. Reviewed a Contoso estimate.
+
+Let me know if you need anything else from me before the weekend.

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eval-coach</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <script src="js/theme.js"></script>
+  <link rel="stylesheet" href="vendor/xterm.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="vendor/xterm.js" defer></script>
+  <script src="vendor/addon-fit.js" defer></script>
+  <script src="js/app.js" type="module"></script>
+</head>
+<body>
+  <header id="topbar"></header>
+  <div id="notices"></div>
+  <div id="setup-banner"></div>
+  <div id="review-banner"></div>
+  <main id="main-area">
+    <div id="screen-setup" hidden></div>
+    <div id="screen-main" hidden>
+      <div id="read-progress" aria-hidden="true"><span></span></div>
+      <section id="col-left" aria-label="This step"></section>
+      <aside id="col-right" aria-label="Your CLI">
+        <div id="term-head"></div>
+        <div id="term-host"></div>
+        <div id="term-foot"></div>
+      </aside>
+    </div>
+    <div id="screen-message" hidden></div>
+  </main>
+  <noscript><p class="noscript">This app needs JavaScript, which is turned off in this browser.</p></noscript>
+</body>
+</html>

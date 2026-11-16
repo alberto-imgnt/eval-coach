@@ -1,0 +1,924 @@
+"""Preflight items, with fake runners. Nothing here downloads or launches anything real."""
+from __future__ import annotations
+
+import hashlib
+import json
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import unittest
+from pathlib import Path
+from unittest import mock
+
+import helpers
+from helpers import FakePty, FakeTerminal
+
+from eval_coach import preflight as pf
+from eval_coach import project, runner
+from eval_coach.engine import Engine, EngineError
+from eval_coach.preflight import Result, SystemRunner
+from eval_coach.terminal import TerminalManager
+
+
+class FakeRunner:
+    """Stands in for the programs preflight would run. Records every call."""
+
+    def __init__(self):
+        self.calls = []
+        self.programs = {}
+        self.which_map = {"python": r"C:\fake\python.exe"}
+        self.free = 500 * 10**9
+        self.gate = None
+
+    def name_of(self, argv):
+        return Path(str(argv[0])).stem.lower()
+
+    def run(self, argv, timeout, env=None, cwd=None, on_tick=None, cancel=None):
+        self.calls.append({"argv": list(argv), "timeout": timeout, "env": env, "cwd": cwd})
+        if self.gate is not None:
+            self.gate.wait(10)
+        if on_tick is not None:
+            on_tick()
+        handler = self.programs.get(self.name_of(argv))
+        if handler is None:
+            return Result(code=-1, started=False, stderr="fake: no program")
+        return handler(argv, env, cwd)
+
+    def which(self, name, path):
+        return self.which_map.get(name)
+
+    def disk_free(self, path):
+        return self.free
+
+    def calls_named(self, name):
+        return [c for c in self.calls if self.name_of(c["argv"]) == name]
+
+
+def text_result(stdout="", code=0, stderr="", timed_out=False):
+    return lambda argv, env, cwd: Result(code=code, stdout=stdout, stderr=stderr, timed_out=timed_out)
+
+
+class Base(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="eval-coach-pf-"))
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.home = self.tmp / "home"
+        self.project_dir = self.tmp / "project"
+        self.fake = FakeRunner()
+        self.fake.programs["python"] = text_result("Python 3.13.17\n")
+        self.terminal = FakeTerminal()
+        self.engine = self.build_engine()
+
+    def build_engine(self):
+        return Engine(self.home, self.terminal, poll_interval=0.01, preflight_runner=self.fake,
+                      registry_paths=lambda: [])
+
+    @property
+    def state(self):
+        return self.engine.get_state()
+
+    def item(self, item_id, state=None):
+        return next(i for i in (state or self.state)["preflight"]["items"] if i["id"] == item_id)
+
+    def run_check_all(self):
+        self.engine.preflight_check()
+        self.engine.preflight.wait_for_job(10)
+
+    def assert_code(self, code, fn, *args, **kwargs):
+        with self.assertRaises(EngineError) as ctx:
+            fn(*args, **kwargs)
+        self.assertEqual(ctx.exception.code, code)
+
+    def setup_project(self):
+        self.engine.setup({"project_path": str(self.project_dir), "starter": "northwind"})
+
+
+class Environment(Base):
+    def test_prepends_found_python_when_no_private_copy(self):
+        self.engine.python_path = r"C:\Found Python\python.exe"
+        env = self.engine._cli_env()
+        self.assertTrue(env["PATH"].startswith(r"C:\Found Python;"), env["PATH"][:40])
+
+    def test_private_runtime_folders_are_first_when_present(self):
+        (self.home / "runtime" / "python").mkdir(parents=True)
+        (self.home / "runtime" / "python" / "python.exe").write_bytes(b"x")
+        (self.home / "runtime" / "node").mkdir(parents=True)
+        (self.home / "runtime" / "node" / "node.exe").write_bytes(b"x")
+        parts = self.engine._cli_env()["PATH"].split(";")
+        self.assertEqual(parts[0], str(self.home / "runtime" / "python"))
+        self.assertEqual(parts[1], str(self.home / "runtime" / "node"))
+
+    def test_adds_exactly_the_npm_and_promptfoo_variables(self):
+        env = self.engine._cli_env()
+        self.assertEqual(env["npm_config_cache"], str(self.home / "npm-cache"))
+        self.assertEqual(env["PROMPTFOO_DISABLE_TELEMETRY"], "1")
+        self.assertEqual(env["PROMPTFOO_CONFIG_DIR"], str(self.home / "promptfoo"))
+        import os
+        added = {k for k, v in env.items() if os.environ.get(k) != v and k != "PATH"}
+        self.assertEqual(added, {"npm_config_cache", "PROMPTFOO_DISABLE_TELEMETRY", "PROMPTFOO_CONFIG_DIR"})
+
+    def test_no_permission_setting_is_ever_added(self):
+        import os
+        # The host may define variables such as AUTO_APPROVAL; only what the app adds counts.
+        clean = {"PATH": r"C:\Windows\System32", "SystemRoot": r"C:\Windows"}
+        with mock.patch.dict(os.environ, clean, clear=True):
+            env = self.engine._cli_env()
+            added = [key for key, value in env.items() if clean.get(key) != value]
+        self.assertTrue(added)
+        for key in env:
+            self.assertNotRegex(key.lower(), r"permission|approval|yolo|dangerous|bypass")
+
+    def test_registry_path_entries_are_appended_for_a_fresh_install(self):
+        engine = Engine(self.home, self.terminal, preflight_runner=self.fake,
+                        registry_paths=lambda: [r"C:\NewlyInstalled"])
+        self.assertIn(r"C:\NewlyInstalled", engine._cli_env()["PATH"].split(";"))
+
+    def test_terminal_and_checker_receive_it(self):
+        helpers.write_passed_preflight(self.home)
+        engine = self.build_engine()
+        engine.setup({"project_path": str(self.project_dir), "cli_command": "fake-cli", "starter": "northwind"})
+        engine.step_start("generate")
+        start = self.terminal.starts[-1]
+        self.assertIn("npm_config_cache", start["env"])
+        seen = {}
+
+        def capture(project, files, timeout=30, env=None):
+            seen["env"] = env
+            return {"ok": True, "exit_code": 0, "error": None, "raw": "", "files": []}
+
+        for n in range(1, 6):
+            (self.project_dir / "runs" / f"run-{n}.txt").write_text("words", encoding="utf-8")
+        engine.step_stop("generate")
+        (self.project_dir / "check.py").write_text("print('hi')\n", encoding="utf-8")
+        engine.progress["steps"]["generate"]["model_name"] = "m"
+        engine.step_check("generate")
+        with mock.patch.object(runner, "run_checker", capture):
+            engine.step_run_checker("build", "first_look")
+        self.assertEqual(seen["env"]["PROMPTFOO_DISABLE_TELEMETRY"], "1")
+
+
+class Compare(unittest.TestCase):
+    def test_node_version_comparison_around_the_minimum(self):
+        for text, ok in (("v22.21.9", False), ("v22.22.0", True), ("v22.22.1", True), ("v24.0.0", True),
+                         ("v21.9.0", False), ("v18.20.3", False), ("v26.13.0", True), ("garbage", False)):
+            with self.subTest(text=text):
+                self.assertEqual(pf.node_is_new_enough(pf.parse_node_version(text)), ok)
+
+
+class Python(Base):
+    def test_passes_with_a_working_python(self):
+        self.run_check_all()
+        item = self.item("python")
+        self.assertEqual(item["status"], "passed")
+        self.assertIn("3.13.17", item["detail"])
+
+    def test_missing_from_path(self):
+        self.fake.which_map["python"] = None
+        self.run_check_all()
+        item = self.item("python")
+        self.assertEqual(item["status"], "failed")
+        self.assertTrue(item["next"])
+
+    def test_store_stub_is_skipped(self):
+        seen = {}
+        original = self.fake.which
+
+        def spy(name, path):
+            seen[name] = path
+            return original(name, path)
+
+        self.fake.which = spy
+        self.engine.preflight._find_tool("python", {"PATH": r"C:\Users\x\AppData\Local\Microsoft\WindowsApps;C:\Py"})
+        self.assertEqual(seen["python"], r"C:\Py")
+
+    def test_pwsh_may_be_found_in_the_store_alias_folder(self):
+        seen = {}
+        original = self.fake.which
+
+        def spy(name, path):
+            seen[name] = path
+            return original(name, path)
+
+        self.fake.which = spy
+        store = r"C:\Users\x\AppData\Local\Microsoft\WindowsApps"
+        path = f"{store};C:\\Py"
+        self.engine.preflight._find_tool("pwsh", {"PATH": path})
+        self.assertEqual(seen["pwsh"], path)
+        self.engine.preflight._find_tool("python", {"PATH": path})
+        self.assertEqual(seen["python"], r"C:\Py")
+
+    def test_too_old(self):
+        self.fake.programs["python"] = text_result("Python 3.8.10\n")
+        self.run_check_all()
+        self.assertEqual(self.item("python")["status"], "failed")
+
+    def test_a_hung_check_times_out_and_explains_itself(self):
+        self.fake.programs["python"] = text_result("", code=-1, timed_out=True)
+        self.run_check_all()
+        item = self.item("python")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("did not finish", item["detail"])
+
+
+class Node(Base):
+    def setUp(self):
+        super().setUp()
+        self.engine.preflight_track("promptfoo")
+
+    def test_not_applicable_on_script_track(self):
+        self.engine.preflight_track("script")
+        self.assertFalse(self.item("node")["applies"])
+        self.assertFalse(self.item("promptfoo")["applies"])
+        self.run_check_all()
+        self.assertEqual(self.fake.calls_named("node"), [])
+
+    def test_needs_you_when_missing(self):
+        self.fake.which_map["node"] = None
+        self.run_check_all()
+        item = self.item("node")
+        self.assertEqual(item["status"], "needs_you")
+        self.assertIsNotNone(item["install"])
+
+    def test_old_version_is_not_reused(self):
+        self.fake.which_map["node"] = r"C:\fake\node.exe"
+        self.fake.programs["node"] = text_result("v20.11.0\n")
+        self.run_check_all()
+        item = self.item("node")
+        self.assertEqual(item["status"], "needs_you")
+        self.assertIn("20.11.0", item["detail"])
+
+    def test_new_enough_is_reused(self):
+        self.fake.which_map["node"] = r"C:\fake\node.exe"
+        self.fake.programs["node"] = text_result("v22.22.0\n")
+        self.run_check_all()
+        self.assertEqual(self.item("node")["status"], "passed")
+
+    def test_consent_text_names_the_disk_amount(self):
+        self.fake.which_map["node"] = None
+        self.run_check_all()
+        body = self.item("node")["install"]["consent"]["body"]
+        self.assertIn("500.0 GB", body)
+        self.assertIn("about 41 MB", body)
+
+
+class Install(Base):
+    def setUp(self):
+        super().setUp()
+        self.engine.preflight_track("promptfoo")
+        self.fake.which_map["node"] = None
+        self.payload = b"pretend node zip" * 100
+        self.sha = hashlib.sha256(self.payload).hexdigest()
+        self.patcher = mock.patch.object(pf, "NODE_SHA256", self.sha)
+        self.patcher.start()
+        self.addCleanup(self.patcher.stop)
+
+    def fake_curl(self, payload=None):
+        data = self.payload if payload is None else payload
+
+        def curl(argv, env, cwd):
+            name = argv[argv.index("--output") + 1]
+            (Path(cwd) / name).write_bytes(data)
+            return Result(code=0)
+
+        return curl
+
+    def fake_tar_success(self):
+        def tar(argv, env, cwd):
+            target = Path(cwd) / argv[argv.index("-C") + 1] / pf.NODE_FOLDER
+            target.mkdir(parents=True)
+            (target / "node.exe").write_bytes(b"exe")
+            return Result(code=0)
+
+        return tar
+
+    def install_node(self):
+        self.engine.preflight_install("node", True)
+        self.engine.preflight.wait_for_job(10)
+
+    def test_consent_is_required(self):
+        self.assert_code("consent_required", self.engine.preflight_install, "node", False)
+        self.assert_code("consent_required", self.engine.preflight_install, "node", None)
+        self.assertEqual(self.fake.calls, [])
+
+    def test_full_install_uses_system_curl_and_tar_and_verifies(self):
+        self.fake.programs["curl"] = self.fake_curl()
+        self.fake.programs["tar"] = self.fake_tar_success()
+        self.fake.programs["node"] = text_result("v26.13.0\n")
+        self.install_node()
+        self.assertEqual(self.item("node")["status"], "passed")
+        self.assertTrue((self.home / "runtime" / "node" / "node.exe").is_file())
+        curl = self.fake.calls_named("curl")[0]
+        self.assertEqual(curl["argv"][0].lower(), pf.CURL.lower())
+        self.assertTrue(curl["argv"][0].lower().endswith(r"system32\curl.exe"))
+        self.assertIn("--ssl-no-revoke", curl["argv"])
+        self.assertEqual(pf.TAR.lower().split("\\")[-2:], ["system32", "tar.exe"])
+        self.assertFalse((self.home / "runtime" / f"{pf.NODE_FOLDER}.zip").exists(), "the archive is removed")
+        self.assertFalse((self.home / "runtime" / "node.new").exists())
+
+    def test_hash_mismatch_deletes_the_file_and_is_never_bypassed(self):
+        self.fake.programs["curl"] = self.fake_curl(payload=b"tampered bytes")
+        self.fake.programs["tar"] = self.fake_tar_success()
+        self.fake.programs["node"] = text_result("v26.13.0\n")
+        self.install_node()
+        item = self.item("node")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("fingerprint", item["detail"])
+        self.assertIn("cannot be turned off", item["detail"])
+        self.assertFalse((self.home / "runtime" / f"{pf.NODE_FOLDER}.zip").exists())
+        self.assertFalse((self.home / "runtime" / "node").exists())
+        self.assertEqual(self.fake.calls_named("tar"), [], "tar must not run on a bad file")
+
+    def test_no_network_is_explained(self):
+        self.fake.programs["curl"] = lambda argv, env, cwd: Result(code=6, stderr="could not resolve")
+        self.install_node()
+        item = self.item("node")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("Company Portal or Software Center", item["next"])
+        self.assertIn("Check everything again", item["next"])
+
+    def test_download_timeout_is_explained(self):
+        self.fake.programs["curl"] = lambda argv, env, cwd: Result(code=28)
+        self.install_node()
+        self.assertIn("timed out", self.item("node")["detail"])
+
+    def test_not_enough_disk_stops_before_any_download(self):
+        self.fake.free = 10 * 10**6
+        self.install_node()
+        item = self.item("node")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("10 MB", item["detail"])
+        self.assertEqual(self.fake.calls, [])
+
+    def test_antivirus_removed_the_file_after_extracting(self):
+        self.fake.programs["curl"] = self.fake_curl()
+
+        def tar_without_exe(argv, env, cwd):
+            (Path(cwd) / argv[argv.index("-C") + 1] / pf.NODE_FOLDER).mkdir(parents=True)
+            return Result(code=0)
+
+        self.fake.programs["tar"] = tar_without_exe
+        self.install_node()
+        self.assertIn("security software", self.item("node")["detail"])
+
+    def test_a_second_install_while_one_runs_is_refused(self):
+        self.fake.gate = threading.Event()
+        self.fake.programs["curl"] = self.fake_curl()
+        self.fake.programs["tar"] = self.fake_tar_success()
+        self.fake.programs["node"] = text_result("v26.13.0\n")
+        self.engine.preflight_install("node", True)
+        try:
+            self.assert_code("job_busy", self.engine.preflight_install, "node", True)
+            self.assert_code("job_busy", self.engine.preflight_check)
+            job = self.state["preflight"]["job"]
+            self.assertTrue(job["running"])
+            self.assertEqual(job["kind"], "node")
+            self.assertEqual(self.engine.get_state()["preflight"]["job"]["kind"], "node", "a state fetch after a reload still shows the job")
+        finally:
+            self.fake.gate.set()
+            self.engine.preflight.wait_for_job(10)
+        self.assertIsNone(self.state["preflight"]["job"])
+
+    def test_install_runs_off_the_request_thread(self):
+        self.fake.gate = threading.Event()
+        self.fake.programs["curl"] = self.fake_curl()
+        started = time.monotonic()
+        self.engine.preflight_install("node", True)
+        self.assertLess(time.monotonic() - started, 2)
+        self.fake.gate.set()
+        self.engine.preflight.wait_for_job(10)
+
+    def test_download_progress_is_reported(self):
+        written = threading.Event()
+
+        def curl(argv, env, cwd):
+            name = argv[argv.index("--output") + 1]
+            (Path(cwd) / name).write_bytes(self.payload[:1000])
+            written.set()
+            self.fake.gate2.wait(10)
+            (Path(cwd) / name).write_bytes(self.payload)
+            return Result(code=0)
+
+        self.fake.gate2 = threading.Event()
+        self.fake.programs["curl"] = curl
+        self.fake.programs["tar"] = self.fake_tar_success()
+        self.fake.programs["node"] = text_result("v26.13.0\n")
+        self.engine.preflight_install("node", True)
+        self.assertTrue(written.wait(5))
+        job = self.state["preflight"]["job"]
+        self.assertEqual(job["total_bytes"], pf.NODE_DOWNLOAD_BYTES)
+        self.fake.gate2.set()
+        self.engine.preflight.wait_for_job(10)
+
+
+class Promptfoo(Base):
+    def setUp(self):
+        super().setUp()
+        self.engine.preflight_track("promptfoo")
+        self.fake.which_map["node"] = r"C:\fake\node.exe"
+        self.fake.which_map["npx"] = r"C:\fake\npx.exe"
+        self.fake.programs["node"] = text_result("v26.13.0\n")
+
+    def test_check_does_not_download_without_consent(self):
+        self.fake.programs["npx"] = text_result("", code=1, stderr="ENOTCACHED")
+        self.run_check_all()
+        item = self.item("promptfoo")
+        self.assertEqual(item["status"], "needs_you")
+        self.assertIsNotNone(item["install"])
+        call = self.fake.calls_named("npx")[0]
+        self.assertEqual(call["env"]["npm_config_offline"], "true")
+        self.assertEqual(call["argv"][1:], ["--yes", "promptfoo@0.125.1", "--version"])
+
+    def test_passes_when_cached_and_right_version(self):
+        self.fake.programs["npx"] = text_result("0.125.1\n")
+        self.run_check_all()
+        self.assertEqual(self.item("promptfoo")["status"], "passed")
+
+    def test_wrong_version_needs_install(self):
+        self.fake.programs["npx"] = text_result("0.100.0\n")
+        self.run_check_all()
+        self.assertEqual(self.item("promptfoo")["status"], "needs_you")
+
+    def test_install_consent_states_one_gigabyte(self):
+        self.fake.programs["npx"] = text_result("", code=1)
+        self.run_check_all()
+        self.assertIn("about 1 GB", self.item("promptfoo")["install"]["consent"]["body"])
+
+    def test_install_requires_node(self):
+        self.fake.which_map["node"] = None
+        self.run_check_all()
+        self.assert_code("needs_node", self.engine.preflight_install, "promptfoo", True)
+
+    def test_predownload_uses_private_cache_and_env(self):
+        self.fake.programs["npx"] = text_result("", code=1)
+        self.run_check_all()
+        self.fake.programs["npx"] = text_result("0.125.1\n")
+        self.engine.preflight_install("promptfoo", True)
+        self.engine.preflight.wait_for_job(10)
+        self.assertEqual(self.item("promptfoo")["status"], "passed")
+        call = self.fake.calls_named("npx")[-1]
+        self.assertEqual(call["env"]["npm_config_cache"], str(self.home / "npm-cache"))
+        self.assertEqual(call["env"]["PROMPTFOO_DISABLE_TELEMETRY"], "1")
+        self.assertEqual(call["env"]["PROMPTFOO_CONFIG_DIR"], str(self.home / "promptfoo"))
+        self.assertNotIn("npm_config_offline", call["env"])
+
+    def test_npm_errors_are_explained_with_a_next_action(self):
+        self.fake.programs["npx"] = text_result("", code=1)
+        self.run_check_all()
+        self.fake.programs["npx"] = text_result("", code=1, stderr="some npm problem")
+        self.engine.preflight_install("promptfoo", True)
+        self.engine.preflight.wait_for_job(10)
+        item = self.item("promptfoo")
+        self.assertEqual(item["status"], "failed")
+        self.assertTrue(item["next"])
+
+    def test_npm_network_block_is_explained(self):
+        self.fake.programs["npx"] = text_result("", code=1)
+        self.run_check_all()
+        self.fake.programs["npx"] = text_result("", code=1, stderr="npm ERR! code ENOTFOUND")
+        self.engine.preflight_install("promptfoo", True)
+        self.engine.preflight.wait_for_job(10)
+        self.assertIn("registry", self.item("promptfoo")["detail"])
+
+    def test_not_enough_disk_blocks_before_download(self):
+        self.fake.programs["npx"] = text_result("", code=1)
+        self.run_check_all()
+        calls_before = len(self.fake.calls)
+        self.fake.free = 2 * 10**8
+        self.engine.preflight_install("promptfoo", True)
+        self.assertEqual(self.item("promptfoo")["status"], "failed")
+        self.assertEqual(len(self.fake.calls), calls_before)
+
+    def test_track_note_is_one_plain_line(self):
+        self.assertIn("Script track", self.state["preflight"]["track_note"])
+        self.engine.preflight_track("script")
+        self.assertIsNone(self.state["preflight"]["track_note"])
+
+
+class Cli(Base):
+    def test_starts_as_needs_you_with_no_command(self):
+        self.run_check_all()
+        self.assertEqual(self.item("cli")["status"], "needs_you")
+
+    def test_a_command_that_is_not_found_explains_itself(self):
+        self.engine.preflight_cli("no-such-cli --flag")
+        item = self.item("cli")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("no-such-cli --flag", item["detail"])
+        self.assertTrue(item["next"])
+
+    def test_found_command_needs_a_launch_then_passes(self):
+        self.engine.preflight_cli("fake-cli")
+        self.assertEqual(self.item("cli")["status"], "needs_you")
+        self.engine.preflight_cli_start()
+        self.assertEqual(self.item("cli")["status"], "passed")
+        start = self.terminal.starts[-1]
+        self.assertEqual(start["command"], "fake-cli")
+        self.assertIn("npm_config_cache", start["env"])
+        self.assertEqual(self.item("signin")["status"], "needs_you")
+
+    def test_not_found_after_install_uses_its_own_message(self):
+        self.engine.preflight.mark_recipe_ran()
+        self.engine.preflight_cli("no-such-cli")
+        self.assertIn("install finished", self.item("cli")["detail"])
+
+    def test_signin_is_confirmed_by_the_participant_only(self):
+        self.engine.preflight_cli("fake-cli")
+        self.engine.preflight_cli_start()
+        self.assertNotEqual(self.item("signin")["status"], "passed")
+        self.engine.preflight_signin_confirm()
+        self.assertEqual(self.item("signin")["status"], "passed")
+
+    def test_signin_message_explains_the_license_requirement(self):
+        self.engine.preflight_cli("fake-cli")
+        self.engine.preflight_cli_start()
+        self.assertIn("license", self.item("signin")["detail"])
+
+    def test_changing_the_command_resets_the_later_items(self):
+        self.engine.preflight_cli("fake-cli")
+        self.engine.preflight_cli_start()
+        self.engine.preflight_signin_confirm()
+        self.engine.preflight_cli("other-cli")
+        self.assertNotEqual(self.item("cli")["status"], "passed")
+        self.assertNotEqual(self.item("signin")["status"], "passed")
+
+    def test_app_never_answers_the_cli(self):
+        self.engine.preflight_cli("fake-cli")
+        self.engine.preflight_cli_start()
+        self.engine.preflight_signin_confirm()
+        self.assertEqual(self.terminal.keystrokes, [])
+        self.assertEqual(self.terminal.typed, [])
+
+
+class Recipes(Base):
+    def test_recipe_needs_consent(self):
+        self.assert_code("consent_required", self.engine.preflight_recipe, "claude-winget", False)
+        self.assertEqual(self.terminal.starts, [])
+
+    def test_recipe_runs_visibly_in_the_terminal_with_the_exact_command(self):
+        self.engine.preflight_recipe("claude-winget", True)
+        start = self.terminal.starts[-1]
+        self.assertEqual(start["command"][-1], "winget install Anthropic.ClaudeCode")
+        self.assertTrue(start["command"][0].lower().endswith("cmd.exe"))
+
+    def test_powershell_recipe_uses_windows_powershell_without_changing_policy(self):
+        self.engine.preflight_recipe("devin", True)
+        argv = self.terminal.starts[-1]["command"]
+        self.assertTrue(argv[0].lower().endswith(r"windowspowershell\v1.0\powershell.exe"))
+        self.assertNotIn("-ExecutionPolicy", argv)
+        self.assertEqual(argv[-1], "irm https://static.devin.ai/cli/setup.ps1 | iex")
+
+    def test_other_recipe_has_nothing_to_run(self):
+        self.assert_code("recipe_no_command", self.engine.preflight_recipe, "other", True)
+
+    def test_unknown_recipe(self):
+        self.assert_code("bad_recipe", self.engine.preflight_recipe, "nope", True)
+
+    def test_not_enough_disk_blocks_a_recipe(self):
+        self.fake.free = 10
+        self.assert_code("not_enough_disk", self.engine.preflight_recipe, "copilot", True)
+
+    def test_consent_text_shows_the_command_and_free_space(self):
+        recipes = {r["id"]: r for r in self.state["preflight"]["cli"]["recipes"]}
+        body = recipes["copilot"]["consent"]["body"]
+        self.assertIn("winget install GitHub.Copilot", body)
+        self.assertIn("500.0 GB", body)
+
+    def test_copilot_shows_pwsh_requirement_when_missing(self):
+        recipes = {r["id"]: r for r in self.state["preflight"]["cli"]["recipes"]}
+        requirement = recipes["copilot"]["requirement"]
+        self.assertIn("PowerShell", requirement["detail"])
+        self.assertEqual(requirement["recipe"], "powershell")
+
+    def test_copilot_requirement_clears_when_pwsh_exists(self):
+        self.fake.which_map["pwsh"] = r"C:\fake\pwsh.exe"
+        recipes = {r["id"]: r for r in self.state["preflight"]["cli"]["recipes"]}
+        self.assertIsNone(recipes["copilot"]["requirement"])
+
+    def test_the_app_never_answers_a_recipe(self):
+        self.engine.preflight_recipe("devin", True)
+        self.assertEqual(self.terminal.keystrokes, [])
+        self.assertEqual(self.terminal.typed, [])
+
+    def test_override_file_replaces_the_bundled_recipes(self):
+        override = self.home / "cli-recipes.json"
+        override.write_text(json.dumps({"recipes": [
+            {"id": "fake", "name": "Fake", "cli_command": "fake", "shell": "cmd", "command": "echo hi", "needs_mb": 1}]}),
+            encoding="utf-8")
+        engine = self.build_engine()
+        recipes = engine.get_state()["preflight"]["cli"]["recipes"]
+        self.assertEqual([r["id"] for r in recipes], ["fake"])
+
+
+class WorkingTest(Base):
+    def setUp(self):
+        super().setUp()
+        self.engine.preflight_cli("fake-cli")
+        self.engine.preflight_cli_start()
+        self.engine.preflight_signin_confirm()
+        self.engine.preflight_test_start()
+        self.folder = self.home / "cli-test"
+
+    def test_folder_is_cleared_and_holds_only_the_input(self):
+        self.assertEqual([p.name for p in self.folder.iterdir()], ["input.txt"])
+        self.assertEqual((self.folder / "input.txt").read_text(encoding="utf-8"), "hello from eval coach")
+        self.assertEqual(Path(self.terminal.starts[-1]["cwd"]), self.folder)
+
+    def test_send_types_the_exact_line_only_on_request(self):
+        self.assertEqual(self.terminal.typed, [])
+        self.engine.preflight_test_send()
+        self.assertEqual(self.terminal.typed, [
+            "Read input.txt, write its contents in uppercase to output.txt, then run python --version "
+            "and write what it prints to version.txt. Do nothing else."])
+        self.assertTrue(self.state["preflight"]["session"]["sent"])
+
+    def finish(self, output=None, version=None):
+        if output is not None:
+            (self.folder / "output.txt").write_text(output, encoding="utf-8")
+        if version is not None:
+            (self.folder / "version.txt").write_text(version, encoding="utf-8")
+        self.engine.preflight_test_check()
+        return self.item("working_test")
+
+    def test_passing(self):
+        item = self.finish("HELLO FROM EVAL COACH\r\n", "Python 3.13.17\n")
+        self.assertEqual(item["status"], "passed")
+
+    def test_trailing_whitespace_is_ignored(self):
+        self.assertEqual(self.finish("HELLO FROM EVAL COACH   \n\n", "Python 3.9.1")["status"], "passed")
+
+    def test_utf16_redirect_output_still_passes(self):
+        (self.folder / "output.txt").write_text("HELLO FROM EVAL COACH", encoding="utf-8")
+        (self.folder / "version.txt").write_bytes("Python 3.12.4\r\n".encode("utf-16"))
+        self.engine.preflight_test_check()
+        self.assertEqual(self.item("working_test")["status"], "passed")
+
+    def test_wrong_output_content_names_reading_files(self):
+        item = self.finish("hello from eval coach", "Python 3.13")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("reading", item["detail"])
+
+    def test_missing_output_names_writing_files(self):
+        item = self.finish(version="Python 3.13")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("write files", item["detail"])
+
+    def test_missing_version_names_running_a_command(self):
+        item = self.finish("HELLO FROM EVAL COACH")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("running a command", item["detail"])
+
+    def test_bad_version_names_the_command(self):
+        item = self.finish("HELLO FROM EVAL COACH", "not a version")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("not a version", item["detail"])
+
+    def test_chat_only_tool_cannot_pass(self):
+        item = self.finish()
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("chat-only", item["next"])
+
+    def test_missing_output_also_explains_sign_in(self):
+        item = self.finish()
+        self.assertIn("not signed in", item["detail"])
+        self.assertIn("sign in", item["next"])
+
+    def test_checking_before_any_test_ran_is_incomplete(self):
+        shutil.rmtree(self.folder)
+        self.engine.preflight_test_check()
+        item = self.item("working_test")
+        self.assertEqual(item["status"], "needs_you")
+        self.assertIn("not finished", item["detail"])
+
+    def test_needs_signin_first(self):
+        self.engine.preflight.set_cli_command("other")
+        self.assert_code("needs_cli_command", self.engine.preflight_test_start)
+
+    def test_check_everything_rereads_the_files(self):
+        self.finish("HELLO FROM EVAL COACH", "Python 3.13.17\n")
+        self.assertEqual(self.item("working_test")["status"], "passed")
+        (self.folder / "output.txt").write_text("stale", encoding="utf-8")
+        self.run_check_all()
+        self.assertEqual(self.item("working_test")["status"], "failed")
+
+    def test_passing_stops_the_cli(self):
+        stops = self.terminal.stops
+        self.finish("HELLO FROM EVAL COACH", "Python 3.13.17\n")
+        self.assertGreater(self.terminal.stops, stops)
+
+
+class ProjectFolder(Base):
+    def test_needs_a_choice_at_first(self):
+        self.run_check_all()
+        self.assertEqual(self.item("project")["status"], "needs_you")
+
+    def test_setup_passes_the_item(self):
+        self.engine.preflight_cli("fake-cli")
+        self.setup_project()
+        item = self.item("project")
+        self.assertEqual(item["status"], "passed")
+        self.assertIn(str(self.project_dir), item["detail"])
+
+    def test_refuses_to_create_a_project_in_onedrive(self):
+        self.engine.preflight_cli("fake-cli")
+        path = self.tmp / "OneDrive - Acme" / "project"
+        self.assert_code("project_in_onedrive", self.engine.setup,
+                         {"project_path": str(path), "starter": "northwind"})
+        self.assertFalse(path.exists())
+
+    def test_existing_project_in_onedrive_fails_but_keeps_progress(self):
+        path = self.tmp / "OneDrive - Acme" / "project"
+        paths = project.Paths(self.home, path)
+        project.create_project(paths, "northwind")
+        from eval_coach import state as store
+        store.save_progress(paths.progress_file, store.new_progress(str(path), "fake-cli", "northwind"))
+        self.engine.setup({"project_path": str(path), "starter": "northwind"})
+        item = self.item("project")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("OneDrive", item["detail"])
+        self.assertTrue(paths.progress_file.is_file())
+
+    def test_missing_files_fail_with_a_next_action(self):
+        self.setup_project_with_cli()
+        (self.project_dir / "prompt-v0.md").unlink()
+        self.run_check_all()
+        item = self.item("project")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("prompt-v0.md", item["detail"])
+
+    def setup_project_with_cli(self):
+        self.engine.preflight_cli("fake-cli")
+        self.setup_project()
+
+
+class Lock(Base):
+    def pass_everything(self):
+        self.engine.preflight_cli("fake-cli")
+        self.engine.preflight_cli_start()
+        self.engine.preflight_signin_confirm()
+        self.engine.preflight_test_start()
+        folder = self.home / "cli-test"
+        (folder / "output.txt").write_text("HELLO FROM EVAL COACH", encoding="utf-8")
+        (folder / "version.txt").write_text("Python 3.13\n", encoding="utf-8")
+        self.engine.preflight_test_check()
+        self.run_check_all()
+
+    def test_steps_are_locked_until_every_item_passes(self):
+        self.engine.preflight_cli("fake-cli")
+        self.setup_project()
+        self.assertFalse(self.state["preflight"]["passed"])
+        self.assertIsNone(self.state["step"])
+        self.assertTrue(all(s["status"] == "locked" for s in self.state["steps"]))
+        self.assert_code("preflight_incomplete", self.engine.step_start, "generate")
+
+    def test_full_pass_opens_the_steps(self):
+        self.pass_everything()
+        self.setup_project()
+        state = self.state
+        self.assertTrue(state["preflight"]["passed"])
+        self.assertEqual(state["current_step"], "generate")
+        self.engine.step_start("generate")
+
+    def test_preflight_passing_stops_any_preflight_cli_session(self):
+        self.pass_everything()
+        self.engine.preflight_cli_start()
+        self.assertTrue(self.terminal.running)
+        stops = self.terminal.stops
+        self.setup_project()
+        self.assertGreater(self.terminal.stops, stops)
+
+    def test_results_persist_across_restart(self):
+        self.pass_everything()
+        self.setup_project()
+        engine = self.build_engine()
+        state = engine.get_state()
+        self.assertTrue(state["preflight"]["passed"])
+        self.assertEqual(state["current_step"], "generate")
+
+    def test_existing_project_resumes_after_preflight_passes(self):
+        self.pass_everything()
+        self.setup_project()
+        self.engine.progress["done"].append("generate")
+        self.engine._save()
+        (self.home / "preflight.json").unlink()
+        engine = self.build_engine()
+        self.engine = engine
+        state = engine.get_state()
+        self.assertTrue(state["configured"], "the project is still known")
+        self.assertFalse(state["preflight"]["passed"], "preflight must run again")
+        self.assertIsNone(state["step"])
+        self.assertEqual(self.item("cli")["status"], "not_checked")
+        self.assertEqual(state["preflight"]["cli"]["command"], "fake-cli", "the saved command carries over")
+        self.assert_code("preflight_incomplete", engine.step_start, "build")
+        self.pass_everything()
+        state = engine.get_state()
+        self.assertTrue(state["preflight"]["passed"])
+        self.assertEqual(state["current_step"], "build", "the saved step is kept")
+        self.assertEqual(engine.progress["done"], ["generate"])
+
+    def test_corrupt_preflight_file_starts_over_and_says_so(self):
+        (self.home / "preflight.json").write_text("{nope", encoding="utf-8")
+        engine = self.build_engine()
+        state = engine.get_state()
+        self.assertEqual(state["preflight"]["items"][1]["status"], "not_checked")
+        self.assertIn("run again", " ".join(state["setup"]["warnings"]))
+
+    def test_a_command_that_was_not_found_does_not_replace_the_saved_one(self):
+        self.pass_everything()
+        self.setup_project()
+        self.engine.preflight_cli("no-such-cli")
+        self.assertEqual(self.engine.progress["cli_command"], "fake-cli")
+
+
+class RealRunner(unittest.TestCase):
+    def test_a_hung_program_is_stopped_by_its_timeout(self):
+        started = time.monotonic()
+        result = SystemRunner().run([sys.executable, "-c", "import time; time.sleep(60)"], timeout=1)
+        self.assertTrue(result.timed_out)
+        self.assertLess(time.monotonic() - started, 20)
+
+    def test_captures_output(self):
+        result = SystemRunner().run([sys.executable, "-c", "print('hi')"], timeout=20)
+        self.assertEqual(result.code, 0)
+        self.assertIn("hi", result.stdout)
+
+    def test_missing_program_does_not_raise(self):
+        result = SystemRunner().run([r"C:\no\such\thing.exe"], timeout=5)
+        self.assertFalse(result.started)
+        self.assertNotEqual(result.code, 0)
+
+    def test_cancel_stops_a_program(self):
+        cancel = threading.Event()
+        cancel.set()
+        result = SystemRunner().run([sys.executable, "-c", "import time; time.sleep(60)"], timeout=60, cancel=cancel)
+        self.assertTrue(result.cancelled)
+
+
+class TerminalOutputIsIgnored(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="eval-coach-pf-"))
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        FakePty.created = []
+        self.terminal = TerminalManager(pty_factory=FakePty, argv_parser=lambda c, env=None: c.split(),
+                                        command_checker=lambda c, env=None: None)
+        self.addCleanup(self.terminal.stop)
+        self.engine = Engine(self.tmp / "home", self.terminal, preflight_runner=FakeRunner(), registry_paths=lambda: [])
+
+    def test_a_terminal_that_prints_the_right_answers_still_fails(self):
+        self.engine.preflight_cli("fake-cli")
+        self.engine.preflight_cli_start()
+        self.engine.preflight_signin_confirm()
+        self.engine.preflight_test_start()
+        FakePty.created[-1].feed(b"HELLO FROM EVAL COACH\r\nPython 3.13.17\r\n")
+        self.engine.preflight_test_check()
+        item = next(i for i in self.engine.get_state()["preflight"]["items"] if i["id"] == "working_test")
+        self.assertEqual(item["status"], "failed")
+        self.assertEqual(FakePty.created[-1].written, [], "the app never answers the CLI")
+
+    def test_devin_gets_a_terminal_marker_and_other_clis_do_not(self):
+        env = {"PATH": "C:\\x"}
+        self.terminal.start("devin", str(self.tmp), "x", env=env)
+        self.assertIn("WT_SESSION", FakePty.created[-1].env)
+        self.terminal.start("fake-cli", str(self.tmp), "x", env=env)
+        self.assertEqual(FakePty.created[-1].env, env)
+        self.terminal.start("devin", str(self.tmp), "x", env={"PATH": "C:\\x", "TERM_PROGRAM": "vscode"})
+        self.assertNotIn("WT_SESSION", FakePty.created[-1].env)
+
+    def test_signin_session_is_labelled_your_cli(self):
+        self.engine.preflight_cli("fake-cli")
+        self.engine.preflight_cli_start()
+        self.assertEqual(self.engine.get_state()["terminal"]["label"], "Your CLI")
+
+    def test_items_are_numbered_without_gaps(self):
+        def numbers():
+            items = self.engine.get_state()["preflight"]["items"]
+            return [i["number"] for i in items if i["applies"]]
+
+        self.engine.preflight_track("script")
+        self.assertEqual(numbers(), list(range(1, len(numbers()) + 1)))
+        self.engine.preflight_track("promptfoo")
+        self.assertEqual(numbers(), list(range(1, len(numbers()) + 1)))
+
+
+class Shutdown(Base):
+    def test_cancels_a_running_job(self):
+        self.engine.preflight_track("promptfoo")
+        self.fake.which_map["node"] = None
+        released = threading.Event()
+
+        def slow_curl(argv, env, cwd):
+            released.wait(5)
+            return Result(code=1)
+
+        self.fake.programs["curl"] = slow_curl
+        self.engine.preflight_install("node", True)
+        job = self.engine.preflight._job
+        self.engine.preflight.shutdown()
+        self.assertTrue(job.cancel.is_set())
+        released.set()
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,298 @@
+{
+  "steps": {
+    "draft": {
+      "kind": "criteria_table",
+      "edit": "rows",
+      "min_rows": 3,
+      "part1": true,
+      "title": "Draft your criteria",
+      "goal": "Turn the five things you know into at least three criteria, each tied to a requirement and each marked as format or content.",
+      "why": [
+        "A criterion is one thing a good answer must do. Writing them down before you look at any answer keeps your judgment fair, because you cannot bend the rules to fit what you see.",
+        "Each criterion traces to a requirement, so nothing is checked that nobody asked for and nothing that was asked for is forgotten.",
+        "You mark each one as format (how the answer looks) or content (what the answer says). A set with both catches a polished answer that misses the point.",
+        "The worksheet is this course's way of drafting. Other approaches work too, such as a list in a document."
+      ],
+      "instructions": [
+        "Read the scenario and the five things you know. They are not in the rough notes, so a good answer has to meet them anyway.",
+        "Add a row for each criterion. Pick a requirement from the card, or write your own, then write the criterion in your own words.",
+        "Choose Format or Content for each row. Aim for at least three rows, with at least one about content.",
+        "Press Save my worksheet. Nothing is saved until you do.",
+        "Tick the two self-checks when they are true for your rows, then press Check my work."
+      ],
+      "scenario": {
+        "intro": "It is Friday afternoon and you need to send your project lead a short end-of-week update. You will use your AI tool to turn your rough notes into the update.",
+        "requirements": [
+          {"id": "r1", "label": "It is sent as a Teams message, not an email"},
+          {"id": "r2", "label": "It is under 150 words"},
+          {"id": "r3", "label": "The work is grouped by client (Northwind, Contoso, Internal), not by day"},
+          {"id": "r4", "label": "It calls out the blocker and what you need to resolve it"},
+          {"id": "r5", "label": "The tone is factual, not self-promotional"}
+        ],
+        "task": "Your task: write at least three criteria that a good update must meet. Nothing is run in this Part. You only write the rules."
+      },
+      "types": [
+        {"id": "format", "label": "Format"},
+        {"id": "content", "label": "Content"}
+      ],
+      "ticks": [
+        {"id": "traces", "label": "Each criterion traces to a requirement"},
+        {"id": "distinct", "label": "No two criteria check the same thing"}
+      ],
+      "words": {"row": "row {n}", "rows": "rows {list}", "and": "and"},
+      "troubleshooting": [
+        {"problem": "You are not sure whether a criterion is format or content.", "fix": "Ask whether it is about how the answer looks (its length, its layout, how it starts) or about what it says (the facts and points it includes). If it is about what it says, choose Content."},
+        {"problem": "Two of your rows seem to check the same thing.", "fix": "Keep the clearer one and change the other so it checks something different, or remove it."},
+        {"problem": "You cannot find a requirement for a criterion.", "fix": "A criterion with no requirement behind it checks something nobody asked for. Pick a requirement from the card, or leave the criterion out."},
+        {"problem": "Check my work says you have unsaved changes.", "fix": "Press Save my worksheet first, then check again."}
+      ],
+      "gate": {
+        "rows": {"label": "Three or more criteria", "ok": "", "fail": "You have {count} saved. Add {missing} more so there are at least {min}."},
+        "filled": {"label": "Every row complete", "ok": "", "fail": "Fill in the requirement, the criterion and the type for {rows}."},
+        "content": {"label": "One about content", "ok": "", "fail": "At least one criterion must be about what the answer says. Change a Format row to Content, or add one."},
+        "unique": {"label": "No repeated criterion", "ok": "", "fail": "The criterion in {rows} is the same. Keep one and change or remove the other."},
+        "traces": {"label": "Self-check: each one traces to a requirement", "ok": "", "fail": "Tick the first self-check once each criterion traces to a requirement."},
+        "distinct": {"label": "Self-check: no two check the same thing", "ok": "", "fail": "Tick the second self-check once no two criteria check the same thing."}
+      },
+      "messages": {
+        "bad_rows": "Those rows are not in the form this step expects.",
+        "rows_locked": "The rows cannot be changed here.",
+        "save_failed": "Your worksheet could not be saved: {error}"
+      },
+      "ui": {
+        "scenario_heading": "The scenario",
+        "requirements_heading": "What you know (it is not in the notes)",
+        "notes_heading": "The rough notes",
+        "notes_hint": "This is what your AI tool would turn into the update.",
+        "worksheet_heading": "Your criteria",
+        "row_label": "Criterion {n}",
+        "requirement_label": "Requirement it traces to",
+        "requirement_menu_label": "Use a requirement from the card",
+        "requirement_menu_none": "Choose a requirement",
+        "criterion_label": "The criterion, in your own words",
+        "type_label": "Type",
+        "type_none": "Not chosen",
+        "add_row": "Add a criterion",
+        "add_row_full": "The worksheet is full.",
+        "remove_row": "Remove criterion {n}",
+        "empty_hint": "Add at least three criteria to begin.",
+        "ticks_heading": "Self-check",
+        "save": "Save my worksheet",
+        "saving": "Saving…",
+        "saved": "Your worksheet is saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "unsaved_check": "You have changes that are not saved yet. Press Save my worksheet first, then check your work.",
+        "part1_heading": "Your own notes from Part 1",
+        "part1_note": "These are the marks you gave and the gap you named. They are shown here for you to read. Nothing is changed.",
+        "part1_marks_label": "Your marks",
+        "part1_gap_label": "The gap you named",
+        "part1_yes": "Yes",
+        "part1_no": "No",
+        "part1_unmarked": "Not marked"
+      }
+    },
+    "thresholds": {
+      "kind": "criteria_table",
+      "edit": "thresholds",
+      "title": "Add a pass or fail rule",
+      "goal": "Give every criterion a threshold a script could decide, with no judgment needed.",
+      "why": [
+        "A criterion says what to look for. A threshold says exactly where pass ends and fail begins. Without one, two people can read the same answer and disagree.",
+        "The script test keeps you honest: could a script decide this? If a person would have to judge, tighten the rule until a script could.",
+        "Some qualities cannot be checked with a rule. Say so with Not checked and a reason, instead of pretending."
+      ],
+      "instructions": [
+        "Your rows from the last step are below, each with an empty Threshold box.",
+        "Write a threshold for each one that a script could decide: a number, a list of terms you choose, or a label the answer must carry.",
+        "If a rule cannot judge something, write Not checked: and the reason.",
+        "Press Save my thresholds. Read any notes that appear, and change a threshold if a note helps.",
+        "Tick the script test when it is true for every threshold, then press Check my work."
+      ],
+      "types": [
+        {"id": "format", "label": "Format"},
+        {"id": "content", "label": "Content"}
+      ],
+      "ticks": [
+        {"id": "script_test", "label": "I applied the script test to every threshold: a script could decide it"}
+      ],
+      "words": {"row": "row {n}", "rows": "rows {list}", "and": "and"},
+      "notes": {
+        "vague": {"text": "Row {n} uses {words}. A script cannot decide that as it stands. Try a number, such as a word count; a list of terms you choose; or a label the answer must carry. If no rule can check it, write Not checked: and say why."}
+      },
+      "troubleshooting": [
+        {"problem": "You cannot turn a criterion into a rule.", "fix": "Ask what you would look for with your own eyes, then write that down. If it needs your judgment every time, write Not checked: and the reason."},
+        {"problem": "A note flags a word you chose on purpose.", "fix": "Put the word inside quotation marks. Words in quotation marks are treated as terms you chose, so they are not flagged."},
+        {"problem": "You want to change a criterion, not only a threshold.", "fix": "Criteria are changed in the earlier step. After you build your file, you can also edit it there."}
+      ],
+      "gate": {
+        "thresholds": {"label": "Every criterion has a threshold", "ok": "", "fail": "Write a threshold for {rows}."},
+        "script_test": {"label": "Script test applied", "ok": "", "fail": "Tick the script test once you have applied it to every threshold."}
+      },
+      "messages": {
+        "bad_rows": "Those rows are not in the form this step expects.",
+        "rows_locked": "Only the thresholds can be changed in this step.",
+        "save_failed": "Your worksheet could not be saved: {error}"
+      },
+      "ui": {
+        "worksheet_heading": "Your criteria and thresholds",
+        "row_label": "Criterion {n}",
+        "requirement_label": "Requirement it traces to",
+        "criterion_label": "The criterion",
+        "type_label": "Type",
+        "threshold_label": "Threshold: what a script could decide",
+        "threshold_hint": "A number, a list of terms you choose, a label, or Not checked: and a reason.",
+        "criteria_locked_hint": "The criteria are fixed in this step. Only the thresholds can change.",
+        "notes_heading": "Notes on your thresholds",
+        "notes_none": "No notes. Nothing here looks vague.",
+        "ticks_heading": "Self-check",
+        "save": "Save my thresholds",
+        "saving": "Saving…",
+        "saved": "Your thresholds are saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "unsaved_check": "You have changes that are not saved yet. Press Save my thresholds first, then check your work."
+      }
+    },
+    "test-file": {
+      "kind": "test_file",
+      "title": "Write your test cases down",
+      "goal": "Build a test case file from your worksheet, edit it, and make it pass the file checks.",
+      "why": [
+        "A file holds your rules in one place, in a layout a person and a program can both read. Part 3 turns a file like this into a checker.",
+        "Writing the rules down before any answer is judged keeps a score honest.",
+        "The file is this course's way of recording rules. Other formats can hold the same rules."
+      ],
+      "instructions": [
+        "Press Build my file from my worksheet. Your criteria, requirements, types and thresholds are copied in, in your own words.",
+        "Read the file in the editor. Edit anything that needs to change.",
+        "If a threshold points to a list, such as terms to avoid or terms that must appear, write that list under Supporting lists. Write your own: the app does not fill it in.",
+        "Press Save my file, then Check my work."
+      ],
+      "troubleshooting": [
+        {"problem": "The build button says there is no worksheet.", "fix": "Go back to the earlier steps and save your worksheet first."},
+        {"problem": "You built the file and then lost your edits.", "fix": "Building replaces the saved file, and the app asks first. Press Cancel to keep what you have."},
+        {"problem": "Check my work says a criterion is missing.", "fix": "Each criterion starts with a heading such as ### C1: and then lines for Requirement, Type and Threshold."}
+      ],
+      "gate": {
+        "file": {"label": "File saved", "ok": "", "fail": "Press Build my file from my worksheet or write the file, then press Save my file."},
+        "input": {"label": "Test input present", "ok": "", "fail": "{message}"},
+        "criteria": {"label": "Three or more criteria", "ok": "", "fail": "{message}"},
+        "content": {"label": "One about content", "ok": "", "fail": "{message}"}
+      },
+      "findings": {
+        "no_input": {"text": "The file has no test input. Under the heading ## Test input, add the rough notes the update is made from."},
+        "no_criteria": {"text": "No criteria were found. Add each one under a heading such as ### C1: followed by lines for Requirement, Type and Threshold."},
+        "few_criteria": {"text": "The file has {count} of the {min} criteria it needs. Add {missing} more. Each one starts with a heading such as ### C3: followed by lines for Requirement, Type and Threshold."},
+        "no_content_criterion": {"text": "No criterion checks what the answer says. Add one whose threshold needs particular information to appear, for example: Passes if the update names every client in the notes."},
+        "missing_threshold": {"text": "{id} ({name}) has no threshold. Add a Threshold line a script could decide, or write Not checked: and the reason."},
+        "vague": {"text": "{id} ({name}) uses {words} in its threshold. Replace it with a number, a list of terms you choose or a label, or write Not checked: and the reason."},
+        "no_requirement": {"text": "{id} ({name}) has no Requirement line. Add the requirement it traces to."},
+        "list_missing": {"text": "{id} ({name}) points to a list, but the file has no list under Supporting lists. Add your own list there so the check can run."}
+      },
+      "build": {
+        "title": "Test cases: Northwind end-of-week update",
+        "supporting_placeholder": "- Example: Terms to avoid: word one, word two"
+      },
+      "messages": {
+        "bad_file": "That file text could not be saved.",
+        "no_worksheet": "Save your worksheet in the earlier steps first. There is nothing to build from yet.",
+        "confirm_replace": "You already saved a file. Building replaces it. Press Build again to confirm.",
+        "save_failed": "Your file could not be saved: {error}"
+      },
+      "ui": {
+        "build": "Build my file from my worksheet",
+        "building": "Building…",
+        "build_hint": "Copies your criteria, requirements, types and thresholds into the file layout Part 3 reads.",
+        "build_empty_hint": "Save your worksheet in the earlier steps to build from it.",
+        "confirm_title": "Replace your saved file?",
+        "confirm_body": "Building a new file replaces the text you saved. Your worksheet is not changed.",
+        "confirm_confirm": "Replace my file",
+        "confirm_cancel": "Keep my file",
+        "editor_heading": "Your test case file",
+        "editor_label": "test-cases.md",
+        "editor_hint": "Your file is saved in your project folder, in the part-2 folder.",
+        "lists_note": "A banned or required list for your own task is something you write yourself. It goes in this file, under Supporting lists, so the check can run.",
+        "save": "Save my file",
+        "saving": "Saving…",
+        "saved": "Your file is saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "unsaved_check": "You have changes that are not saved yet. Press Save my file first, then check your work.",
+        "findings_heading": "What the file checks found",
+        "blocking_heading": "Fix these first",
+        "notes_heading": "Notes. These do not stop you.",
+        "findings_none": "Nothing to fix.",
+        "file_empty": "No file is saved yet."
+      }
+    },
+    "reference": {
+      "kind": "reveal_compare",
+      "title": "Compare with an example",
+      "goal": "See an example set of criteria, and say how each one compares with yours.",
+      "why": [
+        "You wrote your own rules first, so you can now see what an example does differently without it replacing your thinking.",
+        "Comparing shows where your rules were strong, where something was missed and where yours were too vague to check.",
+        "The example is one good answer. A different set of criteria can also be right, and this is not a score."
+      ],
+      "instructions": [
+        "Read each example criterion next to your own file.",
+        "For each one, choose how it compares: you had it, you missed it, yours differs but works, or yours was too vague.",
+        "If you want to improve your file after comparing, edit it below and press Save my file.",
+        "Press Check my work when every example criterion has a choice."
+      ],
+      "options": [
+        {"id": "had", "label": "I had this one"},
+        {"id": "missed", "label": "I missed this one"},
+        {"id": "different", "label": "Mine differs but works"},
+        {"id": "vague", "label": "Mine was too vague"}
+      ],
+      "troubleshooting": [
+        {"problem": "None of the choices fits exactly.", "fix": "Choose the closest one. The app does not judge your choices, and they are only for you."},
+        {"problem": "Your file looks different from the example.", "fix": "That is fine. Different criteria can also be right. Choose how each example criterion compares with what you wrote."}
+      ],
+      "gate": {
+        "choices": {"label": "Every example criterion compared", "ok": "", "fail": "Choose how yours compares for: {missing}."}
+      },
+      "findings": {
+        "no_input": {"text": "The file has no test input. Under the heading ## Test input, add the rough notes the update is made from."},
+        "no_criteria": {"text": "No criteria were found. Add each one under a heading such as ### C1: followed by lines for Requirement, Type and Threshold."},
+        "few_criteria": {"text": "The file has {count} of the {min} criteria it needs. Add {missing} more. Each one starts with a heading such as ### C3: followed by lines for Requirement, Type and Threshold."},
+        "no_content_criterion": {"text": "No criterion checks what the answer says. Add one whose threshold needs particular information to appear, for example: Passes if the update names every client in the notes."},
+        "missing_threshold": {"text": "{id} ({name}) has no threshold. Add a Threshold line a script could decide, or write Not checked: and the reason."},
+        "vague": {"text": "{id} ({name}) uses {words} in its threshold. Replace it with a number, a list of terms you choose or a label, or write Not checked: and the reason."},
+        "no_requirement": {"text": "{id} ({name}) has no Requirement line. Add the requirement it traces to."},
+        "list_missing": {"text": "{id} ({name}) points to a list, but the file has no list under Supporting lists. Add your own list there so the check can run."}
+      },
+      "messages": {
+        "bad_choices": "Those choices are not in the form this step expects.",
+        "bad_file": "That file text could not be saved.",
+        "save_failed": "Your file could not be saved: {error}"
+      },
+      "ui": {
+        "one_good_answer": "This is one good answer, not the only one. A different set of criteria can also be right, and this is not a score.",
+        "reference_heading": "The example criteria",
+        "mine_heading": "Your criteria",
+        "mine_empty": "Your saved file has no criteria yet.",
+        "requirement_label": "Requirement",
+        "type_label": "Type",
+        "threshold_label": "Threshold",
+        "choice_legend": "How does yours compare with {name}?",
+        "lists_heading": "The example's own list",
+        "lists_note": "This list belongs to the example. For your own task you write your own list, and you do not copy this one.",
+        "chosen": "{done} of {total} compared",
+        "editor_heading": "Your test case file",
+        "editor_label": "test-cases.md",
+        "editor_hint": "Edit your file here if the comparison gave you something to improve.",
+        "save": "Save my file",
+        "saving": "Saving…",
+        "saved": "Your file is saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "unsaved_check": "You have changes that are not saved yet. Press Save my file first, then check your work.",
+        "findings_heading": "What the file checks found",
+        "blocking_heading": "Fix these first",
+        "notes_heading": "Notes. These do not stop you.",
+        "findings_none": "Nothing to fix.",
+        "file_empty": "No file is saved yet.",
+        "locked_note": "The example appears once your own file is done."
+      }
+    }
+  }
+}

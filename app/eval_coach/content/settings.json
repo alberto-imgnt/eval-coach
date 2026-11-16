@@ -1,0 +1,94 @@
+{
+  "settings": {
+    "tool": "Settings",
+    "heading": "Settings",
+    "lede": "Change how the app looks, go back to setup, or start over. Nothing here changes your progress unless you choose a reset and confirm it.",
+    "close": "Close Settings",
+    "text_size_heading": "Text size",
+    "text_size_intro": "Makes all the text in the app larger or smaller. Your choice is kept in this browser only.",
+    "text_size_label": "Text size",
+    "text_size_value": "{value}%",
+    "text_size_default": "Back to 100%",
+    "text_size_range": "You can choose from {min}% to {max}%.",
+    "setup_heading": "Setup",
+    "setup_intro": "Setup opens on its own full page, one check at a time. Open it to run the checks again, change your CLI command, or finish setup at any time.",
+    "setup_open": "Open setup",
+    "setup_summary_label": "Setup checks and their status",
+    "reset_heading": "Reset",
+    "reset_intro": "Each reset asks you to confirm first. What it clears is moved to a backup folder, not deleted, except the answer key."
+  },
+  "banner": {
+    "label": "Setup reminder",
+    "text": "Setup is not finished, so exercises that use your CLI are off. You can still read every lesson.",
+    "button": "Go to setup"
+  },
+  "setup_gate": {
+    "cli_exercise": "This exercise uses your CLI, so it needs setup first.",
+    "step": "This step uses your CLI, so it needs setup first.",
+    "button": "Go to setup",
+    "preview_lesson": "You are reading ahead. Setup is not finished, so the exercises here are off and nothing you do here is saved.",
+    "preview_step": "You are reading ahead. Setup is not finished, so nothing in this step can be started yet.",
+    "preview_lesson_after": "You are reading ahead. This lesson opens after you finish \"{title}\", so the exercises here are off and nothing you do here is saved.",
+    "preview_step_after": "You are reading ahead. This step opens after you finish \"{title}\", so nothing in it can be started yet and nothing is saved.",
+    "preview_back": "Back to where I am"
+  },
+  "reset": {
+    "progress": {
+      "button": "Reset lesson progress",
+      "summary": "Start the course again from the first item. Your setup stays.",
+      "title": "Reset lesson progress?",
+      "lead": "The course starts again from its first item.",
+      "clears_title": "This clears",
+      "clears": [
+        "All lesson and step progress, your baseline and your review schedule.",
+        "Everything the app and your AI CLI made during the course: the checker, fixtures, saved runs, saved results and the iteration log.",
+        "The answer key, if you made one. It is deleted and is not backed up."
+      ],
+      "keeps_title": "This keeps",
+      "keeps": [
+        "Your setup, your CLI command, your track and your project folder.",
+        "Your starting prompt and test cases, and every other file in your project folder.",
+        "Text size, theme and sidebar choices."
+      ],
+      "backup": "What is cleared is moved to one backup folder, not deleted: {folder}. It replaces the previous backup.",
+      "no_project": "No project has been set up yet, so there are no files to clear. Only any earlier lesson progress is cleared, and no backup is made.",
+      "keep_button": "Keep everything",
+      "confirm_button": "Reset lesson progress",
+      "done": "Lesson progress was cleared. The files that were cleared are in the backup folder: {folder}.",
+      "done_no_backup": "Lesson progress was cleared. There were no files to back up."
+    },
+    "configuration": {
+      "button": "Reset app configuration",
+      "summary": "Return the app to how it was the first time you opened it. This also clears your lesson progress.",
+      "title": "Reset app configuration?",
+      "lead": "The app goes back to its first-run state. This also clears all lesson progress.",
+      "clears_title": "This clears",
+      "clears": [
+        "All lesson progress, exactly as Reset lesson progress does.",
+        "Your setup results, your CLI command, your track and the remembered project.",
+        "Your starting prompt and test cases and the bundled skill files in your project folder.",
+        "Text size, theme and sidebar choices in this browser. They go back to their defaults.",
+        "The answer key, if you made one. It is deleted and is not backed up."
+      ],
+      "keeps_title": "This keeps",
+      "keeps": [
+        "The tools downloaded for the app, so setup can pass again without downloading.",
+        "Every other file in your project folder."
+      ],
+      "backup": "What is cleared is moved to one backup folder, not deleted: {folder}. It replaces the previous backup.",
+      "no_project": "No project has been set up yet. Only the saved setup is cleared, and no project files are touched.",
+      "keep_button": "Keep everything",
+      "confirm_button": "Reset app configuration",
+      "done": "The app configuration was reset. The files that were cleared are in the backup folder: {folder}. Setup starts again.",
+      "done_no_backup": "The app configuration was reset. There were no files to back up. Setup starts again."
+    }
+  },
+  "errors": {
+    "confirm_required": "Nothing was changed. This needs your confirmation first.",
+    "job_busy": "Nothing was changed. The app is still checking or installing something for setup. Wait for it to finish, then try again.",
+    "backup_failed": "Nothing was changed. The backup could not be made: {error}. Check that the app's storage folder can be written to and has free space, then try again.",
+    "key_failed": "Nothing was changed. The answer key could not be deleted: {error}.",
+    "reset_failed": "Nothing was changed. The reset could not finish: {error}.",
+    "scaffold_failed": "The files were cleared and backed up, but the app could not set up the empty course folders: {error}. Open Settings and run setup again."
+  }
+}

@@ -1,0 +1,119 @@
+/* The printable reference card. Same "Graphite and Lime" tokens as the app, tuned for one page.
+   It follows the theme chosen in the app; print is always light. */
+
+:root {
+  color-scheme: light;
+  --bg: #f5f5f9;
+  --surface: #ffffff;
+  --ink: #12131f;
+  --ink-soft: #4d5066;
+  --ink-faint: #62657b;
+  --rule: #e3e3ee;
+  --accent: #4f6a00;
+  --accent-solid: #b8db35;
+  --accent-tint: #f2f7dc;
+  --pass: #0b7350;
+  --pass-tint: #daf5e8;
+  --fail: #c01c44;
+  --fail-tint: #fde6eb;
+  --nc: #555b6e;
+  --nc-tint: #ebecf2;
+  --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --display: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  --mono: "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0c0c13;
+  --surface: #16161f;
+  --ink: #eeeef6;
+  --ink-soft: #a9abc0;
+  --ink-faint: #8f92a8;
+  --rule: #272735;
+  --accent: #d6ff3e;
+  --accent-solid: #d6ff3e;
+  --accent-tint: #1d2308;
+  --pass: #4ddc9c;
+  --pass-tint: #0f2a20;
+  --fail: #ff8097;
+  --fail-tint: #34151f;
+  --nc: #a9abc0;
+  --nc-tint: #23232f;
+}
+
+* { box-sizing: border-box; }
+
+body.reference-page {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+#reference { max-width: 64rem; margin: 2rem auto; padding: 2rem 2.25rem 2.5rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 20px; }
+.noscript, .ref-error { padding: 1rem; }
+
+.ref-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 0.9rem; border-bottom: 1px solid var(--rule); }
+.ref-head h1 { margin: 0; font-family: var(--display); font-size: 2rem; font-weight: 700; letter-spacing: -0.035em; }
+.ref-print {
+  font-family: var(--sans); font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.1rem; border: 0;
+  border-radius: 10px; background: var(--accent-solid); color: #11160a; cursor: pointer;
+}
+.ref-print:hover { filter: brightness(1.1); }
+.ref-print:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+h2 { font-family: var(--mono); font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin: 1.4rem 0 0.45rem; color: var(--accent); }
+p { margin: 0 0 0.5rem; }
+
+.ref-loop-line { font-family: var(--display); font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; }
+.ref-course-line { color: var(--ink-soft); }
+.ref-principle-list { margin: 0; padding-left: 1.2rem; color: var(--ink-soft); }
+.ref-group { margin: 0.7rem 0 0.4rem; font-family: var(--sans); font-size: 0.9rem; font-weight: 700; color: var(--ink); }
+
+.ref-verdict-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; }
+.ref-verdict { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.7rem 0.85rem; border-radius: 12px; background: var(--nc-tint); font-size: 0.88rem; line-height: 1.4; }
+.ref-verdict strong { font-family: var(--mono); font-size: 0.82rem; letter-spacing: 0.03em; color: var(--nc); }
+.ref-verdict.v-pass { background: var(--pass-tint); }
+.ref-verdict.v-pass strong { color: var(--pass); }
+.ref-verdict.v-fail { background: var(--fail-tint); }
+.ref-verdict.v-fail strong { color: var(--fail); }
+
+.ref-terms { margin: 0; column-count: 3; column-gap: 1.75rem; }
+.ref-term { break-inside: avoid; margin: 0 0 0.6rem; }
+.ref-term dt { font-weight: 700; font-size: 0.9rem; }
+.ref-term dd { margin: 0; font-size: 0.86rem; line-height: 1.4; color: var(--ink-soft); }
+
+@media (max-width: 760px) {
+  #reference { margin: 0; border: 0; border-radius: 0; padding: 1.25rem 1rem 2rem; }
+  .ref-verdict-list { grid-template-columns: 1fr; }
+  .ref-terms { column-count: 1; }
+}
+
+@media print {
+  @page { margin: 0.4in; }
+  :root, :root[data-theme="dark"] {
+    color-scheme: light;
+    --bg: #fff; --surface: #fff; --ink: #12131f; --ink-soft: #33364a; --ink-faint: #62657b; --rule: #cfd0de;
+    --accent: #4f6a00; --pass: #0b7350; --pass-tint: #daf5e8; --fail: #c01c44; --fail-tint: #fde6eb; --nc: #555b6e; --nc-tint: #ebecf2;
+  }
+  html, body.reference-page { background: #fff; font-size: 9pt; line-height: 1.3; }
+  #reference { max-width: none; padding: 0; margin: 0; border: 0; border-radius: 0; }
+  .ref-print { display: none; }
+  .ref-head { padding-bottom: 0.2rem; }
+  .ref-head h1 { font-size: 16pt; }
+  h2 { font-size: 7.5pt; margin: 0.45rem 0 0.15rem; }
+  .ref-loop-line { font-size: 10pt; margin-bottom: 0.2rem; }
+  .ref-group { font-size: 8pt; margin: 0.06in 0 0.03in; }
+  .ref-principle-list { font-size: 8pt; }
+  .ref-verdict-list { grid-template-columns: repeat(3, 1fr); gap: 0.1in; }
+  .ref-verdict { font-size: 8pt; padding: 0.04in 0.1in; border-radius: 6px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ref-verdict strong { font-size: 8pt; }
+  .ref-terms { column-count: 4; column-gap: 0.2in; }
+  .ref-term { margin-bottom: 0.04in; }
+  .ref-term dt { font-size: 7.5pt; }
+  .ref-term dd { font-size: 7pt; line-height: 1.2; }
+}
