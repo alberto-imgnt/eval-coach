@@ -216,7 +216,13 @@ function adoptLesson(res) {
 function applyState(state) {
   const previousStepId = app.state && app.state.step ? app.state.step.id : null;
   const installWas = Boolean(app.state && app.state.preflight && app.state.preflight.session.kind === 'recipe');
+  // First-run setup is open now. If this state finishes it (whichever check was last), it stays open on its
+  // last page instead of closing before the participant has seen Your AI window.
+  const firstRunWizardWas = Boolean(app.state && currentView(app.state) === 'wizard' && app.screen !== 'setup');
   app.state = state;
+  if (firstRunWizardWas && state.preflight.passed && !state.preflight.skipped && !app.setupDismissed) {
+    app.wizardFinishing = true;
+  }
   setMapText(state.course_text);
   if (state.step) app.stepCache.set(state.step.id, state.step);
   if (app.terminal && state.terminal) app.terminal.setRunning(state.terminal.running);

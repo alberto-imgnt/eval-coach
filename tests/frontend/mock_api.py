@@ -1110,6 +1110,7 @@ class Handler(BaseHTTPRequestHandler):
                         item.update(status="passed" if body["result"] == "passed" else "needs_you",
                                     detail=message["detail"], next=message["next"])
                 world.preflight["working_test"]["background"] = {"state": body["result"]}
+                world.preflight["passed"] = all(i["status"] == "passed" for i in world.preflight["items"] if i["applies"])
                 world.emit_state()
             elif parts.path == "/__mock/pf_cli":
                 world.preflight["cli"] = cli_view(body.get("command", ""), body.get("found", []))

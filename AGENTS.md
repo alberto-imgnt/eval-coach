@@ -89,7 +89,7 @@ Run from the repo root on Windows.
 | Approval rule checks | `node e2e-work\harness\classifier-check.js` |
 
 Notes:
-- Verification receipts: the archive gate records each passed check with `python tools\verify_receipt.py write --change <name> --name <backend|interface|build|e2e> -- <command>` (the lifecycle's Step 8 and `operations.archive.guidance` in `openspec/config.yaml`). `post-archive-pr` skips its own test run when `python tools\verify_receipt.py check --change <name> --require backend` says `valid` (the working tree, minus `openspec/` and ignored files, is unchanged since the run).
+- Verification receipts: the archive gate records each passed check with `python tools\verify_receipt.py write --change <name> --name <label> -- <command>` (labels `backend`, `backend-embedded`, `interface`, `build`, `e2e`; the lifecycle's Step 8 and `operations.archive.guidance` in `openspec/config.yaml` say which are required for a change). `post-archive-pr` skips its own test run only when `python tools\verify_receipt.py check --change <name> --staged --require <label> ...` (every required label) says `valid`: the staged snapshot, minus `openspec/` and ignored files, is exactly the tree that was tested.
 - Run the two backend suites one after the other, never at the same time: the `setup.cmd` integration test fails when runs overlap.
 - `test_conpty.RealConsole.test_type_line_sends_enter_separately` is timing-sensitive; rerun it once before treating a failure as real.
 - Two tests are skipped by design. `test_promptfoo_real.py` skips when the spike's private Node and npm cache are absent.

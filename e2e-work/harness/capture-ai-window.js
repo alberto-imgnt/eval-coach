@@ -2,7 +2,8 @@
 // Usage: node e2e-work/harness/capture-ai-window.js <launch name> <output png>
 // Nothing is sent to the AI: the window is started, looked at, and stopped. Account names, e-mail addresses and the
 // user name are painted over with block characters in the page before the picture is taken, and the picture is
-// refused if any of them is still in the window text. Set CAPTURE_TRUST=1 to send one single-use Yes to the
+// refused if any of them is still in the window text. The words to paint over come from CAPTURE_MASKS ("|" separated,
+// kept out of the repository); without it the script refuses to run. Set CAPTURE_TRUST=1 to send one single-use Yes to the
 // folder-trust question of the scratch folder (only when the highlighted choice is a Yes); use it only with the
 // user's approval. Real-CLI use needs the user's approval (AGENTS.md).
 const { chromium } = require('../../tests/frontend/.tmp/node_modules/@playwright/test');
@@ -14,16 +15,25 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const tool = process.argv[2];
 const out = path.resolve(process.argv[3]);
 const HOME = `C:\\eval-coach-capture\\${tool}`;
-const MASKS = (process.env.CAPTURE_MASK_EXTRA || '').split('|').filter(Boolean);
-if (!MASKS.length) throw new Error('Set CAPTURE_MASK_EXTRA to the account names and user names to mask.');
+// Personal text to paint over comes from the local environment, never from tracked source: names, account and
+// organization words, separated by "|". Without it nothing is captured.
+const MASKS = (process.env.CAPTURE_MASKS || '').split('|').map((s) => s.trim()).filter(Boolean);
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const EMAIL = '[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
+  if (!MASKS.length) {
+    throw new Error('CAPTURE_MASKS is not set: list the account names and personal words to paint over, separated by "|". Nothing was started.');
+  }
   fs.rmSync(HOME, { recursive: true, force: true });
   fs.mkdirSync(HOME, { recursive: true });
+  // Choosing the tool would start a real background request. Without a one-shot mode in the scratch home's
+  // recipes, the only run is the visible one this script starts from the working test page.
+  const bundled = JSON.parse(fs.readFileSync(path.join(ROOT, 'app', 'eval_coach', 'content', 'cli-recipes.json'), 'utf8'));
+  for (const recipe of bundled.recipes) delete recipe.headless;
+  fs.writeFileSync(path.join(HOME, 'cli-recipes.json'), JSON.stringify(bundled, null, 2));
   // The window is captured as a participant would see it, so the editor this script runs in must not show through.
   const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^(VSCODE|TERM_PROGRAM|GIT_ASKPASS|ELECTRON)/i.test(k)));
   const server = spawn('python', ['-m', 'eval_coach', '--no-browser', '--home', HOME], { cwd: path.join(ROOT, 'app'), windowsHide: true, env });

@@ -41,42 +41,53 @@ The working tree can hold unrelated edits. Never use `git add -A`, `git add .` o
 
 ## Step 3 - Preflight tests (receipt first, then ask)
 
-`/opsx-apply` does not run the full suites at completion. The archive gate (the lifecycle's Step 8, or the `operations.archive.guidance` in `openspec/config.yaml`) records the single run in a verification receipt (`verification.json` in the change folder, which moves to the archive with it). The receipt is tied to a git tree hash of the working tree (everything except `openspec/` and ignored files), so it proves the tests passed on exactly the files about to be committed. This step uses it to avoid running the same checks twice. When the archive hook hands off straight to this skill, the receipt is normally `valid`. Never write or edit a receipt by hand; only `tools\verify_receipt.py` writes one.
+`/opsx-apply` does not run the full suites at completion. The archive gate (the lifecycle's Step 8, or the `operations.archive.guidance` in `openspec/config.yaml`) records the runs in a verification receipt (`verification.json` in the change folder, which moves to the archive with it), one check per command or runtime (`backend`, `backend-embedded`, `interface`, `build`, `e2e`). The receipt is tied to a git tree hash of the working tree (everything except `openspec/` and ignored files). Because Step 2 can leave unrelated edits unstaged, the working tree alone does not prove what a commit holds, so this step stages the approved paths first and compares the receipt with the **staged snapshot** (`--staged`). Never write or edit a receipt by hand; only `tools\verify_receipt.py` writes one.
 
-### 3a - Check the receipt (no prompt)
+### 3a - Stage, then check the receipt (no prompt)
+
+Stage only the approved paths, by name (never `git add -A`), and review them:
 
 ```powershell
-python tools\verify_receipt.py check --change <change-name> --require backend
+git add -- <path> <path> ...
+git diff --cached --stat
+```
+
+If staging shows anything not approved, run `git restore --staged -- <path>` for it. Then build the required labels the way the archive gate did (the lifecycle's Step 8 "Required checks": always `backend` and `backend-embedded`, plus `interface`, `build` and `e2e` when they apply to this change) and check:
+
+```powershell
+python tools\verify_receipt.py check --change <change-name> --staged --require backend --require backend-embedded [--require <label> ...]
 ```
 
 It prints JSON and exits 0 (`valid`), 1 (`stale`), 2 (`missing`) or 3 (`incomplete`).
 
 | Status | Do this |
 |---|---|
-| `valid` | Skip the run without asking. Tell the user once: "Tests already passed on this exact state of the files (receipt from `<finished>`); skipping." Go to Step 4. |
-| `stale` | Show the `changed` list (files that differ from what was verified) and go to 3b. |
+| `valid` | The staged snapshot is exactly the tree that passed. Skip the run without asking. Tell the user once: "Tests already passed on exactly the files being committed (receipt from `<finished>`); skipping." Go to Step 4. |
+| `stale` | Show the `changed` list (paths where the staged snapshot differs from what was verified; a `D` path was tested but is not staged, so the commit would leave it out) and go to 3b. |
 | `incomplete` | Name the missing checks and go to 3b. |
 | `missing` | Go to 3b. |
 
-Record for the PR body and final report, for `valid`: "Tests: `<command>` passed (`<n>` tests) at `<finished>`; verified by receipt, files unchanged since (tree `<first 10 characters of recorded_tree>`)". Use the receipt's `checks` for every check it holds, not only `backend`.
+Record for the PR body and final report, for `valid`: "Tests: `<command>` passed (`<n>` tests) at `<finished>`; verified by receipt against the staged snapshot (tree `<first 10 characters of recorded_tree>`)". Use the receipt's `checks` for every check it holds, not only `backend`.
 
 ### 3b - Ask whether to run (receipt not valid)
 
-Ask the user, with the ask-user tool, whether to run the backend suite before branching. Use a single yes/no choice, default yes, and say in the question that it can take a few minutes and why the receipt did not apply (for example "3 files changed since the last verification"). Do not decide for them and do not skip the question.
+Ask the user, with the ask-user tool, whether to run the required suites before branching. Use a single yes/no choice, default yes, and say in the question that it can take a few minutes and why the receipt did not apply (for example "3 staged files differ from the last verification"). Do not decide for them and do not skip the question.
 
-- **Yes**: run it through the receipt tool, so the result is recorded and the later steps can reuse it. Stop on any failure:
+- **Yes**: run each required check through the receipt tool, one at a time, so the results are recorded. Stop on any failure:
 
   ```powershell
   python tools\verify_receipt.py write --change <change-name> --name backend -- python -m unittest discover -s tests
   ```
 
+  (use the commands and labels from the lifecycle's Step 8 for the others). `write` fingerprints the working tree, so afterwards run the `--staged` check from 3a again. If it is still not `valid`, files outside the staged set (unrelated edits or untracked files) were present while the tests ran, and the commit does not hold exactly what passed. Say so, and ask whether to stage them too, to set them aside and rerun, or to continue with the tests reported as run on a different tree than the commit. Never call the committed files verified in that case.
+
 - **No** (or the question is declined): skip the run. Record one of these for the PR body and the final report, and never claim a result you did not see:
-  - stale receipt: "Tests: not run now (skipped at the user's request). Earlier round: `<checks>` passed at `<finished>`, but these files changed after it: `<changed list>`."
+  - stale receipt: "Tests: not run now (skipped at the user's request). Earlier round: `<checks>` passed at `<finished>`, but the files being committed differ from what was tested: `<changed list>`."
   - missing or incomplete receipt: "Tests: not run (skipped at the user's request). No valid verification receipt for these changes."
 
   Then continue to Step 4. As a secondary hint only, the archived `tasks.md`, `docs/IMPLEMENTATION-PLAN.md` or the conversation may mention an earlier run; cite it as "reported earlier, not machine-checked", never as verified.
 
-When the suite runs:
+When the suites run:
 
 - Do not run it at the same time as another backend suite.
 - `test_conpty.RealConsole.test_type_line_sends_enter_separately` is timing-sensitive: rerun it once before treating that single failure as real.
@@ -108,14 +119,7 @@ Then:
 
 ## Step 5 - Commit
 
-Stage only the approved paths, by name, and review them:
-
-```powershell
-git add -- <path> <path> ...
-git diff --cached --stat
-```
-
-If staging shows anything not approved, run `git restore --staged -- <path>` for it.
+Staging was done in Step 3. Re-read `git status --porcelain` and `git diff --cached --stat`; if anything changed since (the user may have edited files), stage or unstage by name, and redo the Step 3a check before committing.
 
 Write the message with the file-creation tool to `<session-folder>\files\commit-msg.txt` (never from a PowerShell here-string, never inside the repo), commit from it, then delete the file:
 
@@ -183,7 +187,7 @@ gh pr create --base main --head <branch> --title "<commit header>" --body-file "
 <bullets from the proposal, or "Nothing noted.">
 
 ## Verification
-- Verification, from Step 3: the receipt's passed checks with test counts and time ("verified by receipt, files unchanged since"), or "passed (<n> tests)" from a run just made, or the skipped wording (with the changed files, or "no valid verification receipt")
+- Verification, from Step 3: the receipt's passed checks with test counts and time ("verified by receipt against the staged snapshot"), or "passed (<n> tests)" from a run just made, or the skipped wording (with the changed files, or "no valid verification receipt")
 <other checks the tasks ran and that passed, if known>
 
 ## OpenSpec
@@ -212,7 +216,7 @@ Changing the repo setting affects every future PR in the repo. Say that when ask
 Branch: <branch> (from main)
 Commit: <short sha> <header>
 Files: <n> committed; <m> left out (<list or "none">)
-Tests: passed via valid receipt (files unchanged since) | passed (run now) | not run (skipped at the user's request); <changed files since the earlier round, or "no valid receipt">
+Tests: passed via valid receipt (staged snapshot matches) | passed (run now) | not run (skipped at the user's request); <files that differ from the earlier round, or "no valid receipt">
 PR: <url>
 Delete branch after merge: <what happened in step 8>
 ```
@@ -225,7 +229,7 @@ If it stops early, report the step reached, what is already done (branch, commit
 - Stage by explicit path. Never `git add -A`, `-a`, `--force`, `--no-verify`, or `git reset --hard`.
 - Never merge the PR, and never change repo settings, protection or rulesets without the user's confirmation in this conversation.
 - Never write or change code, specs or docs from this skill. A failing test stops it.
-- Trust a verification receipt only when `verify_receipt.py check` says `valid`; never write or edit one by hand. With a valid receipt, do not ask and do not rerun. Otherwise always ask whether to run the tests (Step 3); never run them or skip them without the user's answer, and never report tests as passed when they were skipped. Report an earlier round as earlier, never as a result of this run.
+- Trust a verification receipt only when `verify_receipt.py check --staged` with every required label says `valid`; never write or edit one by hand. With a valid receipt, do not ask and do not rerun. Otherwise always ask whether to run the tests (Step 3); never run them or skip them without the user's answer, and never report tests as passed when they were skipped, or call the committed files verified when the tests ran on a tree that held unstaged files. Report an earlier round as earlier, never as a result of this run.
 - Do not initialize a repo, add remotes, or change git config.
 - Run `git` and `gh` only against `origin` for this repo. Do not touch other repos or forks.
 - Re-read `git status` from disk before each stage; the user may have edited files.

@@ -9,9 +9,11 @@ Usage:
     python tools/verify_receipt.py write --change <name> --name <check> -- <command...>
         run the command; if it passes and the tree did not change during the run, record it
         in <change folder>/verification.json
-    python tools/verify_receipt.py check --change <name> [--require <check> ...]
+    python tools/verify_receipt.py check --change <name> [--require <check> ...] [--staged]
         print JSON: status valid | stale | missing | incomplete, plus the files changed since
-        a stale receipt. Exit code 0 valid, 1 stale, 2 missing, 3 incomplete.
+        a stale receipt. Exit code 0 valid, 1 stale, 2 missing, 3 incomplete. With --staged the
+        receipt is compared with the staged snapshot, so `valid` means a commit of exactly what
+        is staged holds the tested files (anything left unstaged or untracked makes it stale).
 """
 from __future__ import annotations
 
@@ -19,6 +21,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -44,6 +47,25 @@ def fingerprint(root):
         added = _git(root, "add", "-A", "--", *pathspec, env=env)
         if added.returncode != 0:
             raise RuntimeError("git add failed: " + added.stderr.strip())
+        tree = _git(root, "write-tree", env=env)
+        if tree.returncode != 0:
+            raise RuntimeError("git write-tree failed: " + tree.stderr.strip())
+        return tree.stdout.strip()
+
+
+def staged_fingerprint(root):
+    """Return the tree hash of what is staged now, minus EXCLUDES. Same recipe as `fingerprint`, so the two
+    compare equal only when every change outside EXCLUDES is staged and nothing else is."""
+    index = Path(_git(root, "rev-parse", "--git-path", "index").stdout.strip())
+    index = index if index.is_absolute() else Path(root) / index
+    with tempfile.TemporaryDirectory() as tmp:
+        copy = Path(tmp) / "index"
+        if index.is_file():
+            shutil.copyfile(str(index), str(copy))
+        env = dict(os.environ, GIT_INDEX_FILE=str(copy))
+        removed = _git(root, "rm", "--cached", "-r", "-q", "--ignore-unmatch", "--", *EXCLUDES, env=env)
+        if removed.returncode != 0:
+            raise RuntimeError("git rm failed: " + removed.stderr.strip())
         tree = _git(root, "write-tree", env=env)
         if tree.returncode != 0:
             raise RuntimeError("git write-tree failed: " + tree.stderr.strip())
@@ -132,14 +154,15 @@ def _save(path, change, tree, root, checks):
         path.unlink()
 
 
-def check(root, change, required):
+def check(root, change, required, staged=False):
     folder = find_change(root, change)
     receipt = _load(folder / RECEIPT_NAME) if folder else None
     if not receipt:
         return {"status": "missing", "change": change}
-    current = fingerprint(root)
+    current = staged_fingerprint(root) if staged else fingerprint(root)
     have = {c["name"] for c in receipt.get("checks", [])}
-    result = {"change": change, "recorded_tree": receipt["tree"], "current_tree": current,
+    result = {"change": change, "scope": "staged" if staged else "working-tree",
+              "recorded_tree": receipt["tree"], "current_tree": current,
               "checks": receipt.get("checks", [])}
     if receipt["tree"] != current:
         result["status"] = "stale"
@@ -167,6 +190,8 @@ def main(argv=None):
     c = sub.add_parser("check")
     c.add_argument("--change", required=True)
     c.add_argument("--require", action="append", default=[], help="check label that must be recorded")
+    c.add_argument("--staged", action="store_true",
+                   help="compare the receipt with the staged snapshot (what a commit would hold), not the working tree")
     args = parser.parse_args(argv)
     root = Path(args.root)
 
@@ -174,7 +199,7 @@ def main(argv=None):
         if not command:
             parser.error("write needs a command after --")
         return write(root, args.change, args.name, command)
-    result = check(root, args.change, args.require)
+    result = check(root, args.change, args.require, args.staged)
     print(json.dumps(result, indent=2))
     return EXIT[result["status"]]
 

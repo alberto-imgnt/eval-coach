@@ -47,6 +47,7 @@ NPM_TIMEOUT = 1800
 SIZE_POLL_SECONDS = 3.0
 PUBLISH_SECONDS = 1.0
 AI_TEST_SECONDS = 120  # the quiet test's limit when a recipe does not name one
+AI_TEST_STOP_SECONDS = 45  # how long to wait for a cancelled quiet test's process to be gone
 CREATE_NO_WINDOW = 0x08000000
 _SYSTEM32 = os.path.join(os.environ.get("SystemRoot") or r"C:\Windows", "System32")
 CURL = os.path.join(_SYSTEM32, "curl.exe")
@@ -287,7 +288,7 @@ class Preflight:
         self.load_problem = False
         self._found_commands = []
         self._data = self._load()
-        self._detect_ais()
+        self._detect_ais()  # saved results can reopen setup on the AI choice without a fresh check
 
     # --- persistence -------------------------------------------------------
 
@@ -352,8 +353,8 @@ class Preflight:
 
     def reset_state(self):
         """Forget every saved setup result, as on first run. The caller has moved preflight.json away."""
+        self.cancel_ai_test()
         with self._lock:
-            self._cancel_ai_test()
             self._data = self._new_data()
             self.load_problem = False
 
@@ -874,21 +875,24 @@ class Preflight:
         if not command:
             raise self._error("needs_cli_command")
         with self._lock:
-            if command != self._data["cli_command"]:
-                self._cancel_ai_test()
+            changed = command != self._data["cli_command"]
+            stale = self._cancel_ai_test() if changed else None
+        self._wait_ai_test(stale)
+        with self._lock:
+            if changed:
                 self._data["cli_command"] = command
                 self._data["test_passed_command"] = ""
+                self._discard_test_files()
                 self._set("working_test", "not_checked", "working_test_needs_previous")
             self._save()
         self._check_cli()
-        self._check_working_test_gate()
+        self._check_working_test()
 
-    def _check_working_test_gate(self):
-        """After the command is checked, the working test is open only when the command was found."""
-        if self._status("cli") == "passed":
-            self._set("working_test", "needs_you", "working_test_ready")
-        else:
-            self._set("working_test", "not_checked", "working_test_needs_previous")
+    def _discard_test_files(self):
+        """Another AI's test files must never count for the AI chosen now."""
+        folder = self.home / "cli-test"
+        for name in ("input.txt", "output.txt", "version.txt"):
+            _unlink(folder / name)
 
     def command_usable(self):
         with self._lock:
@@ -930,31 +934,44 @@ class Preflight:
         Nothing is typed, no window opens, and no permission flag is used. Only the process's exit status
         decides: it never records a failure, so an AI that cannot finish quietly goes to the visible test.
         """
-        with self._lock:
-            command = self._data["cli_command"]
-            if (not command or self._status("cli") != "passed" or self._data["test_passed_command"] == command
-                    or self.terminal.running):
-                return False
-            headless = self._headless(command)
-            if headless is None:
-                return False
-            self._cancel_ai_test()
-            record = _AiTest(command)
-            self._ai_test = record
-            record.thread = threading.Thread(target=self._run_ai_test, args=(record, headless), daemon=True)
-            record.thread.start()
+        while True:
+            with self._lock:
+                command = self._data["cli_command"]
+                if (not command or self._status("cli") != "passed" or self._data["test_passed_command"] == command
+                        or self.terminal.running):
+                    return False
+                headless = self._headless(command)
+                if headless is None:
+                    return False
+                stale = self._cancel_ai_test()
+                if stale is None:
+                    record = _AiTest(command)
+                    self._ai_test = record
+                    record.thread = threading.Thread(target=self._run_ai_test, args=(record, headless), daemon=True)
+                    record.thread.start()
+                    break
+            self._wait_ai_test(stale)  # without the lock: the old worker needs it to finish
         self.publish()
         return True
 
     def cancel_ai_test(self):
+        """Stop the quiet test and return only once its process is gone."""
         with self._lock:
-            self._cancel_ai_test()
+            stale = self._cancel_ai_test()
+        self._wait_ai_test(stale)
         self.publish()
 
     def _cancel_ai_test(self):
+        """Signal the running test to stop and return its record. The caller waits with `_wait_ai_test`."""
         record, self._ai_test = self._ai_test, None
         if record is not None:
             record.cancel.set()
+        return record
+
+    @staticmethod
+    def _wait_ai_test(record):
+        if record is not None and record.thread is not None and record.thread is not threading.current_thread():
+            record.thread.join(AI_TEST_STOP_SECONDS)
 
     def _run_ai_test(self, record, headless):
         args, seconds = headless

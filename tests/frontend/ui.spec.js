@@ -469,6 +469,25 @@ test('preflight: a quiet test that cannot finish moves to the AI working test pa
   expect((await postsTo(request, '/api/preflight/test/start')).length).toBe(0);
 });
 
+test('preflight: a quiet test that finishes setup keeps the wizard open on the page after it, then Your AI window ends setup', async ({ page, request }) => {
+  await openPreflight(
+    page,
+    request,
+    {
+      cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' },
+      working_test: { status: 'not_checked', detail: 'Not checked yet.', next: '' },
+      project: { status: 'passed', detail: 'Ready.', next: '' },
+    },
+    { mock_bg: true },
+    { command: '', found: ['claude'] },
+  );
+  await page.locator('#pf-use-ai').click();
+  await expect(page.locator('#pf-ai-testing')).toBeVisible();
+  await mock(request, 'pf_bg_end', { result: 'passed' });
+  await expect(page.locator('#pf-item-ai_window')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Before you begin' })).toBeVisible();
+});
+
 test('preflight: an AI with no quiet test leaves the page as it was', async ({ page, request }) => {
   await openPreflight(page, request, { cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' } }, null, { command: '', found: ['claude'] });
   await page.locator('#pf-use-ai').click();

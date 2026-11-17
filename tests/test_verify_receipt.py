@@ -102,6 +102,17 @@ class ReceiptTests(unittest.TestCase):
         receipt = json.loads((self.change / "verification.json").read_text(encoding="utf-8"))
         self.assertEqual([c["name"] for c in receipt["checks"]], ["interface"])
 
+    def test_staged_is_valid_only_when_everything_tested_is_staged(self):
+        git = lambda *a: subprocess.run(["git", *a], cwd=self.root, check=True, capture_output=True)
+        (self.root / "fix.py").write_text("x = 1\n", encoding="utf-8")  # tested, but left out of the commit
+        self.write()
+        git("add", "--", "app.py", ".gitignore")
+        self.assertEqual(self.status()["status"], "valid")
+        staged = vr.check(self.root, "demo", [], staged=True)
+        self.assertEqual((staged["status"], staged["changed"]), ("stale", ["D fix.py"]))
+        git("add", "--", "fix.py")
+        self.assertEqual(vr.check(self.root, "demo", [], staged=True)["status"], "valid")
+
     def test_real_index_is_untouched(self):
         self.write()
         status = subprocess.run(["git", "status", "--porcelain"], cwd=self.root,

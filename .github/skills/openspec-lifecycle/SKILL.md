@@ -85,10 +85,19 @@ If anything fails, fix it within the change's scope, or pause (checkpoint B). Re
 
 ## Step 8 - Verification gate, sync and archive (checkpoint C)
 
-1. **Verification gate** (before anything is synced or moved). Determine every required check from the tasks and AGENTS.md, with a distinct receipt label for each command/runtime (for example, `backend` and `backend-embedded`). Run `python tools\verify_receipt.py check --change "<name>" --require backend` with an additional `--require <check>` for every other required label.
-   - `valid`: skip the suites only when every required check is present for the current tree, and say the receipt is current.
-   - Otherwise run each required check, one at a time, through the receipt tool using its assigned label: `python tools\verify_receipt.py write --change "<name>" --name <check> -- <command>`. Use stand-ins, never real external tools, unless the user approved them. If a check fails, fix it within the change's scope and rerun, or pause (checkpoint B); never archive on a failure. A fix invalidates earlier receipts, so rerun every required check after the last edit.
+1. **Verification gate** (before anything is synced or moved). Build the required labels as listed under "Required checks" below, then run `python tools\verify_receipt.py check --change "<name>" --require backend --require backend-embedded [--require <label> ...]`.
+   - `valid`: skip the suites and say the receipt is current.
+   - Otherwise run each missing check the change needs, one at a time, through the receipt tool: `python tools\verify_receipt.py write --change "<name>" --name <label> -- <command>`. Use stand-ins, never real external tools, unless the user approved them. If a check fails, fix it within the change's scope and rerun, or pause (checkpoint B); never archive on a failure. A fix invalidates earlier receipts, so rerun every required check after the last edit.
    - Never write or edit a receipt by hand.
+   - **Required checks.** Build the list from the change's `tasks.md` verification tasks and AGENTS.md, and pass every label with its own `--require`. Never skip on a receipt that holds fewer. One label per command or runtime:
+
+     | Label | Command | Required when |
+     |---|---|---|
+     | `backend` | `python -m unittest discover -s tests` | always |
+     | `backend-embedded` | `spikes\phase0-preflight\runtime\python-embed-3.13.17-nopth\python.exe -m unittest discover -s tests` | always (the second runtime; run after `backend`, never at the same time) |
+     | `interface` | `node tests/frontend/.tmp/node_modules/@playwright/test/cli.js test --config tests/frontend/playwright.config.js` | `app/eval_coach/web/` or `tests/frontend/` changed, or a task names it |
+     | `build` | `python tools\build_pyz.py --smoke` | `app/` changed, or a task names it |
+     | `e2e` (and `e2e-promptfoo` for `--track promptfoo`) | `node e2e-work\harness\run-all.js --fresh` (add the track option) | a task names it, or `e2e-work/harness/` or setup behavior changed |
 2. Run `openspec instructions archive --change "<name>" --json` (advisory; ignore failure) and apply its `context` and `operationGuidance`.
 3. Show the user: change name, tasks complete, verification result (from the receipt), delta specs and whether the main specs need syncing, and what will move to `changes/archive/`. Ask to confirm. Wait for the answer.
 4. On confirmation follow the `openspec-archive-change` skill, which assesses the sync, runs `openspec-sync-specs` inline, verifies the merged main specs, and moves the change. Do not sync in the background.

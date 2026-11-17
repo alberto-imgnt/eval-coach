@@ -32,20 +32,32 @@ class FakeRunner:
         self.which_map = {"python": r"C:\fake\python.exe"}
         self.free = 500 * 10**9
         self.gate = None
+        self.active = 0  # programs running right now, to prove two never overlap
+        self.max_active = 0
+        self.exit_delay = 0.0  # how long a cancelled program takes to be gone
 
     def name_of(self, argv):
         return Path(str(argv[0])).stem.lower()
 
     def run(self, argv, timeout, env=None, cwd=None, on_tick=None, cancel=None):
         self.calls.append({"argv": list(argv), "timeout": timeout, "env": env, "cwd": cwd})
-        if self.gate is not None:
-            self.gate.wait(10)
-        if on_tick is not None:
-            on_tick()
-        handler = self.programs.get(self.name_of(argv))
-        if handler is None:
-            return Result(code=-1, started=False, stderr="fake: no program")
-        return handler(argv, env, cwd)
+        self.active += 1
+        self.max_active = max(self.max_active, self.active)
+        try:
+            if self.gate is not None:
+                while not self.gate.is_set():
+                    if cancel is not None and cancel.is_set():
+                        time.sleep(self.exit_delay)
+                        return Result(code=-1, cancelled=True)
+                    time.sleep(0.005)
+            if on_tick is not None:
+                on_tick()
+            handler = self.programs.get(self.name_of(argv))
+            if handler is None:
+                return Result(code=-1, started=False, stderr="fake: no program")
+            return handler(argv, env, cwd)
+        finally:
+            self.active -= 1
 
     def which(self, name, path):
         return self.which_map.get(name)
@@ -687,6 +699,33 @@ class BackgroundTest(Base):
         self.fake.gate.set()
         record.thread.join(10)
 
+    def test_a_cancel_returns_only_when_the_process_is_gone(self):
+        self.fake.gate = threading.Event()
+        self.fake.exit_delay = 0.3
+        self.engine.preflight_cli("copilot")
+        while not self.fake.active:
+            time.sleep(0.005)
+        self.engine.preflight.cancel_ai_test()
+        self.assertEqual(self.fake.active, 0)
+
+    def test_a_replacement_test_never_overlaps_the_one_it_replaces(self):
+        self.fake.gate = threading.Event()
+        self.fake.exit_delay = 0.2
+        self.engine.preflight_cli("copilot")
+        while not self.fake.active:
+            time.sleep(0.005)
+        self.engine.preflight.start_ai_test()
+        self.fake.gate.set()
+        self.wait()
+        self.assertEqual(self.fake.max_active, 1)
+        self.assertEqual(self.item("working_test")["status"], "passed")
+
+    def test_choosing_the_same_ai_again_keeps_its_pass(self):
+        self.choose()
+        self.choose()
+        self.assertEqual(self.item("working_test")["status"], "passed")
+        self.assertEqual(self.engine.preflight._data["test_passed_command"], "copilot")
+
     def test_a_reset_cancels_it(self):
         self.fake.gate = threading.Event()
         self.engine.preflight_cli("copilot")
@@ -772,6 +811,11 @@ class DetectAis(Base):
         self.engine.preflight_cli("claude")
         self.run_check_all()
         self.assertFalse(any(t["preselect"] for t in self.state["preflight"]["cli"]["tools"]))
+
+    def test_saved_results_still_know_which_ais_are_installed_after_a_restart(self):
+        self.only_found("claude")
+        self.engine = self.build_engine()
+        self.assertEqual(self.found_names(), ["claude"])
 
     def test_the_typed_route_is_off_by_default_and_on_with_the_flag(self):
         self.assertFalse(self.state["preflight"]["custom_ai"])
@@ -943,6 +987,25 @@ class WorkingTest(Base):
         self.engine.preflight_test_poll()
         self.assertEqual(self.item("working_test"), before)
         self.assertNotEqual(before["status"], "failed")
+
+    def test_choosing_another_ai_ends_the_test_and_drops_its_files(self):
+        (self.folder / "output.txt").write_text("HELLO FROM EVAL COACH", encoding="utf-8")
+        (self.folder / "version.txt").write_text("Python 3.13.17\n", encoding="utf-8")
+        stops = self.terminal.stops
+        self.engine.preflight_cli("claude")
+        self.assertGreater(self.terminal.stops, stops)
+        self.assertEqual(list(self.folder.iterdir()), [])
+        self.engine.preflight_test_poll()
+        self.engine.preflight_test_check()
+        self.assertNotEqual(self.item("working_test")["status"], "passed")
+        self.assertEqual(self.engine.preflight._data["test_passed_command"], "")
+
+    def test_choosing_the_same_ai_again_leaves_the_running_test_alone(self):
+        stops = self.terminal.stops
+        self.engine.preflight_cli("fake-cli")
+        self.assertEqual(self.terminal.stops, stops)
+        self.assertTrue(self.terminal.running)
+        self.assertTrue((self.folder / "input.txt").is_file())
 
     def test_poll_without_a_test_session_does_nothing(self):
         self.engine.preflight_stop()

@@ -798,6 +798,9 @@ class Engine:
     def preflight_cli(self, command):
         with self._lock:
             self._cli_env()
+            if (self._cli_step == PF_TEST and isinstance(command, str)
+                    and command.strip() != self.preflight.cli_command):
+                self._stop_cli()  # that test session belongs to the AI that was chosen before
             self.preflight.set_cli_command(command)
             if self.progress is not None and self.preflight.command_usable():
                 self.progress["cli_command"] = self.preflight.cli_command
