@@ -14,8 +14,8 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const tool = process.argv[2];
 const out = path.resolve(process.argv[3]);
 const HOME = `C:\\eval-coach-capture\\${tool}`;
-const MASKS = ['AlbertoSalazar', 'Alberto Salazar', 'Alberto', 'Salazar', 'Improving', 'imgnt']
-  .concat(process.env.CAPTURE_MASK_EXTRA ? process.env.CAPTURE_MASK_EXTRA.split('|') : []);
+const MASKS = (process.env.CAPTURE_MASK_EXTRA || '').split('|').filter(Boolean);
+if (!MASKS.length) throw new Error('Set CAPTURE_MASK_EXTRA to the account names and user names to mask.');
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const EMAIL = '[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+';
 
