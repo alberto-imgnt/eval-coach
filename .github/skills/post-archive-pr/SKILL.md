@@ -162,14 +162,13 @@ Do not paste the whole proposal or design, or any secret or personal data. Delet
 
 ## Step 8 - Delete the branch after merge
 
-GitHub has no per-PR "delete source branch" checkbox. It is the repo setting `delete_branch_on_merge`, or `--delete-branch` on a merge. Never run `gh pr merge` without `--auto`, because that would merge the PR now.
+GitHub has no per-PR "delete source branch" checkbox. Use the repo setting `delete_branch_on_merge`, or leave deletion to the user after merge. Do not run `gh pr merge`, including with `--auto`, from this skill: it can merge immediately even on a protected branch when the requirements are already satisfied.
 
 In PowerShell, single-quote every `gh api` path and `--jq` expression that contains braces (`'repos/{owner}/{repo}'`), or PowerShell splits them.
 
-1. Read the repo: `gh api 'repos/{owner}/{repo}' --jq '{auto: .allow_auto_merge, del: .delete_branch_on_merge, admin: .permissions.admin}'`.
-2. **Try auto-merge** only when `auto` is true **and** `main` has branch protection or a ruleset with required checks or reviews (`gh api 'repos/{owner}/{repo}/branches/main/protection'` succeeds, or `gh api 'repos/{owner}/{repo}/rulesets'` lists one that applies). Without such a requirement the PR is already mergeable and auto-merge would merge it at once. When both hold, ask the user to confirm, then run `gh pr merge <pr> --auto --squash --delete-branch` (use a merge method the repo allows; check `squashMergeAllowed`, `mergeCommitAllowed`, `rebaseMergeAllowed` from `gh repo view --json`).
-3. **Fall back to the repo setting** otherwise. If `del` is already true, there is nothing to do. If false and `admin` is true, ask the user to confirm, then run `gh api -X PATCH 'repos/{owner}/{repo}' -F delete_branch_on_merge=true`. If the user is not an admin, do not try; say so.
-4. **Report exactly what happened**: auto-merge enabled, repo setting already on, repo setting turned on, or neither possible and why (for example, branch protection and auto-merge are unavailable on private repos on the free plan, and the repo setting needs admin). When neither works, tell the user that GitHub's "Delete branch" button on the merged PR does it.
+1. Read the repo: `gh api 'repos/{owner}/{repo}' --jq '{del: .delete_branch_on_merge, admin: .permissions.admin}'`.
+2. **Use the repo setting.** If `del` is already true, there is nothing to do. If false and `admin` is true, ask the user to confirm, then run `gh api -X PATCH 'repos/{owner}/{repo}' -F delete_branch_on_merge=true`. If the user declines or is not an admin, leave the setting unchanged.
+3. **Report exactly what happened**: repo setting already on, repo setting turned on, or setting left unchanged and why. If automatic deletion is not enabled, tell the user that GitHub's "Delete branch" button on the merged PR does it.
 
 Changing the repo setting affects every future PR in the repo. Say that when asking for confirmation.
 
