@@ -406,11 +406,11 @@ export function renderFinished(ctx) {
 }
 
 function terminalStatusText(terminal) {
-  if (terminal.running) return 'Your CLI is running.';
+  if (terminal.running) return 'Your AI is running.';
   if (terminal.exit_code !== null && terminal.exit_code !== undefined) {
-    return `Your CLI has stopped (exit code ${terminal.exit_code}).`;
+    return `Your AI has stopped (exit code ${terminal.exit_code}).`;
   }
-  return 'Your CLI is not running.';
+  return 'Your AI is not running.';
 }
 
 export function renderTermHead(ctx) {
@@ -422,15 +422,15 @@ export function renderTermHead(ctx) {
     h(
       'div',
       { class: 'term-title-row', key: 'title' },
-      h('h2', { class: 'term-label' }, terminal.label || 'Your CLI'),
+      h('h2', { class: 'term-label' }, terminal.label || 'Your AI'),
       h('span', { class: `term-status${running ? ' is-on' : ''}`, role: 'status' }, terminalStatusText(terminal)),
     ),
     h(
       'div',
       { class: 'term-line-block', key: 'line' },
-      h('span', { class: 'hint block' }, 'This exact line will be typed into your CLI:'),
+      h('span', { class: 'hint block' }, 'This exact line will be typed into your AI:'),
       h('code', { class: 'term-line' }, cli.line),
-      h('span', { class: 'hint block' }, 'Your CLI starts in: ', cli.folder_label),
+      h('span', { class: 'hint block' }, 'Your AI starts in: ', cli.folder_label),
       cli.blocked ? h('p', { class: 'callout callout-attn', id: 'cli-blocked', role: 'status' }, cli.blocked) : null,
       cli.start_blocked && !ctx.readOnly ? h('p', { class: 'callout callout-attn', id: 'cli-start-blocked', role: 'status' }, cli.start_blocked) : null,
     ),
@@ -440,7 +440,7 @@ export function renderTermHead(ctx) {
           'div',
           { class: 'row term-actions', key: 'actions' },
           actionButton(ctx, {
-            label: 'Start my CLI',
+            label: 'Start my AI',
             id: 'cli-start',
             busyKey: 'start',
             busyLabel: 'Starting…',
@@ -449,7 +449,7 @@ export function renderTermHead(ctx) {
             onClick: () => ctx.actions.start(),
           }),
           actionButton(ctx, {
-            label: 'Send to CLI',
+            label: 'Send to AI',
             id: 'cli-send',
             busyKey: 'send',
             busyLabel: 'Sending…',
@@ -461,9 +461,9 @@ export function renderTermHead(ctx) {
           actionButton(ctx, { label: 'Start again', id: 'cli-retry', busyKey: 'retry', busyLabel: 'Starting…', disabled: Boolean(cli.start_blocked) || (!running && !cli.started && (terminal.exit_code === null || terminal.exit_code === undefined)), onClick: () => ctx.actions.retry() }),
         ),
     !ctx.readOnly && cli.sent
-      ? h('p', { class: 'hint', key: 'sent' }, 'Sent. If your CLI reports a temporary error, press Send to CLI again.')
+      ? h('p', { class: 'hint', key: 'sent' }, 'Sent. If your AI reports a temporary error, press Send to AI again.')
       : !ctx.readOnly && running
-        ? h('p', { class: 'hint', key: 'ready' }, 'Wait until your CLI is ready for a message, then press Send to CLI.')
+        ? h('p', { class: 'hint', key: 'ready' }, 'Wait until your AI is ready for a message, then press Send to AI.')
         : null,
   ];
 }
@@ -473,7 +473,7 @@ export function renderTermFoot() {
     h(
       'p',
       { class: 'term-note', key: 'approvals' },
-      'Depending on its settings, your CLI may ask for your approval before it reads, writes or runs something, or it may act on its own. Any approval requests appear here in the terminal. Click in the terminal and answer them with your keyboard. The app never answers for you. To move out of the terminal, press F6.',
+      'Depending on its settings, your AI may ask for your approval before it reads, writes or runs something, or it may act on its own. Any approval requests appear here in the terminal. Click in the terminal and answer them with your keyboard. The app never answers for you. To move out of the terminal, press F6.',
     ),
   ];
 }

@@ -215,7 +215,7 @@ class Text(PfCase):
         preflight = json.loads((helpers.ROOT / "app" / "eval_coach" / "content" / "preflight.json").read_text(encoding="utf-8"))
         self.assertIsNone(pattern.search(json.dumps(preflight["track_promptfoo_note"])))
         live = " ".join(self.flat(data["live"]))
-        for needle in ("agent-provider.js", "--permission-mode auto", "auto mode", "signed-in CLI", "No API key",
+        for needle in ("agent-provider.js", "--permission-mode auto", "auto mode", "signed-in AI tool", "No API key",
                        "empty temporary folder", "never changes your baseline", "skip this step"):
             self.assertIn(needle, live)
 
@@ -290,7 +290,7 @@ class FixturesConfig(PfCase):
         self.paths.config_yaml.unlink()
         result = self.check("fixtures-config")
         self.assertFalse(result["ok"])
-        self.assertIn("Ask your CLI", " ".join(i["detail"] for i in result["items"] if not i["ok"]))
+        self.assertIn("Ask your AI", " ".join(i["detail"] for i in result["items"] if not i["ok"]))
 
     def test_a_model_graded_check_fails_the_scan(self):
         self.to_pf("fixtures-config")

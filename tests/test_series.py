@@ -23,24 +23,16 @@ def series():
     return json.loads(resources.read_text("content/series.json"))
 
 
-def mission_map(lesson_id="mission", data=None):
-    """The stops of a mission lesson's map as (number, title, outcome); the block itself is never edited."""
-    data = data if data is not None else bundled_data()
-    mission = next(x for x in data["lessons"] if x["id"] == lesson_id)
-    body = mission["body"].split("```you-are-here", 1)[1].split("```", 1)[0]
-    stops = []
-    for line in body.strip().splitlines():
-        _, number, title, outcome = [p.strip() for p in line.split("|", 3)]
-        stops.append((int(number), title, outcome))
-    return stops
+MISSIONS = (("mission", "lessons.json"), ("p1-mission", "part-1-lessons.json"), ("p2-mission", "part-2-lessons.json"))
+PASSAGES = ("**The goal.**", "**Why it matters to you.**", "**What you will do.**", "**What you leave with.**")
+SERIES_PASSAGE = "**About this series.**"
+PART_NAMES = ("Structured prompting", "Defining evaluation criteria", "Running evals and baseline",
+              "Iterating with evaluation-driven development", "Load-bearing audit and packaging")
 
 
-def part_one_mission_map():
-    return mission_map("p1-mission", json.loads(resources.read_text("content/part-1-lessons.json")))
-
-
-def part_two_mission_map():
-    return mission_map("p2-mission", json.loads(resources.read_text("content/part-2-lessons.json")))
+def mission_lesson(lesson_id, file):
+    data = json.loads(resources.read_text(f"content/{file}"))
+    return next(x for x in data["lessons"] if x["id"] == lesson_id)
 
 
 class SeriesContent(unittest.TestCase):
@@ -50,35 +42,25 @@ class SeriesContent(unittest.TestCase):
         self.assertEqual([p["kind"] for p in parts], ["course", "course", "course", "soon", "soon", "live"])
         self.assertEqual(len({p["id"] for p in parts}), 6)
 
-    def test_part_names_and_the_outcomes_of_parts_one_to_five_match_all_three_mission_maps(self):
-        parts = series()["parts"]
-        for name, stops in (("part 3", mission_map()), ("part 1", part_one_mission_map()),
-                            ("part 2", part_two_mission_map())):
-            self.assertEqual(len(stops), 6, name)
-            for part, (number, title, outcome) in zip(parts, stops):
-                with self.subTest(map=name, part=number):
-                    self.assertEqual(part["n"], number)
-                    self.assertEqual(part["title"], title)
-                    if number != PART_6:
-                        self.assertEqual(part["outcome"], outcome)
+    def test_the_intro_is_about_doing_the_work_yourself(self):
+        intro = series()["ui"]["intro"]
+        self.assertTrue(intro.startswith("Six Parts, one method."))
+        self.assertIn("Do each one yourself", intro)
+        self.assertNotRegex(intro, r"(?i)look ahead|stage 3")
 
-    def test_the_part_six_row_is_the_same_in_all_three_mission_maps(self):
-        sixth = {maps[5] for maps in (mission_map(), part_one_mission_map(), part_two_mission_map())}
-        self.assertEqual(len(sixth), 1)
+    def test_no_mission_lists_the_parts(self):
+        for lesson_id, file in MISSIONS:
+            body = mission_lesson(lesson_id, file)["body"]
+            with self.subTest(lesson=lesson_id):
+                self.assertNotIn("you-are-here", body)
+                self.assertEqual([n for n in PART_NAMES if n in body], [])
+                self.assertIsNone(re.search(r"(?m)^(done|here|next) \| \d \|", body))
 
-    def test_the_part_one_map_marks_part_one_as_here_and_the_rest_as_next(self):
-        data = json.loads(resources.read_text("content/part-1-lessons.json"))
-        body = next(x for x in data["lessons"] if x["id"] == "p1-mission")["body"]
-        self.assertEqual(re.findall(r"(?m)^here \| (\d) \|", body), ["1"])
-        self.assertEqual(re.findall(r"(?m)^next \| (\d) \|", body), ["2", "3", "4", "5", "6"])
-        self.assertEqual(re.findall(r"(?m)^done \| (\d) \|", body), [])
-
-    def test_the_part_two_map_marks_part_one_as_done_part_two_as_here_and_the_rest_as_next(self):
-        data = json.loads(resources.read_text("content/part-2-lessons.json"))
-        body = next(x for x in data["lessons"] if x["id"] == "p2-mission")["body"]
-        self.assertEqual(re.findall(r"(?m)^done \| (\d) \|", body), ["1"])
-        self.assertEqual(re.findall(r"(?m)^here \| (\d) \|", body), ["2"])
-        self.assertEqual(re.findall(r"(?m)^next \| (\d) \|", body), ["3", "4", "5", "6"])
+    def test_the_series_map_still_names_every_part(self):
+        titles = [p["title"] for p in series()["parts"]]
+        for name in PART_NAMES:
+            self.assertIn(name, titles)
+        self.assertEqual(len(titles), 6)
 
     def test_parts_one_and_two_carry_their_own_interface_words_and_the_others_carry_none(self):
         for part in series()["parts"]:
@@ -131,6 +113,67 @@ class SeriesContent(unittest.TestCase):
         self.assertEqual(sorted(set(mapped) - set(registered)), [], "on the map as a course, not registered")
         self.assertEqual(sorted(set(registered) - set(mapped)), [], "registered, not a course on the map")
         self.assertEqual(mapped, registered)
+
+
+class MissionShape(unittest.TestCase):
+    def test_each_mission_has_the_four_passages_in_order(self):
+        for lesson_id, file in MISSIONS:
+            body = mission_lesson(lesson_id, file)["body"]
+            labels = re.findall(r"(?m)^\*\*([A-Z][^*]*?\.)\*\*", body)
+            expected = ["The goal.", "Why it matters to you.", "What you will do.", "What you leave with."]
+            if lesson_id == "p1-mission":
+                expected = ["About this series."] + expected
+            with self.subTest(lesson=lesson_id):
+                self.assertEqual(labels, expected)
+                positions = [body.index(p) for p in PASSAGES]
+                self.assertEqual(positions, sorted(positions))
+
+    def test_each_mission_is_one_page_with_no_questions_within_the_cap(self):
+        for lesson_id, file in MISSIONS:
+            lesson = mission_lesson(lesson_id, file)
+            with self.subTest(lesson=lesson_id):
+                self.assertEqual((lesson["activities"], lesson["retrieval"]), ([], []))
+                self.assertLessEqual(len(lesson["body"].split()), 450)
+
+    def test_the_series_passage_is_in_part_one_only(self):
+        part_one = mission_lesson("p1-mission", "part-1-lessons.json")["body"]
+        self.assertTrue(part_one.startswith(SERIES_PASSAGE))
+        for needle in ("judge the work AI gives you", "because you checked it", "blind trust or blind distrust",
+                       "AI sounds sure of itself", "\"Better\" is only an opinion", "from one try to the next"):
+            self.assertIn(needle, part_one)
+        for lesson_id, file in (("mission", "lessons.json"), ("p2-mission", "part-2-lessons.json")):
+            body = mission_lesson(lesson_id, file)["body"]
+            with self.subTest(lesson=lesson_id):
+                self.assertNotIn(SERIES_PASSAGE, body)
+                self.assertNotIn("AI sounds sure of itself", body)
+                self.assertNotIn("blind trust", body)
+
+    def test_why_it_matters_differs_by_part_and_what_you_leave_with_names_something(self):
+        why = []
+        for lesson_id, file in MISSIONS:
+            body = mission_lesson(lesson_id, file)["body"]
+            why.append(re.search(r"\*\*Why it matters to you\.\*\*(.*?)\n\n", body, re.S).group(1))
+            leave = body.split("**What you leave with.**", 1)[1]
+            with self.subTest(lesson=lesson_id):
+                self.assertRegex(leave, r"(?i)prompt|test case|checker|baseline")
+        self.assertEqual(len(set(why)), 3)
+
+    def test_the_practice_task_is_named_as_practice_only(self):
+        for lesson_id, file in MISSIONS:
+            body = mission_lesson(lesson_id, file)["body"]
+            with self.subTest(lesson=lesson_id):
+                self.assertNotIn("Northwind", body)
+                self.assertIn("Practice task", body)
+                self.assertIn("for practice only", body)
+                self.assertIn("never something to submit", body)
+
+    def test_part_two_opens_on_the_question_from_part_one_and_says_nothing_is_run(self):
+        body = mission_lesson("p2-mission", "part-2-lessons.json")["body"]
+        goal = body.split("**Why it matters to you.**", 1)[0]
+        self.assertIn("how do you know the second answer is better?", goal)
+        self.assertIn("before you look at any answer", goal)
+        self.assertIn("Nothing is run in this Part", body)
+        self.assertIn("starts in Part 3", body)
 
 
 class SeriesState(CourseBase):

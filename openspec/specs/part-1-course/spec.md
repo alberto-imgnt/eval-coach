@@ -51,45 +51,6 @@ Everything the participant reads or does before the reveal (`p1-mission`, `cold`
 - **WHEN** the participant reads `p1-benefits`
 - **THEN** it cites the two sample prompts for the same task
 
-### Requirement: The mission page states the purpose and where Part 1 sits
-`p1-mission` SHALL be one page with no activities and no review questions. It SHALL state the Part's goal (why a structured prompt gets better results, and that you can use or build a framework), that the series teaches judging AI work and trusting it because it was checked, the three reasons checking matters and the method, and say the Northwind update is practice only. Source: `docs/SERIES-INTENT.md`.
-
-#### Scenario: Map
-- **WHEN** the participant reads the map on `p1-mission`
-- **THEN** six rows are numbered 1 to 6, Part 1 is marked as where they are, and Parts 2 to 6 are marked next
-
-#### Scenario: Names agree with the Series map
-- **WHEN** the content tests run
-- **THEN** each Part's name on this map equals its name on the Series map, and the outcomes of Parts 1 to 5 equal its lines
-
-#### Scenario: No theory yet
-- **WHEN** the participant reads the page
-- **THEN** it says they will write a prompt in their own words first and it names no framework
-
-### Requirement: Every gap is something the AI could not have known
-`p1-gaps` SHALL teach that each gap the participant found was something the prompt never said, so the AI had no way to know it. A sort activity SHALL place typical gaps from the bundled examples under five numbered kinds of missing information with feedback, and a reflection SHALL ask which kind their own gap is. Source: facilitator guide "The gap buckets".
-
-#### Scenario: The sorting device is not a term
-- **WHEN** the content tests scan the Part 1 lessons, steps, kit files and glossary
-- **THEN** the word "bucket" appears nowhere, and no lesson title or glossary entry uses it
-
-#### Scenario: Kinds of missing information
-- **WHEN** the participant opens `p1-gaps`
-- **THEN** five numbered kinds are shown in plain words: who the AI should act as, what exactly to produce, background it needs, limits and format, and what a good result looks like
-- **AND** no framework name appears
-
-#### Scenario: Lesson titles
-- **WHEN** the participant reads the course list
-- **THEN** each lesson title says what the lesson gives them, in words they already understand: "What your first prompt left out", "Frameworks: ready-made labels for what a prompt needs", "Four ways a structured prompt helps you"
-
-#### Scenario: Sorting typical gaps
-- **WHEN** the participant sorts the typical gaps
-- **THEN** a wrong placement shows how many are right and feedback for that item, never the full answer, and retry is unlimited
-
-#### Scenario: Their own gap
-- **WHEN** the participant writes where their own gap belongs
-- **THEN** it is saved as a reflection that does not block Continue
-
 ### Requirement: Gaps that are not missing input are set aside
 `p1-gaps` SHALL say that invented details, judging overall quality and answers that change from one try to the next are real, but belong to evaluation in later Parts, and SHALL offer a "set aside" group in the sort for such items. Source: facilitator guide "If a gap isn't missing context".
 
@@ -100,25 +61,6 @@ Everything the participant reads or does before the reveal (`p1-mission`, `cold`
 #### Scenario: Plain reason
 - **WHEN** the participant reads the set-aside passage
 - **THEN** it says these are held for later Parts and gives no answer to them here
-
-### Requirement: The reveal names the example kinds and keeps frameworks as samples
-`p1-frameworks` SHALL say people have named kinds of information a prompt needs and the names are prompting frameworks, and SHALL map RTCC (Role, Task, Context, Constraints) and RISE (Role, Input, Steps, Expectation) onto the five example kinds. It SHALL say these are samples, that others exist (CO-STAR and RISEN are named), and that you can build your own. Source: `docs/COURSE-CONTEXT.md` "Part 1" (the app must say the same).
-
-#### Scenario: Mapping
-- **WHEN** the participant reads the mapping
-- **THEN** both frameworks are shown against the five example kinds and the partial fit of kinds 4 and 5 is marked
-
-#### Scenario: The five kinds are an example
-- **WHEN** the participant reads `p1-gaps` or `p1-frameworks`
-- **THEN** each says the five kinds are common but not a complete list, names at least one other kind, and `p1-frameworks` says to build your own labels by adding the kinds the task needs
-
-#### Scenario: Samples, not rules
-- **WHEN** the participant reads the lesson
-- **THEN** it says the letters use common expansions that other sources define differently, and that covering what the task needs matters more than the letters
-
-#### Scenario: A skeleton, not a recommendation
-- **WHEN** the lesson shows how to fill in labels
-- **THEN** it shows a skeleton for each sample and says to use whichever reads clearest
 
 ### Requirement: The benefits come from structure, in four named benefits
 `p1-benefits` SHALL name four benefits and tie each to what the participant saw: completeness (the AI guesses less), better first results (fewer rounds), easier fixes (the labels show which part to change) and repeatability (the same structure works next time and teammates can follow it). It SHALL state the takeaway "Give the AI what it needs. Use a framework, or build your own."
@@ -183,7 +125,7 @@ Each Part 1 lesson after the mission SHALL open with "In the method." then "The 
 - **THEN** none names Stage 3 or certification
 
 ### Requirement: Part 1 uses the app's plain-language rules
-Part 1 text SHALL follow AGENTS.md rule 10 and the content rules in `docs/PHASE3.md`: "Part", never session; no mention of a presenter, facilitator, room, breakout, handout, neighbor or clock; "Script track" and "promptfoo track" where tracks are named; no suggestion of Copilot Chat in Teams; Northwind introduced as a learning example and never a submission option; every glossary entry for a course-specific term begins "In this course,".
+Part 1 text SHALL follow AGENTS.md rule 10 and the content rules in `docs/PHASE3.md`: "Part", never session; no mention of a presenter, facilitator, room, breakout, handout, neighbor or clock; "Script track" and "promptfoo track" where tracks are named; no suggestion of Copilot Chat in Teams; the ready-made example called the Practice task and never a submission option; "your AI" or "AI window", never a bare "CLI"; every glossary entry for a course-specific term begins "In this course,".
 
 #### Scenario: Banned words
 - **WHEN** the content tests scan the Part 1 content, kit files and glossary entries
@@ -203,3 +145,74 @@ Everything a live group did together SHALL be carried by the app: what other peo
 #### Scenario: Compare questions
 - **WHEN** the participant reaches `rescore`
 - **THEN** the two compare questions are asked in the form and answered in writing
+
+### Requirement: The Part 1 mission page follows the mission shape
+`p1-mission` SHALL follow `mission-lesson-shape`, with the series passage "About this series" first. That passage SHALL state the series purpose, the three reasons checking matters and the method. "The goal" SHALL say why a structured prompt gets better results and that you can use or build a framework. "What you will do" SHALL say you write a prompt in your own words first and that the Practice task is for practice only. Source: `docs/SERIES-INTENT.md`, series review items 12 and 13.
+
+#### Scenario: No map
+- **WHEN** the participant reads `p1-mission`
+- **THEN** no map of the six Parts is shown
+
+#### Scenario: The series passage and the four passages
+- **WHEN** the participant reads the page
+- **THEN** "About this series" comes first, then "The goal", "Why it matters to you", "What you will do" and "What you leave with"
+
+#### Scenario: No theory yet
+- **WHEN** the participant reads the page
+- **THEN** it says they will write a prompt in their own words first and it names no framework
+
+### Requirement: Every gap is a missing category the AI could not have known
+`p1-gaps` SHALL teach that each gap the participant found was something the prompt never said, so the AI had no way to know it. A sort activity SHALL place typical gaps from the bundled examples under five numbered categories of missing information with feedback, and a reflection SHALL ask which category their own gap is. Source: facilitator guide "The gap buckets", series review item 14a.
+
+#### Scenario: The sorting device is not a term
+- **WHEN** the content tests scan the Part 1 lessons, steps, kit files and glossary
+- **THEN** the word "bucket" appears nowhere, and no lesson title or glossary entry uses it
+
+#### Scenario: Categories of missing information
+- **WHEN** the participant opens `p1-gaps`
+- **THEN** five numbered categories are shown in plain words: who the AI should act as, what exactly to produce, background it needs, limits and format, and what a good result looks like
+- **AND** no framework name appears
+
+#### Scenario: Categories, not kinds
+- **WHEN** the content tests scan the Part 1 lessons, steps, kit files and glossary
+- **THEN** the five groups are called "categories" wherever the text means them, and the word "kind" is not used for them
+
+#### Scenario: Lesson titles
+- **WHEN** the participant reads the course list
+- **THEN** each lesson title says what the lesson gives them, in words they already understand: "What your first prompt left out", "Frameworks: ready-made labels for what a prompt needs", "Four ways a structured prompt helps you"
+
+#### Scenario: Sorting typical gaps
+- **WHEN** the participant sorts the typical gaps
+- **THEN** a wrong placement shows how many are right and feedback for that item, never the full answer, and retry is unlimited
+
+#### Scenario: Their own gap
+- **WHEN** the participant writes where their own gap belongs
+- **THEN** it is saved as a reflection that does not block Continue
+
+### Requirement: The reveal names the five categories and keeps frameworks as samples
+`p1-frameworks` SHALL say people have named categories of what a prompt needs and that the names are prompting frameworks. It SHALL open with a numbered list "the five categories of what a prompt needs", saying these are the five used in this course and that more exist. It SHALL then show one table per sample framework, RTCC and RISE, one row per letter in spelling order. Source: `docs/COURSE-CONTEXT.md` "Part 1", series review items 14a and 14b.
+
+#### Scenario: The five categories
+- **WHEN** the participant reads the framework section
+- **THEN** a numbered list of the five categories comes first, and says they are the five this course uses and more exist
+
+#### Scenario: One table per framework
+- **WHEN** the participant reads the mapping
+- **THEN** RTCC (Role, Task, Context, Constraints) and RISE (Role, Input, Steps, Expectation) each have their own table with the columns Letter, Label, What you write there and Covers category
+- **AND** a letter that fits two categories shows "also touches" for the second
+
+#### Scenario: The categories are an example
+- **WHEN** the participant reads `p1-gaps` or `p1-frameworks`
+- **THEN** each says the five categories are common but not a complete list, names at least one other category, and `p1-frameworks` says to build your own labels by adding the categories the task needs
+
+#### Scenario: Samples, not rules
+- **WHEN** the participant reads the lesson
+- **THEN** it says the letters use common expansions that other sources define differently, that others exist (CO-STAR and RISEN are named), and that covering what the task needs matters more than the letters
+
+#### Scenario: A skeleton, not a recommendation
+- **WHEN** the lesson shows how to fill in labels
+- **THEN** it shows a skeleton for each sample and says to use whichever reads clearest
+
+#### Scenario: No CRISP
+- **WHEN** the content tests scan the Part 1 lessons, steps, kit files and glossary
+- **THEN** none names CRISP

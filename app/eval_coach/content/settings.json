@@ -11,7 +11,7 @@
     "text_size_default": "Back to 100%",
     "text_size_range": "You can choose from {min}% to {max}%.",
     "setup_heading": "Setup",
-    "setup_intro": "Setup opens on its own full page, one check at a time. Open it to run the checks again, change your CLI command, or finish setup at any time.",
+    "setup_intro": "Setup opens on its own full page, one check at a time. Open it to run the checks again, change your AI command, or finish setup at any time.",
     "setup_open": "Open setup",
     "setup_summary_label": "Setup checks and their status",
     "reset_heading": "Reset",
@@ -19,12 +19,12 @@
   },
   "banner": {
     "label": "Setup reminder",
-    "text": "Setup is not finished, so exercises that use your CLI are off. You can still read every lesson.",
+    "text": "Setup is not finished, so exercises that use your AI are off. You can still read every lesson.",
     "button": "Go to setup"
   },
   "setup_gate": {
-    "cli_exercise": "This exercise uses your CLI, so it needs setup first.",
-    "step": "This step uses your CLI, so it needs setup first.",
+    "cli_exercise": "This exercise uses your AI, so it needs setup first.",
+    "step": "This step uses your AI, so it needs setup first.",
     "button": "Go to setup",
     "preview_lesson": "You are reading ahead. Setup is not finished, so the exercises here are off and nothing you do here is saved.",
     "preview_step": "You are reading ahead. Setup is not finished, so nothing in this step can be started yet.",
@@ -41,12 +41,12 @@
       "clears_title": "This clears",
       "clears": [
         "All lesson and step progress, your baseline and your review schedule.",
-        "Everything the app and your AI CLI made during the course: the checker, fixtures, saved runs, saved results and the iteration log.",
+        "Everything the app and your AI made during the course: the checker, fixtures, saved runs, saved results and the iteration log.",
         "The answer key, if you made one. It is deleted and is not backed up."
       ],
       "keeps_title": "This keeps",
       "keeps": [
-        "Your setup, your CLI command, your track and your project folder.",
+        "Your setup, your AI command, your track and your project folder.",
         "Your starting prompt and test cases, and every other file in your project folder.",
         "Text size, theme and sidebar choices."
       ],
@@ -65,7 +65,7 @@
       "clears_title": "This clears",
       "clears": [
         "All lesson progress, exactly as Reset lesson progress does.",
-        "Your setup results, your CLI command, your track and the remembered project.",
+        "Your setup results, your AI command, your track and the remembered project.",
         "Your starting prompt and test cases and the bundled skill files in your project folder.",
         "Text size, theme and sidebar choices in this browser. They go back to their defaults.",
         "The answer key, if you made one. It is deleted and is not backed up."

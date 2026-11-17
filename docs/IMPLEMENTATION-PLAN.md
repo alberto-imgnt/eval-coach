@@ -23,6 +23,7 @@ Legend: ✅ **Done** (the "Done when" check was run and passed) · ⏳ **To do**
 | M. Series map | M.1 to M.5 (OpenSpec change `add-series-map`) | ✅ Done on the stand-in; the change is archived and its specs are in `openspec/specs/` | None |
 | G. Generalize Parts | G.1 to G.5 (OpenSpec change `generalize-parts`) | ✅ Done on the stand-in; the change is archived and its spec is in `openspec/specs/` | None; `add-part-1` builds on it |
 | P1. Part 1: structured prompting | P1.1 to P1.9 (OpenSpec change `add-part-1`) | ✅ Built and verified on the stand-in; the change is archived and its specs are in `openspec/specs/` | Two real-CLI sessions (the cold run and the rewrite run) after the user approves them, in Phase 6 |
+| C. Content clarity | C.1 to C.8 (OpenSpec change `content-clarity`) | ✅ Done on the stand-in; the change is archived (2026-11-16) and its specs are in `openspec/specs/` | None; guided setup (change 2) builds on this vocabulary |
 | P2. Part 2: defining evaluation criteria | P2.1 to P2.9 (OpenSpec change `add-part-2`) | 🔄 Built on the stand-in; the final integration check (P2.9) and the user's wording review before archive are pending | P2.9; no real CLI is involved, so no real-CLI budget is used |
 | R. Read ahead always | R.1 to R.4 (OpenSpec change `read-ahead-always`) | ✅ Done on the stand-in; the change is archived and its specs are in `openspec/specs/` | None |
 | 5. Package | 5.1 to 5.8 | ⏳ To do, needs go-ahead | All 8 tasks |
@@ -212,6 +213,15 @@ One line per task. The detailed table, files and "Done when" check for each task
 | P2.7 | Interface tests: the mock API's Part 2 row, `tests/frontend/part2.spec.js` against the real app | 🔄 Running (`part2.spec.js` is not in place yet) |
 | P2.8 | Stand-in harness: stage `part2` (works the lessons, fills and saves the worksheet, adds thresholds, builds and saves the file, classifies the reference) | ✅ Written; its run is part of P2.9 |
 | P2.9 | Docs and final integration check: both backend suites, the whole interface suite, `python tools\build_pyz.py --smoke` (`part-2-*.json`, `kit/part2` and `criteria_steps.py` inside the archive), the stand-in harness on both tracks, `openspec validate add-part-2 --strict` | ⏳ Pending verification (docs are done) |
+| **Phase C** | **Content clarity** (OpenSpec change `content-clarity`) | ✅ Done on the stand-in |
+| C.1 | Vocabulary tests `tests/test_participant_vocabulary.py`: no bare "CLI", no "Northwind" as an option name, glossary "AI window", track words, series intro, categories, no CRISP in Part 1 | ✅ Done |
+| C.2 | Mission lessons share one shape (goal, why it matters to you, what you will do, what you leave with); no map; the series framing in `p1-mission` only | ✅ Done |
+| C.3 | "AI window" glossary entry and "your AI" across content, interface strings and participant-visible server messages | ✅ Done |
+| C.4 | "Practice task" and "My own task" for the ready-made example and the other starter | ✅ Done |
+| C.5 | `p1-frameworks` rebuilt: numbered five categories and one table per framework; "categories" instead of "kinds" in Part 1 | ✅ Done (finding: the lesson body is 400 words, so its test cap is 420) |
+| C.6 | Track descriptions by technical level, no default wording; Series map intro | ✅ Done (finding: the Track page still preselects the Script track, because `preflight.py` stores `"script"` as the initial track; removing that is an interface change that needs authorization) |
+| C.7 | Docs: `docs/SPEC.md`, `COURSE-CONTEXT.md`, `PHASE3.md`, `AGENTS.md` rule 10, `docs/temp/series-review-pending-changes.md` | ✅ Done |
+| C.8 | Verification: both backend suites, the interface suite, `python tools\build_pyz.py --smoke`, the stand-in harness on both tracks | ✅ Done |
 | **Phase 5** | **Package** | ⏳ To do (needs go-ahead) |
 | 5.1 | Build `eval-coach.zip` with exactly two files | ⏳ To do |
 | 5.2 | Version number in the app and in progress | ⏳ To do |
@@ -326,7 +336,7 @@ Rules for every task:
 - Add or update tests in the same task as the code.
 - After any app change, run the checks in "Verification commands".
 - When behavior or an API changes, update `SPEC.md` in the same task.
-- Commit only when the user asks. The repo currently has no git history.
+- Commit only when the user asks. The repo is under git with `origin` on GitHub; the `post-archive-pr` skill handles the branch, commit, push and PR after an archived change.
 
 ### Non-negotiable rules
 1. Python standard library only at runtime, with Python 3.9-compatible syntax. The browser UI has no build step.
@@ -774,6 +784,12 @@ Part 2 is the bridge between the prompt written in Part 1 and the checker built 
 
 ---
 
+## Phase C: Content clarity — ✅ DONE on the stand-in (OpenSpec change `content-clarity`)
+
+The words participants read were made plain: one mission shape for Parts 1 to 3 (no map of the Parts; the series framing only in `p1-mission`), "your AI" and "AI window" instead of "CLI" (vendor names stay), "Practice task" and "My own task" instead of "Northwind", "categories" for the five groups of what a prompt needs, a framework section with one table per framework, track descriptions by technical level and a Series map intro about doing each Part yourself. The change's specs (`mission-lesson-shape`, `participant-vocabulary` and changes to `part-1-course`, `part-2-course`, `series-intent-framing`, `series-map`, `setup-access`) win over this plan for their areas. Interface copy edits (`web/` strings, `lesson-ui.json`, `preflight.json`, `settings.json`, `series.json`) were authorized in the change's proposal; no layout, style, component or id changed. `tests/test_participant_vocabulary.py` keeps the words from drifting back. Participant-visible messages built in Python (`engine.py`, `gates.py`, `scan.py`, `baseline.py`, `promptfoo.py`, `part_steps.py`, `conpty.py`, `terminal.py`) were reworded the same way. Findings: the Track page preselects the Script track (see C.6), and the `p1-frameworks` word cap is 420. No real CLI was used.
+
+---
+
 ## Phase 5: Package — ⏳ TO DO (needs go-ahead, D1)
 
 **Status: ⏳ To do. None of the 8 tasks (5.1 to 5.8) is started.**
@@ -853,7 +869,7 @@ These items are outside the phases and are waiting on the user.
 | H1 | Remove Copilot Chat in Teams from the Session 3 materials and attendee kit | Done outside this project; confirmed absent from the Markdown files and the zip on 2026-11-09 |
 | H2 | Delete the 4 Phase 0 transcripts that contain the account email | Offered, not answered |
 | H3 | Remove `e2e-work` and the Phase 0 runtimes and npm cache once they are no longer needed | After the pilot |
-| H4 | Put the repo under git | Only if the user asks |
+| H4 | Put the repo under git | Done; repo is under git with `origin` on GitHub |
 
 ## Known risks
 

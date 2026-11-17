@@ -150,8 +150,7 @@ class BundledCourse(unittest.TestCase):
     def test_every_lesson_after_the_mission_opens_with_the_method_link_it_covers(self):
         for lesson in self.data["lessons"]:
             if lesson["id"] == "mission":
-                self.assertTrue(lesson["body"].startswith("**The goal:"), lesson["body"][:60])
-                self.assertIn("**In plain words.**", lesson["body"])
+                self.assertTrue(lesson["body"].startswith("**The goal.**"), lesson["body"][:60])
                 continue
             with self.subTest(lesson=lesson["id"]):
                 first = paragraphs(lesson["body"])[0]
@@ -388,7 +387,7 @@ class Glossary(unittest.TestCase):
             self.assertIn(term, self.names)
 
     def test_terms_used_in_lessons_are_explained(self):
-        for term in ("CLI", "Agent"):
+        for term in ("AI window", "Agent"):
             self.assertIn(term, self.names)
 
     def test_every_entry_has_a_meaning_a_kind_and_a_real_lesson(self):

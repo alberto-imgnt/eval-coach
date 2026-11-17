@@ -212,7 +212,8 @@ class Approvals(unittest.TestCase):
     def test_northwind_is_always_called_a_learning_example_where_the_course_introduces_it(self):
         data = json.loads(resources.read_text("content/lessons.json"))
         mission = next(x for x in data["lessons"] if x["id"] == "mission")
-        self.assertIn("Northwind is for practice only and is never a task you can submit", mission["body"])
+        self.assertIn("It is for practice only and is never something to submit", mission["body"])
+        self.assertNotIn("Northwind", mission["body"])
         for lesson in data["lessons"]:
             for source in lesson["sources"] + [lesson["primary_source"]]:
                 if "northwind" in source["ref"]:

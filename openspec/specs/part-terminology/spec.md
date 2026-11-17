@@ -37,8 +37,12 @@ The interface strings that show a Part number (the header sub-brand, the course-
 
 #### Scenario: Strings in content
 - **WHEN** the content tests scan `web/js`
-- **THEN** none of `views.js`, `markdown.js` or `part-steps.js` contains the words "Session" or a hard-coded Part title, and the strings are read from the interface text
+- **THEN** none of `views.js`, `markdown.js`, `part-steps.js` or `criteria-steps.js` contains the words "Session" or a hard-coded Part title, and the strings are read from the interface text
 
 #### Scenario: Header in Part 1
 - **WHEN** the participant is inside Part 1
 - **THEN** the sub-brand reads "Part 1 · Structured prompting"
+
+#### Scenario: Header in Part 2
+- **WHEN** the participant is inside Part 2
+- **THEN** the sub-brand reads "Part 2 · Defining evaluation criteria"

@@ -54,7 +54,7 @@
         {"id": "a", "text": "Where your picture of the code differs from it", "correct": true, "feedback": "Right. Each wrong prediction is a place where your picture of the checker and the checker disagree, and that is where to look first."},
         {"id": "b", "text": "Which fixture the checker is likely to read first", "correct": false, "feedback": "The checker reads whatever file it is given. A prediction is about the verdicts, not the order."},
         {"id": "c", "text": "How many words each fixture should contain in total", "correct": false, "feedback": "Word counts are one kind of threshold. A prediction covers the verdict for every criterion on both fixtures."},
-        {"id": "d", "text": "Whether your CLI wrote the answer key too early", "correct": false, "feedback": "No answer key exists yet. It is written only after your predictions are locked."}
+        {"id": "d", "text": "Whether your AI wrote the answer key too early", "correct": false, "feedback": "No answer key exists yet. It is written only after your predictions are locked."}
       ]
     },
     {
@@ -82,7 +82,7 @@
     {
       "id": "sc-fix",
       "step": "fix",
-      "prompt": "When you change a threshold sentence in test-cases.md, what should your CLI update next?",
+      "prompt": "When you change a threshold sentence in test-cases.md, what should your AI update next?",
       "options": [
         {"id": "a", "text": "Only the rules whose threshold sentence changed", "correct": true, "feedback": "Right. The markdown is the spec, so the sentence changes first and only the matching rules follow it. Everything else stays as it was."},
         {"id": "b", "text": "Every rule, rebuilt from a blank file", "correct": false, "feedback": "Rebuilding everything would change rules you did not touch, so you could no longer tell what your edit did."},
@@ -110,15 +110,15 @@
       "win": "You can explain in one sentence how your Part 2 test cases become reusable parts, and where those parts sit in an evaluated AI process.",
       "minutes": 3,
       "skippable": false,
-      "body": "**The goal: understand how to turn the test cases, criteria and thresholds you wrote in Part 2 into reusable parts, and how those parts fit into an evaluated AI process.**\n\n**In plain words.** This series teaches you to judge the work AI gives you, and to trust it because you checked it, not because it looked right. It does not ask you for blind trust or blind distrust. In Part 2 you captured what a good answer looks like. Here those rules become a small program, a checker, that applies them the same way every time, plus a starting score to compare against later. You do not need to code, because your AI tool writes the program. Your job is to decide what good means and to check that the program means the same thing.\n\n**Why it matters.**\n\n- AI sounds sure of itself even when it is wrong, so \"it looks fine\" lets mistakes through.\n- \"Better\" is only an opinion until you measure it.\n- Answers change from one try to the next, so one answer proves little.\n\n**The method.** Ask clearly, know what you need, turn it into rules, score the result, improve, and keep a record. You use the same method on every task.\n\n**Where this course fits.** It is Part 3 of a six-part series, and each Part builds on the one before. The pin marks where you are now:\n\n```you-are-here\ndone | 1 | Structured prompting | I tell the AI clearly what I need, so it guesses less and gives steadier answers.\ndone | 2 | Defining evaluation criteria | I turn \"that looks good\" into clear pass or fail rules.\nhere | 3 | Running evals and baseline | I check five AI answers against my rules and record a starting score.\nnext | 4 | Iterating with evaluation-driven development | I change my prompt, check again with the same rules and see whether the score moved.\nnext | 5 | Load-bearing audit and packaging | I keep only the instructions that earn their place and package my work so someone else can use it.\nnext | 6 | Your own task | I use the method on a task from my own job.\n```\n\nSome lessons use a made-up client called Northwind as a practice example. Northwind is for practice only and is never a task you can submit.",
+      "body": "**The goal.** Turn the test cases, criteria and thresholds you wrote in Part 2 into a checker you can trust, and record a starting score.\n\n**Why it matters to you.** A checker applies your rules the same way every time. Without one, a score depends on who looks and when. You do not need to code, because your AI writes the program. Your job is to decide what good means and to check that the program means the same thing.\n\n**What you will do.** Have your AI build the checker. Test the checker on answers where you already know the result. Run it on five answers and record the baseline. Some lessons use the Practice task, a ready-made example. It is for practice only and is never something to submit.\n\n**What you leave with.** A tested checker, results for five answers, and a baseline score you can compare against in later Parts.",
       "activities": [],
       "retrieval": [],
       "sources": [
         {"label": "The checker skill", "ref": "kit:skills/build-eval-script/SKILL.md"},
-        {"label": "Northwind test cases (learning example)", "ref": "kit:northwind/northwind-test-cases-reference.md"},
-        {"label": "Northwind prompt (learning example)", "ref": "kit:northwind/northwind-prompt-v0.md"}
+        {"label": "Practice task test cases (learning example)", "ref": "kit:northwind/northwind-test-cases-reference.md"},
+        {"label": "Practice task prompt (learning example)", "ref": "kit:northwind/northwind-prompt-v0.md"}
       ],
-      "primary_source": {"label": "Northwind test cases (learning example)", "ref": "kit:northwind/northwind-test-cases-reference.md", "why": "It shows what a Part 2 test case file looks like, which is the raw material your checker is built from."},
+      "primary_source": {"label": "Practice task test cases (learning example)", "ref": "kit:northwind/northwind-test-cases-reference.md", "why": "It shows what a Part 2 test case file looks like, which is the raw material your checker is built from."},
       "related": {"lessons": ["several-runs", "baseline-why"], "glossary": ["Checker", "Baseline (Iteration 0)", "The loop"]}
     },
     {
@@ -127,7 +127,7 @@
       "win": "You have three grades of the same update, from three separate runs, ready to compare side by side.",
       "minutes": 6,
       "skippable": false,
-      "body": "**In the method.** Turn it into rules. A fixed rule gives the same verdict every time, and an AI's opinion may not.\n\n**The idea.** Before you build a checker, try the alternative: ask an AI to do the grading. A score is only useful if whatever produces it gives the same answer when it is asked the same question again. This experiment shows whether it does.\n\n**The experiment.** You ask your own AI tool to grade one short status update against six requirements, three times. The update is part of the Northwind learning example. Each run is a brand new chat with no memory of the one before. When all three results are on screen, compare the score, the pass or fail, and the reasoning. A short check follows. It is for you, so answer it or move on.\n\n**How this course does it.** Press Start, then Send, for each run. If your CLI asks for approvals, answer them in the terminal. This is one way to run the experiment, and other approaches work too.",
+      "body": "**In the method.** Turn it into rules. A fixed rule gives the same verdict every time, and an AI's opinion may not.\n\n**The idea.** Before you build a checker, try the alternative: ask an AI to do the grading. A score is only useful if whatever produces it gives the same answer when it is asked the same question again. This experiment shows whether it does.\n\n**The experiment.** You ask your own AI tool to grade one short status update against six requirements, three times. The update is part of the Practice task, a ready-made example. Each run is a brand new chat with no memory of the one before. When all three results are on screen, compare the score, the pass or fail, and the reasoning. A short check follows. It is for you, so answer it or move on.\n\n**How this course does it.** Press Start, then Send, for each run. If your AI asks for approvals, answer them in the terminal. This is one way to run the experiment, and other approaches work too.",
       "activities": [
         {
           "id": "hook-compare",
@@ -185,11 +185,11 @@
       ],
       "sources": [
         {"label": "The requirements the grader was given", "ref": "kit:lessons/hook/requirements.md"},
-        {"label": "Northwind test cases (learning example)", "ref": "kit:northwind/northwind-test-cases-reference.md"},
+        {"label": "Practice task test cases (learning example)", "ref": "kit:northwind/northwind-test-cases-reference.md"},
         {"label": "The checker skill", "ref": "kit:skills/build-eval-script/SKILL.md"}
       ],
       "primary_source": {"label": "The requirements the grader was given", "ref": "kit:lessons/hook/requirements.md", "why": "Read the requirements and rough notes that your three grades were judged against."},
-      "related": {"lessons": ["several-runs", "rules"], "glossary": ["Deterministic", "Checker", "CLI"]}
+      "related": {"lessons": ["several-runs", "rules"], "glossary": ["Deterministic", "Checker", "AI window"]}
     },
     {
       "id": "several-runs",
@@ -202,7 +202,7 @@
         {
           "id": "generate-spot",
           "type": "choice",
-          "prompt": "A teammate keeps prompt.md and test-cases.md together in one folder and opens their CLI there. They run the prompt in five new chats, and all five answers look very good. What is the problem?",
+          "prompt": "A teammate keeps prompt.md and test-cases.md together in one folder and opens their AI tool there. They run the prompt in five new chats, and all five answers look very good. What is the problem?",
           "options": [
             {"id": "a", "text": "Five runs are too few to be worth anything", "correct": false, "feedback": "Five runs give a rate such as 4 of 5 for each criterion. The problem is in the setup around these runs."},
             {"id": "b", "text": "Each run needed the same chat for better consistency", "correct": false, "feedback": "Sharing a chat would carry earlier answers forward. Each run needs to stand alone, so new chats were the right call."},
@@ -245,7 +245,7 @@
       ],
       "sources": [
         {"label": "The checker skill: Mode 3, run and log", "ref": "kit:skills/build-eval-script/SKILL.md"},
-        {"label": "Northwind prompt (learning example)", "ref": "kit:northwind/northwind-prompt-v0.md"}
+        {"label": "Practice task prompt (learning example)", "ref": "kit:northwind/northwind-prompt-v0.md"}
       ],
       "primary_source": {"label": "The checker skill: Mode 3, run and log", "ref": "kit:skills/build-eval-script/SKILL.md", "why": "It shows the log entry your runs will end up in, including the line for the model name."},
       "related": {"lessons": ["hook", "baseline-why"], "glossary": ["Run", "Blind folder", "Mid-tier model", "prompt-v0.md", "runs/run-1.txt to run-5.txt"]}
@@ -333,7 +333,7 @@
           ],
           "question": {
             "id": "build-try-q",
-            "prompt": "Look at what your CLI saved. Which practice criterion could a rule not decide?",
+            "prompt": "Look at what your AI saved. Which practice criterion could a rule not decide?",
             "options": [
               {"id": "a", "text": "C3: Tone, because \"professional and confident\" is only a judgment", "correct": true, "feedback": "Right. No count or list can say whether something sounds professional, so the checker would report NOT CHECKED and suggest a rewrite."},
               {"id": "b", "text": "C1: Length, because counting the words is far too hard", "correct": false, "feedback": "Counting words is exactly what a rule does well, and it gives the same answer every time."},
@@ -497,7 +497,7 @@
           "prompt": "You are filling in your predictions and you are not sure about one cell. What is the best move?",
           "options": [
             {"id": "a", "text": "Run the checker first and copy what it says", "correct": false, "feedback": "Then you would be measuring the checker against itself. The value of predicting is lost the moment you have seen the result."},
-            {"id": "b", "text": "Ask your CLI which verdict is the correct one", "correct": false, "feedback": "That replaces your own picture of the code with the agent's. Predicting is meant to expose the difference between the two."},
+            {"id": "b", "text": "Ask your AI which verdict is the correct one", "correct": false, "feedback": "That replaces your own picture of the code with the agent's. Predicting is meant to expose the difference between the two."},
             {"id": "c", "text": "Leave the cell blank until you can be sure", "correct": false, "feedback": "A blank cell cannot be compared with anything, and the grid will not lock with one."},
             {"id": "d", "text": "Commit to your best guess and lock it in", "correct": true, "feedback": "Right. A wrong guess is useful. It shows where your idea of the code differs from the code."}
           ]
@@ -561,7 +561,7 @@
         {
           "id": "fix-scenario",
           "type": "choice",
-          "prompt": "Your bad fixture passes the length criterion. The threshold in your markdown says under 1500 words, but you meant 150. Your CLI offers to change 1500 to 150 inside check.py. What do you do?",
+          "prompt": "Your bad fixture passes the length criterion. The threshold in your markdown says under 1500 words, but you meant 150. Your AI offers to change 1500 to 150 inside check.py. What do you do?",
           "options": [
             {"id": "a", "text": "Accept the edit, since the checker result would then be correct", "correct": false, "feedback": "The verdict would look right for now, but the sentence in your spec would still say something else. Think about what the agent would read next time."},
             {"id": "b", "text": "Delete the length criterion so that the surprise goes away completely", "correct": false, "feedback": "Removing a check hides the problem, and you would lose a criterion you still care about."},
@@ -575,7 +575,7 @@
           "prompt": "Decide where each fix belongs.",
           "buckets": [
             {"id": "spec", "label": "Change test-cases.md, then update the checker"},
-            {"id": "crash", "label": "Ask your CLI to fix the crash, thresholds untouched"},
+            {"id": "crash", "label": "Ask your AI to fix the crash, thresholds untouched"},
             {"id": "keep", "label": "Keep it: the result is the information"}
           ],
           "items": [
@@ -599,7 +599,7 @@
             "id": "fix-try-q",
             "prompt": "Suppose you copied that new sentence into your own test-cases.md. What should happen to the checker next?",
             "options": [
-              {"id": "a", "text": "Your CLI updates only the function whose threshold changed", "correct": true, "feedback": "Right. The sentence is the spec, and the script follows it. Only the function for the changed threshold should be touched."},
+              {"id": "a", "text": "Your AI updates only the function whose threshold changed", "correct": true, "feedback": "Right. The sentence is the spec, and the script follows it. Only the function for the changed threshold should be touched."},
               {"id": "b", "text": "You open check.py and then edit it by hand", "correct": false, "feedback": "Editing the code yourself lets the spec and the script drift apart. Change the sentence and let the agent follow it."},
               {"id": "c", "text": "Nothing. The checker reads the markdown itself each run", "correct": false, "feedback": "The checker is a script. It does not read your markdown when it runs, so it has to be updated."},
               {"id": "d", "text": "Delete check.py and build it all again from scratch", "correct": false, "feedback": "Rebuilding everything throws away functions that were already right. Only the changed threshold needs a new function."}
@@ -615,7 +615,7 @@
             {"id": "a", "text": "Vague threshold, script reads it differently, or I predicted wrong", "correct": true, "feedback": "Right. Each one points to a different thing to do next."},
             {"id": "b", "text": "Bad model, bad prompt, or a bug in the app", "correct": false, "feedback": "A surprise is about your prediction and the checker disagreeing. The model and the prompt are not part of that comparison."},
             {"id": "c", "text": "Answer too long, too short, or on the wrong topic", "correct": false, "feedback": "Those are reasons a single answer might fail a criterion. A surprise is something else."},
-            {"id": "d", "text": "A slow model, a busy service, or a network error", "correct": false, "feedback": "Those are operating problems with your CLI, and they have nothing to do with comparing predictions."}
+            {"id": "d", "text": "A slow model, a busy service, or a network error", "correct": false, "feedback": "Those are operating problems with your AI, and they have nothing to do with comparing predictions."}
           ]
         },
         {
@@ -650,7 +650,7 @@
         },
         {
           "id": "r-fix-3",
-          "prompt": "When is it right to ask your CLI to change check.py with no change to any threshold?",
+          "prompt": "When is it right to ask your AI to change check.py with no change to any threshold?",
           "options": [
             {"id": "a", "text": "When a verdict looks too harsh to feel fair", "correct": false, "feedback": "A harsh verdict is information. If the rule is wrong, it is the sentence that changes."},
             {"id": "b", "text": "When the polished fixture passes too many of them", "correct": false, "feedback": "That points at a threshold, so editing the code alone would not address it."},
@@ -672,7 +672,7 @@
       "win": "You can explain what a pass rate across answers tells you and what it does not, and you know what to keep for Part 4.",
       "minutes": 6,
       "skippable": false,
-      "body": "**In the method.** Keep a record, so every change can be compared with where you started.\n\n**The idea.** A baseline is your starting score: for each rule, how many of your five answers passed, such as 4 of 5, or 80%. It must be a pass rate, because one answer tells you only about itself. A rule that could not be judged stays in the record as NOT CHECKED, outside the total.\n\nRecord it after your rules are settled, because changing a rule later would change what the logged numbers mean.\n\n**What a score tells you.** It describes how one prompt did against one set of rules. It does not guarantee every future answer, and it says nothing about qualities no rule checks.\n\n**What comes next.** In Part 4 you change the prompt, check again with the same rules and compare with this score. If the score did not move, the change did not help. Part 5 removes the instructions that do no work.\n\n**Your own work.** The same method fits any task that repeats, has clear requirements and can be checked by rules, such as a message after a client call, a summary of a long thread or a job description. In Part 6 you pick your own. It is live: bring ideas to office hours or the AIR discussion. Northwind is practice only.\n\n**How this course does it.** Pick your best answer as your known-good output. Your checker should score it 95% or more; if not, look at the checker, not the prompt. Other approaches work too.\n\n**How this fits the Stage 3 certification.** Stage 3 asks for three things: the Prompt, the Evaluations and the Log. Your prompt file is the start of the Prompt. Your test cases, your checker and the fixtures that tested it are the start of the Evaluations. Iteration 0 is the first entry of the Log, which needs at least two rounds of improvement. Part 4 adds those rounds and checks that a known-good answer scores 95% or more. Part 5 checks that every instruction in your prompt earns its place. Scripts, promptfoo files and written test cases are all accepted, and the file names and layout here are only this course's way of organizing the work. This note is for orientation only. The program's own instructions decide what to submit, and nothing here is needed to finish this course.",
+      "body": "**In the method.** Keep a record, so every change can be compared with where you started.\n\n**The idea.** A baseline is your starting score: for each rule, how many of your five answers passed, such as 4 of 5, or 80%. It must be a pass rate, because one answer tells you only about itself. A rule that could not be judged stays in the record as NOT CHECKED, outside the total.\n\nRecord it after your rules are settled, because changing a rule later would change what the logged numbers mean.\n\n**What a score tells you.** It describes how one prompt did against one set of rules. It does not guarantee every future answer, and it says nothing about qualities no rule checks.\n\n**What comes next.** In Part 4 you change the prompt, check again with the same rules and compare with this score. If the score did not move, the change did not help. Part 5 removes the instructions that do no work.\n\n**Your own work.** The same method fits any task that repeats, has clear requirements and can be checked by rules, such as a message after a client call, a summary of a long thread or a job description. In Part 6 you pick your own. It is live: bring ideas to office hours or the AIR discussion. Practice task is practice only.\n\n**How this course does it.** Pick your best answer as your known-good output. Your checker should score it 95% or more; if not, look at the checker, not the prompt. Other approaches work too.\n\n**How this fits the Stage 3 certification.** Stage 3 asks for three things: the Prompt, the Evaluations and the Log. Your prompt file is the start of the Prompt. Your test cases, your checker and the fixtures that tested it are the start of the Evaluations. Iteration 0 is the first entry of the Log, which needs at least two rounds of improvement. Part 4 adds those rounds and checks that a known-good answer scores 95% or more. Part 5 checks that every instruction in your prompt earns its place. Scripts, promptfoo files and written test cases are all accepted, and the file names and layout here are only this course's way of organizing the work. This note is for orientation only. The program's own instructions decide what to submit, and nothing here is needed to finish this course.",
       "activities": [
         {
           "id": "baseline-total",

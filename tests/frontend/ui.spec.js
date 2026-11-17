@@ -126,10 +126,10 @@ test('Start again works after the CLI was stopped', async ({ page, request }) =>
   await page.locator('#cli-start').click();
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
   await page.locator('#cli-stop').click();
-  await expect(page.getByText('Your CLI has stopped')).toBeVisible();
+  await expect(page.getByText('Your AI has stopped')).toBeVisible();
   await expect(page.locator('#cli-retry')).not.toHaveAttribute('aria-disabled', 'true');
   await page.locator('#cli-retry').click();
-  await expect(page.getByText('Your CLI is running.')).toBeVisible();
+  await expect(page.getByText('Your AI is running.')).toBeVisible();
 });
 
 test('without a token the page shows a plain message and makes no API calls', async ({ page, request }) => {
@@ -150,7 +150,7 @@ test('preflight project item: prefills defaults, shows warnings, posts the contr
   await expect(page.getByText('inside OneDrive')).toBeVisible();
   await page.getByLabel('Project folder').fill('C:\\work\\project');
 
-  await page.getByRole('radio', { name: /My own files/ }).check();
+  await page.getByRole('radio', { name: /My own task/ }).check();
   await expect(page.getByLabel('Path to your prompt file')).toBeVisible();
   await page.getByLabel('Path to your prompt file').fill('C:\\a\\prompt.md');
   await page.getByLabel('Path to your test cases file').fill('C:\\a\\tests.md');
@@ -176,16 +176,16 @@ test('preflight project item: prefills defaults, shows warnings, posts the contr
 async function openImportScreen(page, request) {
   await openApp(page, request, 'setup');
   await page.getByLabel('Project folder').fill('C:\\work\\project');
-  await page.getByRole('radio', { name: /My own files/ }).check();
+  await page.getByRole('radio', { name: /My own task/ }).check();
 }
 
-test('import screen: Northwind is only a learning example, and the copies are named in plain words', async ({ page, request }) => {
+test('import screen: the Practice task is only a ready-made example, and the copies are named in plain words', async ({ page, request }) => {
   await openApp(page, request, 'setup');
-  await expect(page.locator('#northwind-note')).toContainText('Northwind is a learning example');
+  await expect(page.locator('#northwind-note')).toContainText('The Practice task is a ready-made example');
   await expect(page.locator('#northwind-note')).toContainText('cannot be your submission');
   await expect(page.locator('#northwind-note')).toContainText('no way to submit it as your own work');
   await expect(page.locator('#import-copies')).toHaveCount(0);
-  await page.getByRole('radio', { name: /My own files/ }).check();
+  await page.getByRole('radio', { name: /My own task/ }).check();
   await expect(page.locator('#northwind-note')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Bring your own prompt and test cases' })).toBeVisible();
   await expect(page.locator('#import-copies')).toContainText('Your original files are not touched');
@@ -328,7 +328,7 @@ test('preflight: the first page has the welcome text and the track choice; promp
   await expect(page.locator('#pf-item-node')).toHaveCount(0);
   await expect(page.getByRole('radio', { name: /Script track/ })).toBeChecked();
   await page.getByRole('radio', { name: /promptfoo track/ }).check();
-  await expect(page.locator('#pf-track-note')).toContainText('one extra step where your CLI adds your two fixtures');
+  await expect(page.locator('#pf-track-note')).toContainText('one extra step where your AI adds your two fixtures');
   await expect(page.locator('#wizard-count')).toHaveText('1 of 8');
   await page.locator('#wizard-next').click();
   await page.locator('#wizard-next').click();
@@ -383,11 +383,11 @@ test('preflight: command check, sign-in confirm and working test follow the Star
     working_test: { status: 'needs_you', detail: 'Ready.', next: 'Press Start the test.' },
   });
   await expect.poll(async () => (await mockLog(request)).log.some((e) => e.path.startsWith('/api/terminal/stream'))).toBe(true);
-  await page.getByLabel('Command that starts your AI CLI').fill('mycli --model mid');
+  await page.getByLabel('Command that starts your AI').fill('mycli --model mid');
   await page.locator('#pf-cli-check').click();
   await expect.poll(async () => (await mockLog(request)).log.some((e) => e.path === '/api/preflight/cli' && e.body.cli_command === 'mycli --model mid')).toBe(true);
 
-  await mock(request, 'pf_item', { id: 'cli', changes: { status: 'passed', detail: 'Your CLI started.', next: '' } });
+  await mock(request, 'pf_item', { id: 'cli', changes: { status: 'passed', detail: 'Your AI started.', next: '' } });
   await mock(request, 'emit_state');
   await expect(page.locator('#wizard-next')).not.toHaveAttribute('aria-disabled', 'true');
   await page.locator('#wizard-next').click();
@@ -399,7 +399,7 @@ test('preflight: command check, sign-in confirm and working test follow the Star
   await expect(page.locator('.term-line')).toContainText('Read input.txt, write its contents in uppercase to output.txt');
   await expect(page.locator('#cli-send')).toHaveAttribute('aria-disabled', 'true');
   await page.locator('#cli-start').click();
-  await expect(page.locator('#term-head .term-status')).toHaveText('Your CLI is running.');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await page.locator('#cli-send').click();
   await expect(page.getByText('Sent. Watch the terminal')).toBeVisible();
   await page.locator('#pf-test-check').click();
@@ -431,8 +431,8 @@ test('generate: tracker, model name autosave, automatic advance statement, SSE u
   await expect(page.locator('.run').nth(2)).toContainText('Current run');
   await expect(page.getByText('You do not need to press anything to move on.')).toBeVisible();
 
-  await page.getByLabel('The name of the model you chose in your CLI').fill('mid-model-3');
-  await page.getByLabel('The name of the model you chose in your CLI').blur();
+  await page.getByLabel('The name of the model you chose in your AI').fill('mid-model-3');
+  await page.getByLabel('The name of the model you chose in your AI').blur();
   await expect.poll(async () => (await mockLog(request)).log.some((e) => e.path === '/api/step/submit' && e.body.data.model_name === 'mid-model-3')).toBe(true);
 
   await mock(request, 'set_data', { step: 'generate', data: { current_run: 4, runs: [
@@ -445,23 +445,23 @@ test('generate: tracker, model name autosave, automatic advance statement, SSE u
 
 test('terminal header shows label, exact line, buttons; send focuses the terminal', async ({ page, request }) => {
   await openApp(page, request, 'generate');
-  await expect(page.locator('#term-head h2')).toHaveText('Your CLI');
+  await expect(page.locator('#term-head h2')).toHaveText('Your AI');
   await expect(page.locator('.term-line')).toHaveText('Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.');
   await expect(page.locator('#term-foot')).toContainText('Any approval requests appear here in the terminal');
   await expect(page.locator('#cli-send')).toHaveAttribute('aria-disabled', 'true');
 
   await page.locator('#cli-start').click();
-  await expect(page.locator('#term-head .term-status')).toHaveText('Your CLI is running.');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
   await expect(page.locator('#cli-start')).toHaveAttribute('aria-disabled', 'true');
 
   await page.locator('#cli-send').click();
   await expect(page.locator('#cli-send')).not.toHaveAttribute('aria-busy', 'true');
   await expect.poll(() => page.evaluate(() => document.activeElement && document.activeElement.className)).toContain('xterm-helper-textarea');
-  await expect(page.getByText('Sent. If your CLI reports a temporary error')).toBeVisible();
+  await expect(page.getByText('Sent. If your AI reports a temporary error')).toBeVisible();
 
   await page.locator('#cli-stop').click();
-  await expect(page.locator('#term-head .term-status')).toHaveText('Your CLI has stopped (exit code 0).');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI has stopped (exit code 0).');
 });
 
 test('terminal renders UTF-8 split across chunks and ANSI color', async ({ page, request }) => {
@@ -506,7 +506,7 @@ test('SSE reconnects with after= and does not duplicate output', async ({ page, 
 test('keystrokes arrive in order', async ({ page, request }) => {
   await openApp(page, request, 'generate');
   await page.locator('#cli-start').click();
-  await expect(page.locator('#term-head .term-status')).toHaveText('Your CLI is running.');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await expect.poll(() => page.evaluate(() => document.activeElement && document.activeElement.className)).toContain('xterm-helper-textarea');
   const message = 'The quick brown fox é ✓ jumps 0123456789';
   await page.keyboard.type(message, { delay: 2 });
@@ -588,10 +588,10 @@ const EXAMPLE_ROUTE = '/api/step/use-example-fixtures';
 test('fixtures recovery: the page says whose fixtures these are, on both tracks', async ({ page, request }) => {
   for (const scenario of ['fixtures', 'pf-fixtures']) {
     await openApp(page, request, scenario);
-    await expect(page.getByRole('heading', { name: 'If your CLI cannot make usable fixtures' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'If your AI cannot make usable fixtures' })).toBeVisible();
     const note = page.locator('#example-fixtures-note');
-    await expect(note).toContainText("These two files are the Northwind example's own fixtures.");
-    await expect(note).toContainText("They fit the example's test cases only");
+    await expect(note).toContainText("These two files are the Practice task's own fixtures.");
+    await expect(note).toContainText("They fit its test cases only");
     await expect(note).toContainText('No answer key is written now');
     await expect(note).toContainText('Pressing Start again clears them.');
     await expect(page.locator('#use-example-fixtures')).toHaveText("Use the example's fixtures");
@@ -619,7 +619,7 @@ test('fixtures recovery: replacing text asks first, and Cancel sends nothing', a
   await page.locator('#use-example-fixtures').click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('Replace the fixtures?');
-  await expect(dialog).toContainText("replaces it with the Northwind example's two fixtures");
+  await expect(dialog).toContainText("replaces it with the Practice task's two fixtures");
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect((await mockLog(request)).log.filter((e) => e.path === EXAMPLE_ROUTE)).toHaveLength(0);
@@ -638,13 +638,13 @@ test('fixtures recovery: nothing is offered with your own files', async ({ page,
   await expect(page.locator('.file-list li')).toHaveCount(2);
   await expect(page.locator('#use-example-fixtures')).toHaveCount(0);
   await expect(page.locator('#example-fixtures-note')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'If your CLI cannot make usable fixtures' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'If your AI cannot make usable fixtures' })).toHaveCount(0);
 });
 
 test('fixtures recovery: the button waits while the CLI is running, and a server refusal shows as plain text', async ({ page, request }) => {
   await openApp(page, request, 'fixtures');
   await page.locator('#cli-start').click();
-  await expect(page.locator('#term-head .term-status')).toHaveText('Your CLI is running.');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await expect(page.locator('#use-example-fixtures')).toHaveAttribute('aria-disabled', 'true');
   await expect(page.locator('#example-fixtures-stop')).toContainText('Press Stop first.');
   await page.locator('#use-example-fixtures').click({ force: true });
@@ -947,7 +947,7 @@ test('done steps are viewable and read-only, and passing a check stays on the re
   await page.locator('.step-item').nth(0).getByRole('button').click();
   await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
   await expect(page.getByText('You finished this step.')).toBeVisible();
-  await expect(page.getByLabel('The name of the model you chose in your CLI')).toBeDisabled();
+  await expect(page.getByLabel('The name of the model you chose in your AI')).toBeDisabled();
   await expect(page.locator('#cli-start')).toHaveCount(0);
   await expect(page.locator('#continue')).toHaveText('Continue to: Build the checker');
   await page.locator('#continue').click();
@@ -968,24 +968,24 @@ test('the terminal starts clear in every section it enters', async ({ page, requ
   await page.locator('#cli-start').click();
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
   await mock(request, 'emit_exit', { code: 1 });
-  await expect(status).toHaveText('Your CLI has stopped (exit code 1).');
-  await expect(page.locator('#term-head .term-label')).toHaveText('Your CLI');
+  await expect(status).toHaveText('Your AI has stopped (exit code 1).');
+  await expect(page.locator('#term-head .term-label')).toHaveText('Your AI');
 
   // Another section: no output, label or exit code from the fixtures session.
   await page.locator('.step-item').nth(0).getByRole('button').click();
   await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
-  await expect(status).toHaveText('Your CLI is not running.');
+  await expect(status).toHaveText('Your AI is not running.');
   await expect.poll(() => termText(page)).not.toContain('Fake CLI ready');
   await expect.poll(async () => (await postsTo(request, '/api/terminal/release')).length).toBe(1);
 
   // Coming back does not bring the old session back.
   await page.locator('.step-item').nth(2).getByRole('button').click();
   await expect(page.locator('#step-heading')).toHaveText('Make the fixtures');
-  await expect(status).toHaveText('Your CLI is not running.');
+  await expect(status).toHaveText('Your AI is not running.');
   expect(await termText(page)).not.toContain('Fake CLI ready');
   expect((await postsTo(request, '/api/terminal/release')).length).toBe(1);
   await page.locator('#cli-start').click();
-  await expect(status).toHaveText('Your CLI is running.');
+  await expect(status).toHaveText('Your AI is running.');
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
 });
 
@@ -1022,9 +1022,9 @@ test('Quit asks first, then stops and shows a closing message', async ({ page, r
 test('exit event updates terminal status without a state refetch', async ({ page, request }) => {
   await openApp(page, request, 'generate');
   await page.locator('#cli-start').click();
-  await expect(page.locator('#term-head .term-status')).toHaveText('Your CLI is running.');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await mock(request, 'emit_exit', { code: 3 });
-  await expect(page.locator('#term-head .term-status')).toHaveText('Your CLI has stopped (exit code 3).');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI has stopped (exit code 3).');
 });
 
 test('resize sends new terminal dimensions, debounced', async ({ page, request }) => {
@@ -1225,7 +1225,7 @@ test('preflight: before any step is done the track can still be changed', async 
   await expect(page.locator('#pf-track-locked')).toHaveCount(0);
   await expect(page.getByRole('radio', { name: /promptfoo track/ })).toBeEnabled();
   await page.getByRole('radio', { name: /promptfoo track/ }).check();
-  await expect(page.locator('#pf-track-note')).toContainText('one extra step where your CLI adds your two fixtures');
+  await expect(page.locator('#pf-track-note')).toContainText('one extra step where your AI adds your two fixtures');
 });
 
 // ---- Task 4.18: optional live mode (promptfoo track) -------------------------------
@@ -1235,7 +1235,7 @@ const LIVE_LINE = (cli, model) => `Read skills/build-promptfoo-config/SKILL.md a
 test('live mode: the course is finished without it, and it is offered as an optional extra', async ({ page, request }) => {
   await openApp(page, request, 'pf-live');
   await expect(page.locator('#step-heading')).toHaveText('You have finished every step');
-  await expect(page.locator('#optional-live-note')).toContainText('Optional: you can have promptfoo write fresh outputs through your own signed-in CLI.');
+  await expect(page.locator('#optional-live-note')).toContainText('Optional: you can have promptfoo write fresh outputs through your own signed-in AI tool.');
   await expect(page.locator('#optional-live-note')).toContainText('the course is complete without it');
   const items = page.locator('.step-item');
   await expect(items).toHaveCount(11);
@@ -1259,7 +1259,7 @@ test('live mode: the warning is shown first and nothing can start until it is ac
   await page.locator('#open-live').click();
   const warning = page.locator('#live-warning');
   await expect(warning).toContainText('Live mode is optional. The course is complete without it, so you can skip this step.');
-  await expect(warning).toContainText('Live mode makes promptfoo call your own signed-in CLI to write fresh outputs. No API key is involved');
+  await expect(warning).toContainText('Live mode makes promptfoo call your own signed-in AI tool to write fresh outputs. No API key is involved');
   await expect(warning).toContainText('For Devin CLI the helper adds --permission-mode auto, which turns on Devin\'s auto mode for that run, so Devin may act without asking you.');
   await expect(warning).toContainText('For GitHub Copilot CLI and Claude Code the helper adds no permission flag.');
   await expect(warning).toContainText('empty temporary folder, so it cannot see test-cases.md');
@@ -1274,7 +1274,7 @@ test('live mode: the warning is shown first and nothing can start until it is ac
   expect((await mockLog(request)).log.filter((e) => e.path === '/api/step/start')).toHaveLength(0);
 
   await page.locator('#live-ack').check();
-  await expect(page.locator('#cli-start-blocked')).toContainText('Choose the CLI you use from the list');
+  await expect(page.locator('#cli-start-blocked')).toContainText('Choose the AI tool you use from the list');
   await expect(page.locator('#cli-start')).toHaveAttribute('aria-disabled', 'true');
   await expect(page.locator('.term-line')).toContainText(LIVE_LINE('<copilot | claude | devin>', 'mid-tier-model'));
 });
@@ -1301,7 +1301,7 @@ test('live mode: choosing a CLI shows what the helper does for it and puts it in
   await expect(page.locator('.term-line')).toContainText(LIVE_LINE('claude', 'mid-tier-model'));
 
   await page.locator('#cli-start').click();
-  await expect(page.locator('#term-head .term-status')).toHaveText('Your CLI is running.');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await page.locator('#cli-send').click();
   const log = (await mockLog(request)).log;
   expect(log.filter((e) => e.path === '/api/step/send').map((e) => e.body)).toEqual([{ step: 'live' }]);
@@ -1319,7 +1319,7 @@ test('live mode: Check my work reads files only, says what is missing, and finis
   await page.locator('#check-work').click();
   await expect(page.getByText('Not done yet.')).toBeVisible();
   await expect(page.locator('.is-missing')).toContainText('promptfooconfig.live.yaml exists');
-  await expect(page.locator('.is-missing')).toContainText('Press Start my CLI, then Send to CLI, so your CLI writes it.');
+  await expect(page.locator('.is-missing')).toContainText('Press Start my AI, then Send to AI, so your AI writes it.');
   await expect(page.locator('#live-files')).toContainText('Not there yet');
   await mock(request, 'set_data', { step: 'live', data: { config_exists: true, provider_exists: true, provider_ok: true, started: true } });
   await page.reload();
@@ -1336,7 +1336,7 @@ test('live mode: scan problems and a changed provider file are shown in plain te
   await openApp(page, request, 'pf-live');
   await mock(request, 'set_data', { step: 'live', data: {
     config_exists: true, provider_exists: true, provider_ok: false,
-    scan: [{ message: 'promptfooconfig.live.yaml uses the "llm-rubric" check, which needs an AI model or the network. Ask your CLI to copy the checks from promptfooconfig.yaml unchanged, then check again.' }],
+    scan: [{ message: 'promptfooconfig.live.yaml uses the "llm-rubric" check, which needs an AI model or the network. Ask your AI to copy the checks from promptfooconfig.yaml unchanged, then check again.' }],
   } });
   await page.reload();
   await page.locator('#open-live').click();
@@ -1752,7 +1752,7 @@ test('hook: three runs side by side as plain text, the question opens when all t
   await page.locator('#cli-start').click();
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
   await page.locator('#cli-send').click();
-  await expect(page.getByText('Sent. If your CLI reports a temporary error, press Send to CLI again.')).toBeVisible();
+  await expect(page.getByText('Sent. If your AI reports a temporary error, press Send to AI again.')).toBeVisible();
   const starts = await postsTo(request, '/api/lesson/cli/start');
   expect(starts[0].body).toEqual({ lesson: 'hook', activity: 'hook-compare' });
   expect((await postsTo(request, '/api/lesson/cli/send'))[0].body).toEqual({ lesson: 'hook', activity: 'hook-compare' });
@@ -1765,7 +1765,7 @@ test('hook: three runs side by side as plain text, the question opens when all t
   await mock(request, 'hook_run', { n: 3, text: '8/10 pass. Short and clear.' });
   await expect(page.locator('.compare-col.is-done')).toHaveCount(3);
   await expect(page.getByText('All three runs are saved. Compare them, then answer the question below.')).toBeVisible();
-  await expect(page.locator('#term-head')).toContainText('Your CLI has stopped');
+  await expect(page.locator('#term-head')).toContainText('Your AI has stopped');
 
   await question.getByRole('radio', { name: 'Three matching scores prove it' }).check();
   await question.locator('#submit-hook-compare').click();
@@ -1783,9 +1783,9 @@ test('anatomy demo: the checker runs twice from the app and both verdict lists a
   await lessonReady(page);
   const demo = activity(page, 'cli_demo');
   await expect(demo.locator('#submit-rules-demo')).toHaveAttribute('aria-disabled', 'true');
-  await expect(demo).toContainText('When your CLI has written check.py, run it twice from here.');
+  await expect(demo).toContainText('When your AI has written check.py, run it twice from here.');
   await page.locator('#cli-start').click();
-  await expect(page.locator('#term-head')).toContainText('Your CLI is running.');
+  await expect(page.locator('#term-head')).toContainText('Your AI is running.');
   await mock(request, 'demo_checker', { exists: true });
   await expect(demo.locator('#submit-rules-demo')).not.toHaveAttribute('aria-disabled', 'true');
   await expect(demo).toContainText('No warnings. check.py does not import any network or AI libraries.');
@@ -1799,7 +1799,7 @@ test('anatomy demo: the checker runs twice from the app and both verdict lists a
   await expect(page.locator('#term-head')).toContainText('This activity is finished, so the controls are off here.');
   await expect(page.locator('#cli-start')).toHaveCount(0);
   await page.locator('#cli-stop').click();
-  await expect(page.locator('#term-head')).toContainText('Your CLI has stopped');
+  await expect(page.locator('#term-head')).toContainText('Your AI has stopped');
   expect((await postsTo(request, '/api/lesson/cli/stop'))[0].body).toEqual({ lesson: 'rules', activity: 'rules-demo' });
 });
 
@@ -2363,15 +2363,15 @@ test('the wizard keeps the terminal inside the CLI pages and a running CLI survi
   await expect(page.locator('#col-right')).toBeHidden();
   await page.locator('#wizard-back').click();
   await expect(page.locator('#col-right')).toBeHidden();
-  await mock(request, 'pf_item', { id: 'cli', changes: { status: 'passed', detail: 'Your CLI started.', next: '' } });
+  await mock(request, 'pf_item', { id: 'cli', changes: { status: 'passed', detail: 'Your AI started.', next: '' } });
   await mock(request, 'emit_state');
   await wizardTo(page, 'cli');
   await page.locator('#pf-cli-start').click();
-  await expect(page.locator('#term-head .term-status')).toHaveText('Your CLI is running.');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await page.locator('#wizard-next').click();
   await expect(page.locator('#pf-item-signin')).toBeVisible();
   await expect(page.locator('#col-right')).toBeVisible();
-  await expect(page.locator('#term-head .term-status')).toHaveText('Your CLI is running.');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await page.screenshot({ path: path.join(SHOTS, 'wizard-cli-page.png') });
   expect((await postsTo(request, '/api/preflight/stop')).length).toBe(0);
 });
@@ -2497,7 +2497,7 @@ test('banner: on every screen, not on setup, no close control, button opens setu
   await page.locator('#pf-skip').click();
   const banner = page.locator('#setup-reminder');
   await expect(banner).toBeVisible();
-  await expect(banner).toContainText('exercises that use your CLI are off');
+  await expect(banner).toContainText('exercises that use your AI are off');
   await expect(banner.getByRole('button')).toHaveCount(1);
   expect(await page.evaluate(() => document.querySelector('#setup-reminder').contains(document.activeElement))).toBe(false);
   await enterPart(page);
@@ -2635,13 +2635,13 @@ test('Settings: one panel with the text size, setup and both resets in that orde
 test('Settings: leaving returns to the screen that was open, and opening it changes no progress or CLI', async ({ page, request }) => {
   await openApp(page, request, 'generate');
   await page.locator('#cli-start').click();
-  await expect(page.getByText('Your CLI is running.')).toBeVisible();
+  await expect(page.getByText('Your AI is running.')).toBeVisible();
   await openSettings(page);
   await page.locator('#text-size-slider').focus();
   await page.keyboard.press('ArrowRight');
   await page.locator('#settings-close').click();
   await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
-  await expect(page.getByText('Your CLI is running.')).toBeVisible();
+  await expect(page.getByText('Your AI is running.')).toBeVisible();
   const posts = (await mockLog(request)).log.filter((e) => e.method === 'POST').map((e) => e.path);
   expect(posts.filter((p) => /stop|reset|submit|check|complete/.test(p))).toEqual([]);
   await page.setViewportSize({ width: 1600, height: 900 });
@@ -2813,7 +2813,7 @@ test('terminal: the text follows the text size, the terminal refits, and the CLI
   await page.evaluate(() => window.EvalCoachDisplay.setSize(150));
   await expect.poll(fontPx).toBe(21);
   await expect.poll(async () => (await resizes()).pop().cols).toBeLessThan(first.cols);
-  await expect(page.getByText('Your CLI is running.')).toBeVisible();
+  await expect(page.getByText('Your AI is running.')).toBeVisible();
   expect((await postsTo(request, '/api/step/stop')).length).toBe(0);
   const state = await (await request.get('/api/state', { headers: { 'X-Eval-Token': TOKEN } })).json();
   expect(state.terminal.running).toBe(true);

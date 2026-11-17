@@ -189,7 +189,7 @@ class WarningText(LiveCase):
         self.assertEqual(self.live()["cli"]["start_blocked"], message)
         self.engine.step_submit("live", {"acknowledged": True})
         message = self.refused("cli_not_chosen", self.engine.step_start, "live")
-        self.assertIn("Choose the CLI", message)
+        self.assertIn("Choose the AI tool", message)
         self.refused("cli_not_chosen", self.engine.step_send, "live")
         self.engine.step_submit("live", {"cli": "claude"})
         self.assertIsNone(self.live()["cli"]["start_blocked"])
@@ -217,7 +217,7 @@ class WarningText(LiveCase):
         self.to_live()
         ui = self.live()["ui"]
         text = " ".join(ui["warning_points"])
-        self.assertIn("call your own signed-in CLI to write fresh outputs", text)
+        self.assertIn("call your own signed-in AI tool to write fresh outputs", text)
         self.assertIn("No API key is involved", text)
         self.assertIn("Devin CLI the helper adds --permission-mode auto", text)
         self.assertIn("turns on Devin's auto mode for that run", text)
@@ -347,7 +347,7 @@ class Gate(LiveCase):
         self.paths.config_yaml.write_text(self.paths.config_yaml.read_text(encoding="utf-8") + "# edit\n", encoding="utf-8")
         result = self.result()
         self.assertEqual(self.failing(result), ["promptfooconfig.yaml is unchanged"])
-        self.assertIn("Ask your CLI to undo that change", result["items"][-2]["detail"])
+        self.assertIn("Ask your AI to undo that change", result["items"][-2]["detail"])
         self.assertEqual(self.status_of_live(), "active")
 
     def test_the_log_must_be_unchanged_even_by_a_new_entry(self):
@@ -447,7 +447,7 @@ class Scan(unittest.TestCase):
             with self.subTest(bad=bad):
                 found = self.messages(live_config(provider=bad))
                 self.assertEqual(len(found), 1, found)
-                self.assertIn("Ask your CLI", found[0])
+                self.assertIn("Ask your AI", found[0])
 
     def test_every_model_graded_type_the_main_scan_knows_is_stopped(self):
         for kind in scan.MODEL_GRADED + ("model-graded-closedqa", "context-faithfulness", "llm-whatever", "not-llm-rubric"):
@@ -492,7 +492,7 @@ class Scan(unittest.TestCase):
         for sample in samples:
             for message in self.messages(sample):
                 with self.subTest(message=message[:60]):
-                    self.assertRegex(message, r"(Ask your CLI|Choose one)")
+                    self.assertRegex(message, r"(Ask your AI|Choose one)")
                     self.assertTrue(message.rstrip().endswith("."))
 
     def test_the_main_scan_is_unchanged(self):
@@ -667,7 +667,7 @@ class Content(unittest.TestCase):
 
     def test_the_instructions_tell_people_not_to_log_the_live_runs_and_that_the_app_does_not_run_it(self):
         text = " ".join(self.live["instructions"])
-        self.assertIn("Do not ask your CLI to log these runs", text)
+        self.assertIn("Do not ask your AI to log these runs", text)
         self.assertIn("does not run the live config", text)
         self.assertIn("you answer them there", text)
         self.assertIn("The app never answers for you", text)

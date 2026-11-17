@@ -15,6 +15,7 @@ import helpers  # noqa: F401
 from helpers import ROOT
 
 from eval_coach import lessons as L
+from eval_coach import resources
 
 STAGE_THREE = re.compile(r"stage\s*3|certif", re.I)
 NOTE_LESSON = "baseline-why"
@@ -103,7 +104,7 @@ class SeriesIntentFraming(unittest.TestCase):
 
     def setUp(self):
         self.data = ch.bundled_data()
-        self.mission = lesson_of(self.data, "mission")
+        self.mission = lesson_of(json.loads(resources.read_text("content/part-1-lessons.json")), "p1-mission")
         self.baseline = lesson_of(self.data, NOTE_LESSON)
 
     def test_the_mission_states_the_purpose_and_neither_blind_trust_nor_blind_distrust(self):
@@ -119,7 +120,7 @@ class SeriesIntentFraming(unittest.TestCase):
         self.assertIn("Answers change from one try to the next", body)
 
     def test_the_mission_names_the_method_in_one_line(self):
-        self.assertIn("Ask clearly, know what you need, turn it into rules, score the result, improve, and keep a record.",
+        self.assertIn("ask clearly, know what you need, turn it into rules, score the result, improve, and keep a record.",
                       self.mission["body"])
 
     def test_the_mission_stays_one_page_with_no_questions(self):
@@ -128,14 +129,14 @@ class SeriesIntentFraming(unittest.TestCase):
         self.assertNotIn("How you will work", self.mission["body"])
         self.assertNotIn("What to bring", self.mission["body"])
 
-    def test_the_map_uses_the_series_part_names_with_one_current_row(self):
-        body = self.mission["body"]
-        rows = re.findall(r"(?m)^(done|here|next) \| (\d) \| ([^|]+) \| (.+)$", body)
-        self.assertEqual([r[1] for r in rows], list("123456"))
-        self.assertEqual([r[2].strip() for r in rows], list(PART_NAMES))
-        self.assertEqual([r[0] for r in rows], ["done", "done", "here", "next", "next", "next"])
-        for _status, _n, _title, line in rows:
-            self.assertTrue(line.startswith("I "), line)
+    def test_the_series_map_is_the_only_list_of_the_parts(self):
+        for lesson_id, data in (("mission", self.data), ("p1-mission", json.loads(resources.read_text("content/part-1-lessons.json")))):
+            body = lesson_of(data, lesson_id)["body"]
+            with self.subTest(lesson=lesson_id):
+                self.assertNotIn("you-are-here", body)
+                self.assertIsNone(re.search(r"(?m)^(done|here|next) \| \d \|", body))
+        titles = [p["title"] for p in json.loads(resources.read_text("content/series.json"))["parts"]]
+        self.assertEqual(titles, list(PART_NAMES))
 
     def test_the_baseline_lesson_says_what_a_score_does_and_does_not_tell_you(self):
         body = self.baseline["body"]
@@ -155,7 +156,7 @@ class SeriesIntentFraming(unittest.TestCase):
         for condition in ("repeats", "has clear requirements", "can be checked by rules"):
             self.assertIn(condition, body)
         self.assertIn("In Part 6", body)
-        self.assertIn("Northwind is practice only", body)
+        self.assertIn("Practice task is practice only", body)
 
     def test_part_six_is_informational_and_points_to_office_hours_and_the_air_discussion(self):
         # The one allowed pointer to people (AGENTS.md rule 10 exception); the lesson gives no exercise for it.
@@ -179,18 +180,8 @@ class TierTwoWorkflow(unittest.TestCase):
         mission = lesson_of(self.data, "mission")
         self.assertEqual(mission["activities"], [])
         self.assertEqual(mission["retrieval"], [])
-        self.assertIn("six-part series", mission["body"])
-        for number in range(1, 7):
-            self.assertRegex(mission["body"], rf"(?m)^(done|here|next) \| {number} \|")
-
-    def test_the_series_map_pins_part_three_as_the_current_one(self):
-        body = lesson_of(self.data, "mission")["body"]
-        self.assertIn("six-part series", body)
-        self.assertNotIn("four-part", body)
-        self.assertNotIn("| Part |", body)
-        self.assertEqual(re.findall(r"(?m)^here \| (\d) \|", body), ["3"])
-        self.assertEqual(re.findall(r"(?m)^done \| (\d) \|", body), ["1", "2"])
-        self.assertEqual(re.findall(r"(?m)^next \| (\d) \|", body), ["4", "5", "6"])
+        self.assertNotIn("six-part series", mission["body"])
+        self.assertNotIn("you-are-here", mission["body"])
 
     def test_the_baseline_lesson_says_what_the_next_two_parts_do(self):
         body = lesson_of(self.data, NOTE_LESSON)["body"]

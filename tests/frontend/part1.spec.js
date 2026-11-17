@@ -135,14 +135,12 @@ test('opening Part 1 shows its own header, course list and groups, and Part 3 ke
   await expect(page.locator('.course-item')).toHaveCount(9);
 });
 
-test('the mission page is one page with the six-Part map, no questions and no framework names', async ({ page, request }) => {
+test('the mission page is one page with no map of the Parts, no questions and no framework names', async ({ page, request }) => {
   await openPart1(page, request);
-  await expect(page.locator('.route-stop')).toHaveCount(6);
-  await expect(page.locator('.route-stop.is-here')).toContainText('Part 1: Structured prompting');
-  await expect(page.locator('.route-stop.is-next')).toHaveCount(5);
+  await expect(page.locator('.route-stop')).toHaveCount(0);
   const body = await page.locator('.lesson-body').innerText();
   expect(body).not.toMatch(FRAMEWORK_WORDS);
-  expect(body).toContain('Northwind is for practice only');
+  expect(body).toContain('for practice only and never something to submit');
   await expect(page.getByRole('heading', { name: 'Test what you know' })).toHaveCount(0);
   await page.locator('#lesson-continue').click();
   await expect(page.locator('#step-heading')).toHaveText('Write it your way');

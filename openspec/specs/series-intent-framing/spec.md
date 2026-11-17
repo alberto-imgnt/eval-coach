@@ -5,37 +5,12 @@ Makes the course say what the whole series is for, why checking AI work matters,
 
 ## Requirements
 
-### Requirement: The mission states the series purpose
-The mission lesson SHALL state, in plain words, that the series teaches participants to judge the work AI gives them and to trust it because it was checked, not because it looked right. It SHALL say the series is not asking for blind trust or blind distrust. Source: `docs/SERIES-INTENT.md` "Intent".
-
-#### Scenario: Purpose on the mission page
-- **WHEN** the participant opens the mission lesson
-- **THEN** the text says the goal is to judge AI work and trust it for the right reasons
-- **AND** it says trust comes from checking, and that neither blind trust nor blind distrust is asked for
-
-#### Scenario: Mission stays one page with no questions
-- **WHEN** the mission lesson is loaded
-- **THEN** it has no activities and no review questions
-- **AND** its stated mission sentence is unchanged apart from "Part 2" replacing "Session 2"
-
 ### Requirement: The mission says why checking AI work matters
-The mission lesson SHALL give a short "why it matters" covering three reasons: AI sounds sure of itself even when it is wrong, "better" is an opinion until it is measured, and answers change from one try to the next. Source: `docs/SERIES-INTENT.md` "Why it matters".
+Part 1's mission lesson SHALL give a short "why it matters" covering three reasons: AI sounds sure of itself even when it is wrong, "better" is an opinion until it is measured, and answers change from one try to the next. Source: `docs/SERIES-INTENT.md` "Why it matters", series review item 13.
 
 #### Scenario: The three reasons
-- **WHEN** the participant reads the mission lesson
+- **WHEN** the participant reads `p1-mission`
 - **THEN** each of the three reasons is stated in plain words with no code
-
-### Requirement: The course map uses the series' Part names
-The course map in the mission lesson SHALL list all six Parts with the names used in the series intent (structured prompting, defining evaluation criteria, running evals and baseline, iterating with evaluation-driven development, load-bearing audit and packaging, your own task). Each row SHALL carry a one-line plain description in the participant's words, and exactly one row SHALL be marked as the current Part.
-
-#### Scenario: Six rows, one current
-- **WHEN** the course map is shown
-- **THEN** it has six rows numbered 1 to 6
-- **AND** Parts 1 and 2 are marked done, Part 3 is marked as where the participant is, and Parts 4 to 6 are marked next
-
-#### Scenario: Wider series stays plain
-- **WHEN** a row describes Part 4, 5 or 6
-- **THEN** it says what the participant will be able to do, not what the app does
 
 ### Requirement: The baseline lesson says what a score does and does not tell you
 The baseline lesson SHALL say that a score describes how one prompt did against one set of rules and does not guarantee every future answer, and that a rule that cannot judge something is marked NOT CHECKED instead of pretending. Source: `docs/SERIES-INTENT.md` "What to keep in mind".
@@ -86,3 +61,15 @@ The "Your own work" passage SHALL say that Part 6 is live and that task ideas ca
 #### Scenario: No new blocking element
 - **WHEN** the baseline lesson is loaded
 - **THEN** the number of activities that hold back Continue is unchanged
+
+### Requirement: Part 1's mission states the series purpose
+`p1-mission` SHALL state, in plain words, that the series teaches participants to judge the work AI gives them and to trust it because it was checked, not because it looked right, and that it is not asking for blind trust or blind distrust. The other mission lessons SHALL NOT repeat it (`mission-lesson-shape`). Source: `docs/SERIES-INTENT.md` "Intent", series review item 13.
+
+#### Scenario: Purpose on the Part 1 mission page
+- **WHEN** the participant opens `p1-mission`
+- **THEN** the text says the goal is to judge AI work and trust it for the right reasons
+- **AND** it says trust comes from checking, and that neither blind trust nor blind distrust is asked for
+
+#### Scenario: A mission stays one page with no questions
+- **WHEN** a mission lesson is loaded
+- **THEN** it has no activities and no review questions

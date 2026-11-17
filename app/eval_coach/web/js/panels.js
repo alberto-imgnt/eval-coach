@@ -56,8 +56,8 @@ function renderGenerate(ctx, step) {
       h(
         'p',
         { class: 'callout' },
-        'You do not need to press anything to move on. When your CLI saves its answer, the app files it as the next run and stops the CLI by itself. Then press ',
-        h('strong', null, 'Start my CLI'),
+        'You do not need to press anything to move on. When your AI saves its answer, the app files it as the next run and stops your AI by itself. Then press ',
+        h('strong', null, 'Start my AI'),
         ' for the next run.',
       ),
       h(
@@ -82,7 +82,7 @@ function renderGenerate(ctx, step) {
       null,
       textField(ctx, {
         id: 'model-name',
-        label: 'The name of the model you chose in your CLI',
+        label: 'The name of the model you chose in your AI',
         hint: 'Pick a mid-tier model, not the most powerful one offered.',
         draftKey: 'generate.model_name',
         value: modelName,
@@ -231,7 +231,7 @@ function renderFixtures(ctx, step) {
             onClick: () => ctx.actions.useExampleFixtures(),
           }),
           ctx.state.terminal.running && !ctx.readOnly
-            ? h('span', { class: 'hint', id: 'example-fixtures-stop' }, 'Press Stop first. Your CLI is still running.')
+            ? h('span', { class: 'hint', id: 'example-fixtures-stop' }, 'Press Stop first. Your AI is still running.')
             : null,
         ),
       ),
@@ -268,7 +268,7 @@ function renderReadback(ctx, step) {
     section(
       'answers',
       'Does the code mean what you meant?',
-      h('p', { class: 'hint' }, 'For each criterion, read the explanation in your CLI and answer honestly. A "No" is useful: it shows you what to fix.'),
+      h('p', { class: 'hint' }, 'For each criterion, read the explanation in your AI and answer honestly. A "No" is useful: it shows you what to fix.'),
       h(
         'div',
         { class: 'readback' },
@@ -858,7 +858,7 @@ function renderBaseline(ctx, step) {
       textField(ctx, {
         id: 'baseline-model',
         label: 'The model you used for your five runs',
-        hint: 'The app types this name into the line for your CLI. It is the name you wrote in the first step.',
+        hint: 'The app types this name into the line for your AI. It is the name you wrote in the first step.',
         draftKey: 'baseline.model_name',
         value: data.model_name,
         saveStep: step.id,
@@ -919,7 +919,7 @@ function renderBaseline(ctx, step) {
           h('span', { class: data.log_exists ? 'ok-text' : 'hint' }, data.log_exists ? 'Present' : 'Not there yet'),
         ),
       ),
-      h('p', { class: 'hint' }, 'Your CLI writes this file. The app only reads it, and never changes it.'),
+      h('p', { class: 'hint' }, 'Your AI writes this file. The app only reads it, and never changes it.'),
     ),
     optionalLiveSection(ctx),
   ];

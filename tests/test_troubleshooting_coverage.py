@@ -16,7 +16,7 @@ HANDOUTS = SOURCE / "handouts"
 SKILL = "cannot read the skill file"
 
 BOTH = ("script", "promptfoo")
-NORTHWIND_ENTRY = ("fixtures", BOTH, "Northwind example")
+NORTHWIND_ENTRY = ("fixtures", BOTH, "Practice task")
 
 
 def at(step, tracks, text):
@@ -139,7 +139,7 @@ class Coverage(unittest.TestCase):
 
     def test_a_missing_entry_makes_the_check_fail(self):
         fixtures = self.steps["fixtures"]["troubleshooting"]
-        fixtures[:] = [t for t in fixtures if "Northwind example" not in t["problem"]]
+        fixtures[:] = [t for t in fixtures if "Practice task" not in t["problem"]]
         missing = missing_placements(self.steps)
         self.assertEqual({(m[2], m[3]) for m in missing}, {("fixtures", "script"), ("fixtures", "promptfoo")})
         self.assertEqual({m[1] for m in missing},
@@ -214,18 +214,18 @@ class ExampleFixturesContent(unittest.TestCase):
 
     def test_the_northwind_entry_is_on_both_tracks_and_says_it_is_only_for_the_example(self):
         for track in BOTH:
-            entries = [t for t in effective_troubleshooting(self.steps, "fixtures", track) if "Northwind example" in t["problem"]]
+            entries = [t for t in effective_troubleshooting(self.steps, "fixtures", track) if "Practice task" in t["problem"]]
             with self.subTest(track=track):
                 self.assertEqual(len(entries), 1)
                 fix = entries[0]["fix"]
                 self.assertIn("Use the example's fixtures", fix)
-                self.assertIn("only with the Northwind example", fix)
+                self.assertIn("only with the Practice task", fix)
                 self.assertIn("writes no answer key", fix)
                 self.assertIn("Check my work", fix)
 
     def test_the_screen_text_explains_whose_fixtures_these_are(self):
         ui = self.steps["fixtures"]["ui"]
-        self.assertIn("Northwind example's own fixtures", ui["example_blurb"])
+        self.assertIn("Practice task's own fixtures", ui["example_blurb"])
         self.assertIn("test cases only", ui["example_blurb"])
         self.assertIn("No answer key is written now", ui["example_blurb"])
         self.assertTrue(ui["example_button"])

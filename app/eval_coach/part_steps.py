@@ -192,7 +192,7 @@ class WriteAndRun:
                 engine.terminal.start(engine.progress["cli_command"], str(work), text["title"],
                                       env=engine._cli_env(), owner=step)
             except (ValueError, OSError) as exc:
-                raise _error("cli_start_failed", f"Your CLI could not be started: {exc}") from exc
+                raise _error("cli_start_failed", f"Your AI could not be started: {exc}") from exc
             engine._cli_step = step
             engine._sent = False
             record["prompt_hash"] = _sha(prompt)
