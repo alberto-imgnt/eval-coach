@@ -287,6 +287,7 @@ class Preflight:
         self.load_problem = False
         self._found_commands = []
         self._data = self._load()
+        self._detect_ais()
 
     # --- persistence -------------------------------------------------------
 
