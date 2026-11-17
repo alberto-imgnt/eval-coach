@@ -1,5 +1,6 @@
 // Sidebar (a top bar on narrow screens), step layout and terminal header.
 
+import { aiWindowLink } from './ai-window.js';
 import { getTheme, navCollapsed, toggleNav, toggleTheme } from './chrome.js';
 import { h } from './dom.js';
 import { hasLessons, renderCourseNav, renderStepQuestion, tx } from './lessons.js';
@@ -425,6 +426,7 @@ export function renderTermHead(ctx) {
       h('h2', { class: 'term-label' }, terminal.label || 'Your AI'),
       h('span', { class: `term-status${running ? ' is-on' : ''}`, role: 'status' }, terminalStatusText(terminal)),
     ),
+    h('div', { class: 'row term-ai-link', key: 'ai-window-link' }, aiWindowLink(ctx)),
     h(
       'div',
       { class: 'term-line-block', key: 'line' },

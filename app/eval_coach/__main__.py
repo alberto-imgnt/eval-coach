@@ -18,11 +18,12 @@ def main(argv=None):
     parser.add_argument("--home", default=None, help="Storage folder (default: %%USERPROFILE%%\\.eval-coach).")
     parser.add_argument("--no-browser", action="store_true", help="Print the URL but do not open a browser.")
     parser.add_argument("--python", default=None, help="Path of the Python that launched the app (setup.cmd sets this).")
+    parser.add_argument("--custom-ai", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
 
     try:
         course = load_bundled()
-        engine = Engine(args.home or default_home(), TerminalManager(), lessons=course)
+        engine = Engine(args.home or default_home(), TerminalManager(), lessons=course, custom_ai=args.custom_ai)
     except LessonError as exc:
         print(f"eval-coach could not load its course content: {exc}", file=sys.stderr)
         return 1

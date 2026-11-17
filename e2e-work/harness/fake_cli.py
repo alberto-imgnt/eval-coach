@@ -218,6 +218,23 @@ def handle(line):
     print("\nDone.", flush=True)
 
 
+def one_shot(line, flags):
+    """The stand-in's `-p <line>` mode, like a real tool's one-shot mode: no prompt, no input, no files.
+    A flag before `-p` picks the ending: --bg-fail exits 1 (for example not signed in) and --bg-hang never ends."""
+    log("oneshot", text=line, cwd=os.getcwd(), flags=flags, stdin_closed=sys.stdin.read(1) == "")
+    if "--bg-hang" in flags:
+        time.sleep(600)
+    if "--bg-fail" in flags:
+        print("STAND-IN: not signed in.", flush=True)
+        sys.exit(1)
+    print("OK", flush=True)
+    sys.exit(0)
+
+
+if "-p" in sys.argv[1:]:
+    cut = sys.argv.index("-p", 1)
+    one_shot(sys.argv[cut + 1] if len(sys.argv) > cut + 1 else "", sys.argv[1:cut])
+
 log("launch", argv=sys.argv[1:], cwd=os.getcwd())
 print("STAND-IN CLI (no AI) ? for shortcuts\n> ", end="", flush=True)
 for raw in sys.stdin:

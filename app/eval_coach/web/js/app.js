@@ -1,6 +1,7 @@
 // Entry point: state, drafts, saving, rendering and step actions.
 
 import { ApiError, apiGet, apiGetState, apiPost, readTokenOnce } from './api.js';
+import { openAiWindowLesson } from './ai-window.js';
 import { celebrate, initChrome, resetDisplayChoices, syncCourseNav, updateReadProgress } from './chrome.js';
 import { confirmDialog } from './dialog.js';
 import { morph } from './dom.js';
@@ -10,7 +11,7 @@ import { PANELS } from './panels.js';
 import { unsavedCriteria } from './criteria-steps.js';
 import { unsavedTexts } from './part-steps.js';
 import { setMapText } from './markdown.js';
-import { firstWizardItem, renderPreflightTermFoot, renderPreflightTermHead, renderWizard, wizardUsesTerminal } from './preflight.js';
+import { aiTesting, firstWizardItem, nextWizardPage, renderPreflightTermFoot, renderPreflightTermHead, renderWizard, wizardIndex, wizardPageId, wizardPages, wizardUsesTerminal } from './preflight.js';
 import { renderSeries } from './series.js';
 import { renderSettings, renderSetupBanner, resetDialogBody } from './settings.js';
 import { createTerminal } from './terminal.js';
@@ -18,6 +19,7 @@ import { renderFinished, renderNotices, renderStep, renderTermFoot, renderTermHe
 
 const $ = (id) => document.getElementById(id);
 const SAVE_DELAY_MS = 600;
+const TEST_POLL_MS = 3000; // how often the working test page quietly re-reads the test folder after Send
 const DEFAULT_PART = 'part-3'; // the Part the server describes when a request names none
 const DEFAULT_OPEN_PARTS = ['part-1', 'part-2', 'part-3']; // the Parts with content start expanded on the Series map
 
@@ -32,6 +34,12 @@ const app = {
   setupFrom: null, // the screen the setup wizard was opened from ('settings', 'series' or null for the course), to return to on close
   wizardItem: null, // the setup wizard's current page (a preflight item id); in memory only
   setupDismissed: false, // the participant has moved on from the first-run setup wizard without skipping it
+  wizardFinishing: false, // first-run setup has passed, but the wizard stays open on its last page (Your AI window)
+  summaryStarted: false, // the Checking your computer page started its checks on this visit
+  aiTestWatch: false, // after "Use this AI": the wizard moves on by itself when the quiet test ends
+  summaryStarting: false,
+  testPoll: null, // the timer that quietly re-reads the working test folder after Send
+  testPolling: false,
   lessons: new Map(), // latest view of each lesson, with its answers removed by the server
   lessonGen: 0,
   local: new Map(), // short-lived results that are not saved (rule lab runs)
@@ -153,6 +161,7 @@ function currentView(state) {
   const pf = state.preflight;
   // First run: setup comes first, until it passes, is skipped, or the participant moves on by choice.
   if (!pf.passed && !pf.skipped && !app.setupDismissed) return 'wizard';
+  if (app.wizardFinishing) return 'wizard';
   if (app.screen === 'series' && state.series) return 'series';
   return viewedLessonIdInCourse(state) ? 'lesson' : 'course';
 }
@@ -206,12 +215,23 @@ function adoptLesson(res) {
 
 function applyState(state) {
   const previousStepId = app.state && app.state.step ? app.state.step.id : null;
+  const installWas = Boolean(app.state && app.state.preflight && app.state.preflight.session.kind === 'recipe');
+  // First-run setup is open now. If this state finishes it (whichever check was last), it stays open on its
+  // last page instead of closing before the participant has seen Your AI window.
+  const firstRunWizardWas = Boolean(app.state && currentView(app.state) === 'wizard' && app.screen !== 'setup');
   app.state = state;
+  if (firstRunWizardWas && state.preflight.passed && !state.preflight.skipped && !app.setupDismissed) {
+    app.wizardFinishing = true;
+  }
   setMapText(state.course_text);
   if (state.step) app.stepCache.set(state.step.id, state.step);
   if (app.terminal && state.terminal) app.terminal.setRunning(state.terminal.running);
   render();
   syncLesson();
+  // An install in the AI window ended: look again, so the new tool is found without a button press.
+  if (installWas && state.preflight.session.kind !== 'recipe' && !(state.preflight.job && state.preflight.job.running)) {
+    mutate('/api/preflight/check', {}).catch(() => {});
+  }
   const newStepId = state.step ? state.step.id : null;
   if (newStepId !== previousStepId && !viewedLessonId(state)) $('col-left').scrollTop = 0;
   if (app.focusHeading) {
@@ -374,6 +394,7 @@ const actions = {
     if (app.screen !== 'setup') app.setupFrom = app.screen;
     app.screen = 'setup';
     app.wizardItem = firstWizardItem(app.state.preflight);
+    app.summaryStarted = false;
     app.focusHeading = true;
     scheduleRender();
     focusWizardTop();
@@ -384,14 +405,39 @@ const actions = {
     app.screen = app.setupFrom;
     app.setupFrom = null;
     app.wizardItem = null;
+    app.wizardFinishing = false;
+    app.summaryStarted = false;
     app.focusHeading = true;
     refresh();
   },
 
   wizardGo(id) {
     app.wizardItem = id;
+    app.summaryStarted = false;
     scheduleRender();
     focusWizardTop();
+  },
+
+  // The last page, Your AI window, is done. First-run setup closes on the Series map; setup opened by choice closes back.
+  wizardFinish() {
+    if (app.screen === 'setup') {
+      actions.closeSetup();
+      return;
+    }
+    app.wizardFinishing = false;
+    app.wizardItem = null;
+    app.summaryStarted = false;
+    app.screen = 'series';
+    app.settingsFrom = null;
+    app.setupFrom = null;
+    app.viewLesson = null;
+    app.viewStep = null;
+    app.focusHeading = true;
+    refresh();
+  },
+
+  openAiWindowLesson() {
+    if (app.state) openAiWindowLesson(buildContext());
   },
 
   pfSkip() {
@@ -402,6 +448,8 @@ const actions = {
       app.setupFrom = null;
       app.wizardItem = null;
       app.setupDismissed = true;
+      app.wizardFinishing = false;
+      app.summaryStarted = false;
       app.local.delete('reset-result');
       app.focusHeading = true;
       await refresh();
@@ -441,6 +489,8 @@ const actions = {
         app.setupFrom = null;
         app.wizardItem = null;
         app.setupDismissed = false;
+        app.wizardFinishing = false;
+        app.summaryStarted = false;
       }
       await refresh();
     });
@@ -786,15 +836,16 @@ const actions = {
       const command = (app.drafts.has('pf.cli_command') ? app.drafts.get('pf.cli_command') : pf.cli.command || '').trim();
       await mutate('/api/preflight/cli', { cli_command: command });
       app.drafts.delete('pf.cli_command');
+      watchAiTest();
     });
   },
 
-  pfCliStart() {
-    return act('pf-cli-start', () => beginPreflightCli('/api/preflight/cli/start', {}));
-  },
-
-  pfSignin() {
-    return act('pf-signin', () => mutate('/api/preflight/signin', {}));
+  pfUseAi(command) {
+    return act('pf-use-ai', async () => {
+      await mutate('/api/preflight/cli', { cli_command: command });
+      app.drafts.delete('pf.ai');
+      watchAiTest();
+    });
   },
 
   pfRecipe(recipeId) {
@@ -870,15 +921,14 @@ const actions = {
       await mutate('/api/setup', body);
       app.local.delete('import-check');
       for (const key of Array.from(app.drafts.keys())) if (key.startsWith('setup.')) app.drafts.delete(key);
-      // The last page is done: the wizard closes on the Series map.
-      app.screen = 'series';
-      app.settingsFrom = null;
-      app.setupFrom = null;
-      app.wizardItem = null;
+      // The project page is done, but the wizard has one page left: Your AI window. Finish closes it.
+      if (app.screen !== 'setup') app.wizardFinishing = true;
+      app.wizardItem = 'ai_window';
       app.viewLesson = null;
       app.viewStep = null;
       app.focusHeading = true;
       await refresh();
+      focusWizardTop();
     });
   },
 
@@ -1020,7 +1070,11 @@ function buildContext() {
     state,
     step,
     view,
-    wizard: { item: app.wizardItem, byChoice: app.screen === 'setup' },
+    wizard: {
+      item: app.wizardItem,
+      byChoice: app.screen === 'setup',
+      summaryDone: Boolean(app.summaryStarted && rawState && rawState.preflight.ran_once && !(rawState.preflight.job && rawState.preflight.job.running)),
+    },
     text: (state && state.course_text) || {},
     seriesOpen: app.seriesOpen,
     // The sidebar shows the Series map's form on the map and on Settings opened from it.
@@ -1075,6 +1129,74 @@ function focusWizardTop() {
   });
 }
 
+function stopTestPoll() {
+  if (app.testPoll) {
+    clearInterval(app.testPoll);
+    app.testPoll = null;
+  }
+}
+
+// After "Use this AI", the server tests the AI quietly in the background. Watch for it on this visit only when
+// a test ran or has a result for this AI; an AI with no quiet test leaves the page as it was.
+function watchAiTest() {
+  const background = app.state && app.state.preflight.working_test.background;
+  app.aiTestWatch = Boolean(background && background.state !== 'idle');
+  scheduleRender();
+}
+
+// When the quiet test ends the wizard moves on by itself: to the next page that still needs the participant after
+// a pass, and to the AI working test page, where the AI window is, when the test could not finish.
+function followAiTest(ctx, page) {
+  if (!app.aiTestWatch) return;
+  const pf = ctx.state.preflight;
+  const state = pf.working_test.background.state;
+  if (page !== 'cli' || state === 'idle') {
+    app.aiTestWatch = false;
+    return;
+  }
+  if (aiTesting(pf)) return;
+  app.aiTestWatch = false;
+  const pages = wizardPages(pf);
+  const target = state === 'passed' ? nextWizardPage(pages, wizardIndex(ctx)) : pages.find((p) => p.id === 'working_test');
+  actions.wizardGo(target.id);
+}
+
+// Two things the wizard does by itself. The Checking your computer page starts the checks when it is shown (not
+// while another job runs). After Send on the working test page, the test folder is re-read every few seconds;
+// that read only ever records a pass, so a failure is shown only when the participant presses the Check button.
+function syncWizardAutomation(ctx) {
+  const pf = ctx.state.preflight;
+  const page = wizardPageId(ctx);
+  const jobRunning = Boolean(pf.job && pf.job.running);
+  followAiTest(ctx, page);
+  if (page === 'summary' && !app.summaryStarted && !app.summaryStarting && !jobRunning) {
+    app.summaryStarting = true;
+    act('pf-summary', async () => {
+      try {
+        await mutate('/api/preflight/check', {});
+      } finally {
+        app.summaryStarted = true;
+        app.summaryStarting = false;
+      }
+    });
+  }
+  const waiting = page === 'working_test' && pf.session.kind === 'test' && pf.session.sent;
+  if (!waiting) {
+    stopTestPoll();
+    return;
+  }
+  if (app.testPoll) return;
+  app.testPoll = setInterval(() => {
+    if (app.testPolling) return;
+    app.testPolling = true;
+    mutate('/api/preflight/test/poll', {})
+      .catch(() => {})
+      .finally(() => {
+        app.testPolling = false;
+      });
+  }, TEST_POLL_MS);
+}
+
 function render() {
   if (app.quitting) return;
   try {
@@ -1084,6 +1206,8 @@ function render() {
       app.wizardItem = firstWizardItem(ctx.state.preflight);
       ctx.wizard.item = app.wizardItem;
     }
+    if (ctx.view === 'wizard') syncWizardAutomation(ctx);
+    else stopTestPoll();
     // The wizard fills the window: no sidebar, course list or tools beside it.
     if (ctx.view === 'wizard') $('topbar').replaceChildren();
     else morph($('topbar'), ...renderTopbar(ctx));

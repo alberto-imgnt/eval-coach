@@ -1,6 +1,7 @@
 // Lessons: the course list, the lesson page, every activity type, placement and the review banner.
 // Correct answers never reach this file. Everything shown as right or wrong comes from a server response.
 
+import { aiWindowLink } from './ai-window.js';
 import { isWide } from './chrome.js';
 import { h } from './dom.js';
 import { renderMarkdown } from './markdown.js';
@@ -1123,6 +1124,7 @@ export function renderLessonTermHead(ctx, lesson, activity) {
       h('h2', { class: 'term-label' }, terminal.label || 'Your AI'),
       h('span', { class: `term-status${mine ? ' is-on' : ''}`, role: 'status' }, terminalStatus(ctx, mine)),
     ),
+    h('div', { class: 'row term-ai-link', key: 'ai-window-link' }, aiWindowLink(ctx)),
     h(
       'div',
       { class: 'term-line-block', key: 'line' },

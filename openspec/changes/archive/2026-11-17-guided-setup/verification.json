@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "change": "guided-setup",
+  "tree": "565b22d5f7cc4e00165d503b607abfcf3a9f1eb1",
+  "excludes": [
+    "openspec"
+  ],
+  "head": "8546c90cb7f48e0d56ff5bdebeb7305acf48172b",
+  "checks": [
+    {
+      "name": "backend",
+      "command": "python -m unittest discover -s tests",
+      "exit_code": 0,
+      "tests": 1530,
+      "finished": "2026-11-17T15:06:34Z"
+    }
+  ]
+}

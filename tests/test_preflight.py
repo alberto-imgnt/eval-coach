@@ -32,20 +32,32 @@ class FakeRunner:
         self.which_map = {"python": r"C:\fake\python.exe"}
         self.free = 500 * 10**9
         self.gate = None
+        self.active = 0  # programs running right now, to prove two never overlap
+        self.max_active = 0
+        self.exit_delay = 0.0  # how long a cancelled program takes to be gone
 
     def name_of(self, argv):
         return Path(str(argv[0])).stem.lower()
 
     def run(self, argv, timeout, env=None, cwd=None, on_tick=None, cancel=None):
         self.calls.append({"argv": list(argv), "timeout": timeout, "env": env, "cwd": cwd})
-        if self.gate is not None:
-            self.gate.wait(10)
-        if on_tick is not None:
-            on_tick()
-        handler = self.programs.get(self.name_of(argv))
-        if handler is None:
-            return Result(code=-1, started=False, stderr="fake: no program")
-        return handler(argv, env, cwd)
+        self.active += 1
+        self.max_active = max(self.max_active, self.active)
+        try:
+            if self.gate is not None:
+                while not self.gate.is_set():
+                    if cancel is not None and cancel.is_set():
+                        time.sleep(self.exit_delay)
+                        return Result(code=-1, cancelled=True)
+                    time.sleep(0.005)
+            if on_tick is not None:
+                on_tick()
+            handler = self.programs.get(self.name_of(argv))
+            if handler is None:
+                return Result(code=-1, started=False, stderr="fake: no program")
+            return handler(argv, env, cwd)
+        finally:
+            self.active -= 1
 
     def which(self, name, path):
         return self.which_map.get(name)
@@ -509,47 +521,307 @@ class Cli(Base):
         self.assertIn("no-such-cli --flag", item["detail"])
         self.assertTrue(item["next"])
 
-    def test_found_command_needs_a_launch_then_passes(self):
+    def test_a_found_command_passes_without_starting_anything(self):
         self.engine.preflight_cli("fake-cli")
-        self.assertEqual(self.item("cli")["status"], "needs_you")
-        self.engine.preflight_cli_start()
         self.assertEqual(self.item("cli")["status"], "passed")
-        start = self.terminal.starts[-1]
-        self.assertEqual(start["command"], "fake-cli")
-        self.assertIn("npm_config_cache", start["env"])
-        self.assertEqual(self.item("signin")["status"], "needs_you")
+        self.assertEqual(self.terminal.starts, [])
 
     def test_not_found_after_install_uses_its_own_message(self):
         self.engine.preflight.mark_recipe_ran()
         self.engine.preflight_cli("no-such-cli")
         self.assertIn("install finished", self.item("cli")["detail"])
 
-    def test_signin_is_confirmed_by_the_participant_only(self):
-        self.engine.preflight_cli("fake-cli")
-        self.engine.preflight_cli_start()
-        self.assertNotEqual(self.item("signin")["status"], "passed")
-        self.engine.preflight_signin_confirm()
-        self.assertEqual(self.item("signin")["status"], "passed")
+    def test_there_is_no_sign_in_item(self):
+        self.assertNotIn("signin", [i["id"] for i in self.state["preflight"]["items"]])
 
-    def test_signin_message_explains_the_license_requirement(self):
+    def test_changing_the_command_clears_the_passed_test(self):
         self.engine.preflight_cli("fake-cli")
-        self.engine.preflight_cli_start()
-        self.assertIn("license", self.item("signin")["detail"])
-
-    def test_changing_the_command_resets_the_later_items(self):
-        self.engine.preflight_cli("fake-cli")
-        self.engine.preflight_cli_start()
-        self.engine.preflight_signin_confirm()
+        self.engine.preflight_test_start()
+        folder = self.home / "cli-test"
+        (folder / "output.txt").write_text("HELLO FROM EVAL COACH", encoding="utf-8")
+        (folder / "version.txt").write_text("Python 3.13\n", encoding="utf-8")
+        self.engine.preflight_test_check()
+        self.assertEqual(self.item("working_test")["status"], "passed")
         self.engine.preflight_cli("other-cli")
-        self.assertNotEqual(self.item("cli")["status"], "passed")
-        self.assertNotEqual(self.item("signin")["status"], "passed")
+        self.assertEqual(self.item("working_test")["status"], "needs_you")
+        self.run_check_all()
+        self.assertEqual(self.item("working_test")["status"], "needs_you")
+
+    def test_a_missing_command_closes_the_working_test(self):
+        self.engine.preflight_cli("no-such-cli")
+        self.assertEqual(self.item("working_test")["status"], "not_checked")
+        self.assert_code("needs_cli_command", self.engine.preflight_test_start)
 
     def test_app_never_answers_the_cli(self):
         self.engine.preflight_cli("fake-cli")
-        self.engine.preflight_cli_start()
-        self.engine.preflight_signin_confirm()
+        self.engine.preflight_test_start()
         self.assertEqual(self.terminal.keystrokes, [])
         self.assertEqual(self.terminal.typed, [])
+
+
+class BackgroundTest(Base):
+    """Choosing an AI starts a quiet one-shot test. Only the exit status decides, and it never records a failure."""
+
+    def setUp(self):
+        super().setUp()
+        self.line = self.engine.preflight.content["working_test"]["headless_line"]
+        self.fake.programs["copilot"] = text_result("OK\n")
+
+    def wait(self):
+        record = self.engine.preflight._ai_test
+        if record is not None and record.thread is not None:
+            record.thread.join(10)
+
+    def choose(self, command="copilot"):
+        self.engine.preflight_cli(command)
+        self.wait()
+        return self.state["preflight"]
+
+    def test_choosing_an_ai_runs_its_one_shot_mode_with_no_window_or_typing(self):
+        pf_state = self.choose()
+        call = self.fake.calls_named("copilot")[0]
+        self.assertEqual(call["argv"], ["copilot", "-p", self.line])
+        self.assertEqual(call["timeout"], 120)
+        self.assertEqual(Path(call["cwd"]), self.home / "cli-test")
+        self.assertEqual(self.terminal.starts, [])
+        self.assertEqual(self.terminal.typed, [])
+        self.assertEqual(self.terminal.keystrokes, [])
+        self.assertEqual(pf_state["working_test"]["background"]["state"], "passed")
+
+    def test_an_exit_status_of_zero_passes_the_working_test_for_this_ai(self):
+        self.choose()
+        item = self.item("working_test")
+        self.assertEqual(item["status"], "passed")
+        self.assertIn("quiet test", item["detail"])
+        self.assertEqual(self.engine.preflight._data["test_passed_command"], "copilot")
+
+    def test_a_pass_survives_a_later_check_of_everything(self):
+        self.choose()
+        self.run_check_all()
+        self.assertEqual(self.item("working_test")["status"], "passed")
+
+    def test_a_non_zero_exit_needs_the_participant_and_is_never_a_failure(self):
+        self.fake.programs["copilot"] = text_result("OK\n", code=1)
+        pf_state = self.choose()
+        item = self.item("working_test")
+        self.assertEqual(item["status"], "needs_you")
+        self.assertIn("sign in", item["detail"])
+        self.assertEqual(pf_state["working_test"]["background"]["state"], "needs_you")
+        self.assertEqual(self.engine.preflight._data["test_passed_command"], "")
+
+    def test_the_printed_text_decides_nothing(self):
+        self.fake.programs["copilot"] = text_result("not signed in, error", code=0)
+        self.choose()
+        self.assertEqual(self.item("working_test")["status"], "passed")
+        self.fake.programs["copilot"] = text_result("OK", code=2)
+        self.choose("claude")
+        self.fake.programs["claude"] = text_result("OK", code=2)
+        self.choose("claude")
+        self.assertEqual(self.item("working_test")["status"], "needs_you")
+
+    def test_a_timeout_needs_the_participant(self):
+        self.fake.programs["copilot"] = text_result("", code=-1, timed_out=True)
+        self.choose()
+        self.assertEqual(self.item("working_test")["status"], "needs_you")
+
+    def test_a_tool_that_cannot_start_needs_the_participant(self):
+        del self.fake.programs["copilot"]
+        self.choose()
+        self.assertEqual(self.item("working_test")["status"], "needs_you")
+
+    def test_a_command_without_one_shot_data_runs_nothing(self):
+        pf_state = self.choose("fake-cli")
+        self.assertEqual(self.fake.calls_named("fake-cli"), [])
+        self.assertEqual(pf_state["working_test"]["background"]["state"], "idle")
+        self.assertEqual(self.item("working_test")["status"], "needs_you")
+
+    def test_a_command_that_is_not_found_runs_nothing(self):
+        self.choose("no-such-cli")
+        self.assertEqual(self.fake.calls, [])
+
+    def test_the_same_passed_ai_is_not_tested_again(self):
+        self.choose()
+        self.choose()
+        self.assertEqual(len(self.fake.calls_named("copilot")), 1)
+
+    def test_a_needs_you_result_is_tried_again_when_the_ai_is_chosen_again(self):
+        self.fake.programs["copilot"] = text_result("", code=1)
+        self.choose()
+        self.fake.programs["copilot"] = text_result("OK")
+        self.choose()
+        self.assertEqual(self.item("working_test")["status"], "passed")
+        self.assertEqual(len(self.fake.calls_named("copilot")), 2)
+
+    def test_it_never_starts_while_an_ai_window_is_running(self):
+        self.terminal.running = True
+        self.choose()
+        self.assertEqual(self.fake.calls_named("copilot"), [])
+
+    def test_the_visible_test_cancels_a_running_quiet_test(self):
+        self.fake.gate = threading.Event()
+        self.engine.preflight_cli("copilot")
+        record = self.engine.preflight._ai_test
+        self.assertEqual(self.state["preflight"]["working_test"]["background"]["state"], "running")
+        self.engine.preflight_test_start()
+        self.fake.gate.set()
+        record.thread.join(10)
+        self.assertEqual(self.state["preflight"]["working_test"]["background"]["state"], "idle")
+        self.assertEqual(self.item("working_test")["status"], "needs_you")
+        self.assertNotIn("quiet test", self.item("working_test")["detail"])
+
+    def test_choosing_another_ai_cancels_a_running_quiet_test(self):
+        self.fake.gate = threading.Event()
+        self.engine.preflight_cli("copilot")
+        record = self.engine.preflight._ai_test
+        self.engine.preflight_cli("fake-cli")
+        self.fake.gate.set()
+        record.thread.join(10)
+        self.assertEqual(self.engine.preflight._data["test_passed_command"], "")
+        self.assertNotEqual(self.item("working_test")["detail"], "")
+        self.assertNotIn("quiet test", self.item("working_test")["detail"])
+
+    def test_an_install_cancels_a_running_quiet_test(self):
+        self.fake.gate = threading.Event()
+        self.engine.preflight_cli("copilot")
+        record = self.engine.preflight._ai_test
+        self.engine.preflight_recipe("claude-winget", True)
+        self.fake.gate.set()
+        record.thread.join(10)
+        self.assertEqual(self.engine.preflight._data["test_passed_command"], "")
+
+    def test_a_check_of_everything_leaves_a_running_test_alone(self):
+        self.fake.gate = threading.Event()
+        self.engine.preflight_cli("copilot")
+        record = self.engine.preflight._ai_test
+        before = self.item("working_test")
+        self.engine.preflight._check_working_test()
+        self.assertEqual(self.item("working_test"), before)
+        self.fake.gate.set()
+        record.thread.join(10)
+
+    def test_a_cancel_returns_only_when_the_process_is_gone(self):
+        self.fake.gate = threading.Event()
+        self.fake.exit_delay = 0.3
+        self.engine.preflight_cli("copilot")
+        while not self.fake.active:
+            time.sleep(0.005)
+        self.engine.preflight.cancel_ai_test()
+        self.assertEqual(self.fake.active, 0)
+
+    def test_a_replacement_test_never_overlaps_the_one_it_replaces(self):
+        self.fake.gate = threading.Event()
+        self.fake.exit_delay = 0.2
+        self.engine.preflight_cli("copilot")
+        while not self.fake.active:
+            time.sleep(0.005)
+        self.engine.preflight.start_ai_test()
+        self.fake.gate.set()
+        self.wait()
+        self.assertEqual(self.fake.max_active, 1)
+        self.assertEqual(self.item("working_test")["status"], "passed")
+
+    def test_choosing_the_same_ai_again_keeps_its_pass(self):
+        self.choose()
+        self.choose()
+        self.assertEqual(self.item("working_test")["status"], "passed")
+        self.assertEqual(self.engine.preflight._data["test_passed_command"], "copilot")
+
+    def test_a_reset_cancels_it(self):
+        self.fake.gate = threading.Event()
+        self.engine.preflight_cli("copilot")
+        record = self.engine.preflight._ai_test
+        self.engine.preflight.reset_state()
+        self.fake.gate.set()
+        record.thread.join(10)
+        self.assertEqual(self.engine.preflight._data["test_passed_command"], "")
+
+    def test_a_recipe_without_usable_one_shot_data_is_ignored(self):
+        for bad in ({"args": ["-p"], "timeout_seconds": 5}, {"args": ["-p", "{line}"], "timeout_seconds": 0},
+                    {"args": "-p {line}", "timeout_seconds": 5}, "no"):
+            with self.subTest(bad=bad):
+                override = self.home / "cli-recipes.json"
+                override.write_text(json.dumps({"recipes": [
+                    {"id": "fake", "name": "Fake", "cli_command": "fake-cli", "shell": "cmd", "command": "x",
+                     "needs_mb": 1, "headless": bad}]}), encoding="utf-8")
+                engine = self.build_engine()
+                engine.preflight_cli("fake-cli")
+                self.assertEqual(self.fake.calls_named("fake-cli"), [])
+
+    def test_the_stand_in_can_be_tested_through_a_recipe_override(self):
+        override = self.home / "cli-recipes.json"
+        override.write_text(json.dumps({"recipes": [
+            {"id": "fake", "name": "Fake", "cli_command": "fake-cli --x", "shell": "cmd", "command": "x",
+             "needs_mb": 1, "headless": {"args": ["-p", "{line}"], "timeout_seconds": 9}}]}), encoding="utf-8")
+        self.engine = self.build_engine()
+        self.fake.programs["fake-cli"] = text_result("OK")
+        self.engine.preflight_cli("fake-cli --x")
+        self.wait()
+        call = self.fake.calls_named("fake-cli")[0]
+        self.assertEqual(call["argv"], ["fake-cli", "--x", "-p", self.line])
+        self.assertEqual(call["timeout"], 9)
+
+
+class DetectAis(Base):
+    """Item 6: the checks find which supported AIs resolve, without starting any."""
+
+    def found_names(self):
+        return [t["cli_command"] for t in self.state["preflight"]["cli"]["tools"] if t["found"]]
+
+    def only_found(self, *commands):
+        self.terminal.check_command = lambda command, env=None: (
+            None if command in commands else (_ for _ in ()).throw(FileNotFoundError(command)))
+
+    def test_lists_the_three_tools_and_never_the_free_text_one(self):
+        tools = self.state["preflight"]["cli"]["tools"]
+        self.assertEqual([t["cli_command"] for t in tools], ["copilot", "claude", "devin"])
+        self.assertEqual([t["name"] for t in tools], ["GitHub Copilot CLI", "Claude Code", "Devin CLI"])
+
+    def test_claude_has_one_entry_with_the_second_install_behind_it(self):
+        claude = next(t for t in self.state["preflight"]["cli"]["tools"] if t["cli_command"] == "claude")
+        self.assertEqual(claude["install"]["id"], "claude-installer")
+        self.assertEqual([r["id"] for r in claude["other_installs"]], ["claude-winget"])
+
+    def test_none_found(self):
+        self.only_found()
+        self.run_check_all()
+        self.assertEqual(self.found_names(), [])
+        self.assertFalse(any(t["preselect"] for t in self.state["preflight"]["cli"]["tools"]))
+
+    def test_one_found_is_preselected(self):
+        self.only_found("claude")
+        self.run_check_all()
+        tools = {t["cli_command"]: t for t in self.state["preflight"]["cli"]["tools"]}
+        self.assertEqual(self.found_names(), ["claude"])
+        self.assertTrue(tools["claude"]["preselect"])
+
+    def test_several_found_preselects_none(self):
+        self.only_found("claude", "copilot")
+        self.run_check_all()
+        self.assertEqual(self.found_names(), ["copilot", "claude"])
+        self.assertFalse(any(t["preselect"] for t in self.state["preflight"]["cli"]["tools"]))
+
+    def test_nothing_is_started_and_nothing_is_typed(self):
+        self.only_found("claude", "copilot", "devin")
+        self.run_check_all()
+        self.assertEqual(self.terminal.starts, [])
+        self.assertEqual(self.terminal.typed, [])
+
+    def test_a_chosen_tool_is_not_preselected_again(self):
+        self.only_found("claude")
+        self.engine.preflight_cli("claude")
+        self.run_check_all()
+        self.assertFalse(any(t["preselect"] for t in self.state["preflight"]["cli"]["tools"]))
+
+    def test_saved_results_still_know_which_ais_are_installed_after_a_restart(self):
+        self.only_found("claude")
+        self.engine = self.build_engine()
+        self.assertEqual(self.found_names(), ["claude"])
+
+    def test_the_typed_route_is_off_by_default_and_on_with_the_flag(self):
+        self.assertFalse(self.state["preflight"]["custom_ai"])
+        engine = Engine(self.home, self.terminal, preflight_runner=self.fake, registry_paths=lambda: [],
+                        custom_ai=True)
+        self.assertTrue(engine.get_state()["preflight"]["custom_ai"])
 
 
 class Recipes(Base):
@@ -616,8 +888,6 @@ class WorkingTest(Base):
     def setUp(self):
         super().setUp()
         self.engine.preflight_cli("fake-cli")
-        self.engine.preflight_cli_start()
-        self.engine.preflight_signin_confirm()
         self.engine.preflight_test_start()
         self.folder = self.home / "cli-test"
 
@@ -692,9 +962,57 @@ class WorkingTest(Base):
         self.assertEqual(item["status"], "needs_you")
         self.assertIn("not finished", item["detail"])
 
-    def test_needs_signin_first(self):
-        self.engine.preflight.set_cli_command("other")
+    def test_needs_a_found_ai_first(self):
+        self.engine.preflight.set_cli_command("no-such-cli")
         self.assert_code("needs_cli_command", self.engine.preflight_test_start)
+
+    def test_poll_records_a_pass_and_stops_the_ai(self):
+        (self.folder / "output.txt").write_text("HELLO FROM EVAL COACH", encoding="utf-8")
+        (self.folder / "version.txt").write_text("Python 3.13.17\n", encoding="utf-8")
+        stops = self.terminal.stops
+        self.engine.preflight_test_poll()
+        self.assertEqual(self.item("working_test")["status"], "passed")
+        self.assertGreater(self.terminal.stops, stops)
+
+    def test_poll_before_the_files_exist_records_nothing(self):
+        before = self.item("working_test")
+        self.engine.preflight_test_poll()
+        self.assertEqual(self.item("working_test"), before)
+        self.assertTrue(self.terminal.running)
+
+    def test_poll_never_records_a_failure(self):
+        (self.folder / "output.txt").write_text("wrong", encoding="utf-8")
+        (self.folder / "version.txt").write_text("nothing", encoding="utf-8")
+        before = self.item("working_test")
+        self.engine.preflight_test_poll()
+        self.assertEqual(self.item("working_test"), before)
+        self.assertNotEqual(before["status"], "failed")
+
+    def test_choosing_another_ai_ends_the_test_and_drops_its_files(self):
+        (self.folder / "output.txt").write_text("HELLO FROM EVAL COACH", encoding="utf-8")
+        (self.folder / "version.txt").write_text("Python 3.13.17\n", encoding="utf-8")
+        stops = self.terminal.stops
+        self.engine.preflight_cli("claude")
+        self.assertGreater(self.terminal.stops, stops)
+        self.assertEqual(list(self.folder.iterdir()), [])
+        self.engine.preflight_test_poll()
+        self.engine.preflight_test_check()
+        self.assertNotEqual(self.item("working_test")["status"], "passed")
+        self.assertEqual(self.engine.preflight._data["test_passed_command"], "")
+
+    def test_choosing_the_same_ai_again_leaves_the_running_test_alone(self):
+        stops = self.terminal.stops
+        self.engine.preflight_cli("fake-cli")
+        self.assertEqual(self.terminal.stops, stops)
+        self.assertTrue(self.terminal.running)
+        self.assertTrue((self.folder / "input.txt").is_file())
+
+    def test_poll_without_a_test_session_does_nothing(self):
+        self.engine.preflight_stop()
+        (self.folder / "output.txt").write_text("HELLO FROM EVAL COACH", encoding="utf-8")
+        (self.folder / "version.txt").write_text("Python 3.13.17\n", encoding="utf-8")
+        self.engine.preflight_test_poll()
+        self.assertNotEqual(self.item("working_test")["status"], "passed")
 
     def test_check_everything_rereads_the_files(self):
         self.finish("HELLO FROM EVAL COACH", "Python 3.13.17\n")
@@ -756,8 +1074,6 @@ class ProjectFolder(Base):
 class Lock(Base):
     def pass_everything(self):
         self.engine.preflight_cli("fake-cli")
-        self.engine.preflight_cli_start()
-        self.engine.preflight_signin_confirm()
         self.engine.preflight_test_start()
         folder = self.home / "cli-test"
         (folder / "output.txt").write_text("HELLO FROM EVAL COACH", encoding="utf-8")
@@ -783,7 +1099,7 @@ class Lock(Base):
 
     def test_preflight_passing_stops_any_preflight_cli_session(self):
         self.pass_everything()
-        self.engine.preflight_cli_start()
+        self.engine.preflight_recipe("claude-winget", True)
         self.assertTrue(self.terminal.running)
         stops = self.terminal.stops
         self.setup_project()
@@ -868,8 +1184,6 @@ class TerminalOutputIsIgnored(unittest.TestCase):
 
     def test_a_terminal_that_prints_the_right_answers_still_fails(self):
         self.engine.preflight_cli("fake-cli")
-        self.engine.preflight_cli_start()
-        self.engine.preflight_signin_confirm()
         self.engine.preflight_test_start()
         FakePty.created[-1].feed(b"HELLO FROM EVAL COACH\r\nPython 3.13.17\r\n")
         self.engine.preflight_test_check()
@@ -885,11 +1199,6 @@ class TerminalOutputIsIgnored(unittest.TestCase):
         self.assertEqual(FakePty.created[-1].env, env)
         self.terminal.start("devin", str(self.tmp), "x", env={"PATH": "C:\\x", "TERM_PROGRAM": "vscode"})
         self.assertNotIn("WT_SESSION", FakePty.created[-1].env)
-
-    def test_signin_session_is_labelled_your_cli(self):
-        self.engine.preflight_cli("fake-cli")
-        self.engine.preflight_cli_start()
-        self.assertEqual(self.engine.get_state()["terminal"]["label"], "Your AI")
 
     def test_items_are_numbered_without_gaps(self):
         def numbers():

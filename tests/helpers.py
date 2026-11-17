@@ -23,12 +23,11 @@ def write_passed_preflight(home, track="script"):
     Item 8 (project folder) passes when the test calls Engine.setup.
     """
     items = {item: {"status": "passed", "detail": "ok", "next": ""}
-             for item in ("track", "python", "node", "promptfoo", "cli", "signin", "working_test")}
+             for item in ("track", "python", "node", "promptfoo", "cli", "working_test")}
     home = Path(home)
     home.mkdir(parents=True, exist_ok=True)
     (home / "preflight.json").write_text(json.dumps(
-        {"version": 1, "track": track, "cli_command": "", "launched_command": "fake",
-         "signed_in_command": "fake", "test_passed_command": "fake", "recipe_ran": False,
+        {"version": 1, "track": track, "cli_command": "", "test_passed_command": "fake", "recipe_ran": False,
          "ran_once": True, "items": items}), encoding="utf-8")
 
 
@@ -60,6 +59,9 @@ class FakeTerminal:
     def check_command(self, command, env=None):
         if command.startswith("no-such-cli"):
             raise FileNotFoundError("Could not find the command.")
+
+    def argv_for(self, command, env=None):
+        return command.split()
 
     def start(self, command, cwd, label, env=None, owner=None):
         self.running = True

@@ -227,6 +227,104 @@ class PreflightContent(unittest.TestCase):
         self.assertEqual(preflight.PROMPTFOO_VERSION, manifest["promptfoo"]["version"])
 
 
+class GuidedSetupContent(unittest.TestCase):
+    """The recipe words and the AI window lesson that setup shows."""
+
+    def setUp(self):
+        self.preflight = json.loads(resources.read_text("content/preflight.json"))
+        self.recipes = json.loads(resources.read_text("content/cli-recipes.json"))["recipes"]
+        self.lesson = self.preflight["ai_window_lesson"]
+
+    def test_every_recipe_a_participant_sees_has_plain_words_and_a_tool_name(self):
+        shown = [r for r in self.recipes if r.get("participant") is not False]
+        self.assertEqual({r["cli_command"] for r in shown if r["cli_command"]}, {"copilot", "claude", "devin"})
+        for recipe in shown:
+            with self.subTest(recipe=recipe["id"]):
+                self.assertTrue(recipe.get("plain", "").strip())
+                if recipe["cli_command"]:
+                    self.assertTrue(recipe.get("tool_name", "").strip())
+
+    def test_the_free_text_recipe_is_not_for_participants(self):
+        other = next(r for r in self.recipes if r["id"] == "other")
+        self.assertIs(other.get("participant"), False)
+
+    def test_each_tool_has_one_shot_data_without_a_permission_flag(self):
+        banned = ("allow", "yolo", "permission", "dangerous", "bypass", "autonomous", "accept")
+        for command in ("copilot", "claude", "devin"):
+            with self.subTest(tool=command):
+                found = [r["headless"] for r in self.recipes if r["cli_command"] == command and r.get("headless")]
+                self.assertEqual(len(found), 1)
+                args, limit = found[0]["args"], found[0]["timeout_seconds"]
+                self.assertEqual(sum(a.count("{line}") for a in args), 1)
+                self.assertTrue(isinstance(limit, int) and limit > 0)
+                for arg in args:
+                    self.assertFalse(any(word in arg.lower() for word in banned), arg)
+
+    def test_the_background_test_asks_for_no_tool_and_has_words_for_both_endings(self):
+        working = self.preflight["working_test"]
+        self.assertTrue(working["headless_line"].strip())
+        for forbidden in ("file", "write", "run ", "command"):
+            self.assertNotIn(forbidden, working["headless_line"].lower())
+        for key in ("working_test_passed_background", "ai_test_background_needs_you"):
+            self.assertTrue(self.preflight["messages"][key]["detail"].strip())
+        self.assertTrue(self.preflight["ui"]["ai_testing"].strip())
+
+    def test_the_plain_words_name_a_size(self):
+        for recipe in self.recipes:
+            if recipe["cli_command"] or recipe["id"] == "powershell":
+                with self.subTest(recipe=recipe["id"]):
+                    self.assertRegex(recipe["plain"], r"\b\d+ MB\b")
+
+    def test_there_is_no_sign_in_page_wording_left(self):
+        self.assertNotIn("signin", self.preflight["items"])
+        self.assertNotIn("signin", self.preflight["session_labels"])
+        for key in ("signin_waiting", "signin_confirmed", "signin_needs_cli", "cli_launched", "cli_found"):
+            self.assertNotIn(key, self.preflight["messages"])
+
+    def test_every_marker_has_a_number_a_label_and_text(self):
+        sets = [("generic", self.lesson["generic"]["markers"])]
+        sets += [(name, tool["markers"]) for name, tool in self.lesson["tools"].items()]
+        for name, markers in sets:
+            with self.subTest(tool=name):
+                self.assertEqual([m["n"] for m in markers], list(range(1, len(markers) + 1)))
+                for marker in markers:
+                    self.assertTrue(marker["label"].strip())
+                    self.assertTrue(marker["text"].strip())
+        self.assertGreaterEqual(len(self.lesson["generic"]["markers"]), 3)
+
+    def test_a_tool_with_a_picture_has_alt_text_positions_a_date_and_a_real_file(self):
+        for name, tool in self.lesson["tools"].items():
+            with self.subTest(tool=name):
+                if not tool["image"]:
+                    self.assertEqual(tool["markers"], [])
+                    continue
+                self.assertTrue(tool["alt"].strip())
+                self.assertRegex(tool["captured"], r"^\d{4}-\d{2}-\d{2}$")
+                self.assertTrue((PACKAGE / "web" / tool["image"]).is_file())
+                for marker in tool["markers"]:
+                    self.assertTrue(0 <= marker["x"] <= 100 and 0 <= marker["y"] <= 100)
+                    box = marker["box"]
+                    self.assertTrue(box["w"] > 0 and box["h"] > 0)
+                    self.assertTrue(0 <= box["x"] and box["x"] + box["w"] <= 100, (name, marker["n"]))
+                    self.assertTrue(0 <= box["y"] and box["y"] + box["h"] <= 100, (name, marker["n"]))
+                    self.assertLessEqual(marker["n"], 8)  # styles.css has one highlight rule per marker number, up to 8
+
+    def test_the_lesson_tools_are_the_supported_launch_names(self):
+        self.assertEqual(set(self.lesson["tools"]), {"copilot", "claude", "devin"})
+
+    def test_the_lesson_holds_no_account_name_or_email(self):
+        for text in strings_in(self.lesson):
+            with self.subTest(text=text[:60]):
+                self.assertNotRegex(text, r"\S+@\S+")
+                self.assertNotRegex(text, r"(?i)\b(e-?mail|signed in as|logged in as)\b")
+
+    def test_the_typed_command_wording_is_kept_out_of_the_participant_text(self):
+        ui = self.preflight["ui"]
+        for key in ("cli_label", "cli_hint", "cli_check", "recipe_use", "signin_confirm"):
+            self.assertNotIn(key, ui)
+        self.assertIn("cli_label", self.preflight["test_only"])
+
+
 class Resources(unittest.TestCase):
     def test_reads_from_disk(self):
         self.assertIn("build-eval-script", resources.read_text("kit/skills/build-eval-script/SKILL.md"))

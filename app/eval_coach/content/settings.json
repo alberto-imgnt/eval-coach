@@ -11,9 +11,11 @@
     "text_size_default": "Back to 100%",
     "text_size_range": "You can choose from {min}% to {max}%.",
     "setup_heading": "Setup",
-    "setup_intro": "Setup opens on its own full page, one check at a time. Open it to run the checks again, change your AI command, or finish setup at any time.",
+    "setup_intro": "Setup opens on its own full page, one check at a time. Open it to run the checks again, choose a different AI, or finish setup at any time.",
     "setup_open": "Open setup",
+    "setup_ai_window": "What am I looking at?",
     "setup_summary_label": "Setup checks and their status",
+    "summary_names": {"cli": "Your AI"},
     "reset_heading": "Reset",
     "reset_intro": "Each reset asks you to confirm first. What it clears is moved to a backup folder, not deleted, except the answer key."
   },
