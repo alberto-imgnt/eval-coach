@@ -9,7 +9,7 @@ function fmt(template, vars) {
   return String(template || '').replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] !== undefined ? vars[k] : m));
 }
 
-function openOverlay({ title, className, closeLabel, onClose }) {
+export function openOverlay({ title, className, closeLabel, onClose }) {
   const opener = document.activeElement;
   overlayCount += 1;
   const titleId = `overlay-title-${overlayCount}`;

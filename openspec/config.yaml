@@ -33,9 +33,12 @@ operations:
       - Use the stand-in CLI (e2e-work/harness/fake_cli.py); never run a real CLI without the user's approval.
       - Run the two backend suites one after the other, never at the same time.
       - Update docs/SPEC.md and the master task table in docs/IMPLEMENTATION-PLAN.md in the same change.
+      - Run each task's own verification command as the task says, but do not run the full verification suites again when all tasks are done; the archive gate runs them once and records the result.
   archive:
     guidance:
+      - 'Verification gate (before syncing specs or moving anything): list the checks this change needs, then run `python tools\verify_receipt.py check --change "<name>" --require backend --require backend-embedded` plus one `--require <label>` for each of interface, build, e2e (e2e-promptfoo for the promptfoo track) that applies. Always required: backend (`python -m unittest discover -s tests`) and backend-embedded (the same suite on `spikes\phase0-preflight\runtime\python-embed-3.13.17-nopth\python.exe`, after backend, never at the same time). Add interface when web/ or tests/frontend changed or a task names it, build (`python tools\build_pyz.py --smoke`) when app/ changed or a task names it, e2e when a task names it or the harness or setup behavior changed (commands in AGENTS.md). On `valid` for the whole set, skip the suites and say so. Otherwise run each missing check through `python tools\verify_receipt.py write --change "<name>" --name <label> -- <command>`, one at a time, and stop the archive if one fails. Never write a receipt by hand, and do not edit files outside openspec/ between this gate and the commit, because that makes the receipt stale.'
       - Summarize which docs/SPEC.md sections are now superseded by the archived specs.
+      - 'Completion hook: when the archive succeeds, ask the user whether to open the branch and pull request now (the post-archive-pr skill). Only start it on yes; on no, say they can ask for it later.'
 
 # Project context (optional)
 # Add only constraints that should guide OpenSpec artifacts and workflows.

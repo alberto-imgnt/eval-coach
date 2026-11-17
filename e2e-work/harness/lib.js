@@ -73,7 +73,7 @@ function filteredEnv() {
 async function startServer() {
   fs.writeFileSync(SERVER_LOG, '');
   const out = fs.openSync(SERVER_LOG, 'a');
-  const child = spawn(PYTHON, [PYZ, '--no-browser', '--home', HOME], {
+  const child = spawn(PYTHON, [PYZ, '--no-browser', '--custom-ai', '--home', HOME], {
     detached: true, stdio: ['ignore', out, out], env: filteredEnv(), windowsHide: true, cwd: WORK,
   });
   child.unref();

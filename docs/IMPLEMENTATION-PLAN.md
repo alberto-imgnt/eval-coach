@@ -26,6 +26,7 @@ Legend: ✅ **Done** (the "Done when" check was run and passed) · ⏳ **To do**
 | C. Content clarity | C.1 to C.8 (OpenSpec change `content-clarity`) | ✅ Done on the stand-in; the change is archived (2026-11-16) and its specs are in `openspec/specs/` | None; guided setup (change 2) builds on this vocabulary |
 | P2. Part 2: defining evaluation criteria | P2.1 to P2.9 (OpenSpec change `add-part-2`) | 🔄 Built on the stand-in; the final integration check (P2.9) and the user's wording review before archive are pending | P2.9; no real CLI is involved, so no real-CLI budget is used |
 | R. Read ahead always | R.1 to R.4 (OpenSpec change `read-ahead-always`) | ✅ Done on the stand-in; the change is archived and its specs are in `openspec/specs/` | None |
+| GS. Guided setup | GS.1 to GS.34 (OpenSpec change `guided-setup`, `openspec/changes/guided-setup/tasks.md`): automatic summary check, Choose your AI, quiet background AI test, merged sign-in and working test, AI window only where needed, Your AI window mini lesson | ✅ Built and verified on the stand-in (background test: real-tool runs pending your approval); the three annotated screenshots are in (Copilot's was taken by hand outside the app) | Archive after your review |
 | 5. Package | 5.1 to 5.8 | ⏳ To do, needs go-ahead | All 8 tasks |
 | 6. Pilot | 6.1 to 6.16 | ⏳ To do, needs go-ahead and D4 | All 16 tasks |
 | 7. Mac | 7.1 to 7.6 | ⏸ Deferred | All 6 tasks |

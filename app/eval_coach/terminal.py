@@ -94,6 +94,10 @@ class TerminalManager:
         """Raise ValueError or OSError if the command cannot be launched."""
         self._check(command, env)
 
+    def argv_for(self, command, env=None):
+        """The argv a command string means, for programs the app runs itself without a terminal."""
+        return list(self._parse(command, env))
+
     def start(self, command, cwd, label, env=None, owner=None):
         """Stop any running CLI, then start this one. Only one runs at a time.
 

@@ -404,6 +404,14 @@ class Routes(ServerCase):
                 self.assertEqual(body["error"]["code"], "consent_required")
                 self.assertIsNone(body["state"]["preflight"]["job"])
 
+    def test_removed_sign_in_routes_are_gone_and_poll_is_quiet(self):
+        for path in ("/api/preflight/signin", "/api/preflight/cli/start"):
+            status, _ = self.post(path, {})
+            self.assertEqual(status, 404, path)
+        status, body = self.post("/api/preflight/test/poll", {})
+        self.assertEqual(status, 200, body)
+        self.assertNotIn("error", body)
+
     def test_preflight_routes_need_the_token(self):
         status, body = self.post("/api/preflight/track", {"track": "script"}, token=False)
         self.assertEqual(status, 401)

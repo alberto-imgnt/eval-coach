@@ -55,17 +55,47 @@ function sorted(obj) {
 
 const pfItem = (s, id) => s.preflight.items.find((i) => i.id === id);
 
-// The setup wizard shows one check per page; Next only works once the page's check has passed.
+// The setup wizard moves forward to the next page that still needs the participant, and Next waits for the page's
+// check (on Checking your computer, until the checks it started have ended).
 async function wizardTo(page, id) {
-  for (let i = 0; i < 8; i += 1) {
+  for (let i = 0; i < 80; i += 1) {
     if (await page.locator(`#pf-item-${id}`).count()) return;
-    await page.locator('#wizard-next').click();
-    await L.sleep(300);
+    if ((await page.locator('#wizard-next').getAttribute('aria-disabled')) !== 'true') await page.locator('#wizard-next').click();
+    await L.sleep(500);
   }
   L.assertion(`the wizard reached the ${id} page`, (await page.locator(`#pf-item-${id}`).count()) > 0);
 }
 
+// Stand-in only. The real tools' recipes carry the one-shot data for the quiet background test; the stand-in's launch
+// commands get the same through the recipes override file in the app home, so the real test code path runs.
+const QUIET = { hang: `${L.CLI_COMMAND} --bg-hang`, fail: `${L.CLI_COMMAND} --bg-fail` };
+const EVENTS_FILE = path.join(L.WORK, 'fake-cli-events.jsonl');
+
+function writeQuietRecipes() {
+  const recipe = (id, command, seconds) => ({ id, name: `Stand-in ${id}`, cli_command: command, shell: 'none', command: '', needs_mb: 0, headless: { args: ['-p', '{line}'], timeout_seconds: seconds } });
+  fs.mkdirSync(L.HOME, { recursive: true });
+  fs.writeFileSync(path.join(L.HOME, 'cli-recipes.json'), JSON.stringify({ recipes: [recipe('hang', QUIET.hang, 4), recipe('fail', QUIET.fail, 120), recipe('plain', L.CLI_COMMAND, 120)] }, null, 2));
+}
+
+let quietBase = 0;
+
+function oneShotEvents() {
+  if (!exists(EVENTS_FILE)) return [];
+  return fs.readFileSync(EVENTS_FILE, 'utf8').split(/\r?\n/).filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((e) => e && e.event === 'oneshot').slice(quietBase);
+}
+
+// Back with the Back button to a page that a passed check skipped going forward.
+async function backTo(page, id) {
+  for (let i = 0; i < 12 && !(await page.locator(`#pf-item-${id}`).count()); i += 1) {
+    await page.locator('#wizard-back').click();
+    await L.sleep(300);
+  }
+  L.assertion(`the wizard went back to the ${id} page`, (await page.locator(`#pf-item-${id}`).count()) > 0);
+}
+
 async function stageSetup() {
+  quietBase = oneShotEvents().length;
+  if (L.STANDIN) writeQuietRecipes();
   await L.startServer();
   const { browser, page } = await L.openBrowser({ tall: true });
   try {
@@ -83,7 +113,8 @@ async function stageSetup() {
       L.assertion('the promptfoo track lists the Node.js and promptfoo items as applying', ['node', 'promptfoo'].every((id) => pfItem(picked, id).applies === true));
       L.assertion('the track screen explains the extra step', /one extra step/.test(picked.preflight.track_note || ''), picked.preflight.track_note);
     }
-    await L.clickAndWait(page, '#pf-check-all', '/api/preflight/check');
+    // Next from Track opens Checking your computer, which starts the checks by itself.
+    await L.clickAndWait(page, '#wizard-next', '/api/preflight/check');
     await L.waitFor(async () => !(await L.apiState()).preflight.job, L.PF ? 240000 : 60000, 'checks to finish');
     const afterCheck = await L.apiState();
     L.assertion('python item passed by running it', pfItem(afterCheck, 'python').status === 'passed', pfItem(afterCheck, 'python').detail);
@@ -103,20 +134,33 @@ async function stageSetup() {
     L.assertion('next action given for a missing command', pfItem(await L.apiState(), 'cli').next.length > 0);
     L.assertion('preflight screen still shown after bad command', await page.getByRole('heading', { name: 'Before you begin' }).isVisible());
 
-    await page.getByLabel('Command that starts your AI').fill(L.CLI_COMMAND);
-    await L.clickAndWait(page, '#pf-cli-check', '/api/preflight/cli');
-    await L.waitFor(async () => pfItem(await L.apiState(), 'cli').status === 'needs_you', 10000, 'command found');
-
-    L.countSession('preflight sign-in');
-    await L.clickAndWait(page, '#pf-cli-start', '/api/preflight/cli/start');
-    await L.waitFor(async () => pfItem(await L.apiState(), 'cli').status === 'passed', 10000, 'CLI launched');
-    await L.waitReady(page, 'preflight-signin');
-    await wizardTo(page, 'signin');
-    await L.clickAndWait(page, '#pf-signin-confirm', '/api/preflight/signin');
-    await L.waitFor(async () => pfItem(await L.apiState(), 'signin').status === 'passed', 10000, 'signed in');
+    if (L.STANDIN) {
+      // The quiet background test of the chosen AI, with the stand-in's one-shot mode. It never opens an AI window.
+      // First it runs past its limit (the process is killed), then it exits non-zero (as when not signed in).
+      // Both end as "needs you" and the wizard moves to the AI working test page, which is the visible fallback.
+      for (const [label, command] of [['runs past its limit', QUIET.hang], ['exits non-zero', QUIET.fail]]) {
+        await page.getByLabel('Command that starts your AI').fill(command);
+        await L.clickAndWait(page, '#pf-cli-check', '/api/preflight/cli');
+        await page.locator('#pf-ai-testing').waitFor({ timeout: 8000 });
+        L.assertion(`no AI window while the quiet test runs (${label})`, (await page.locator('#col-right').isHidden()) && !(await L.apiState()).terminal.running);
+        await L.waitFor(async () => (await page.locator('#pf-item-working_test').count()) > 0, 40000, `the wizard to move to the AI working test page (${label})`);
+        const ended = await L.apiState();
+        L.assertion(`the quiet test that ${label} needs the participant and is not a failure`, pfItem(ended, 'working_test').status === 'needs_you' && ended.preflight.working_test.background.state === 'needs_you', JSON.stringify(pfItem(ended, 'working_test')));
+        L.assertion(`the page says the quiet test could not finish (${label})`, /could not finish/.test(await page.locator('#pf-item-working_test').innerText()));
+        if (command !== QUIET.fail) await backTo(page, 'cli');
+      }
+      const ran = oneShotEvents();
+      L.assertion('the quiet tests ran the one-shot mode with no input', ran.length === 2 && ran.every((e) => e.stdin_closed === true) && ran[0].flags.includes('--bg-hang') && ran[1].flags.includes('--bg-fail'), JSON.stringify(ran));
+      L.assertion('the one-shot runs started in the test folder', ran.every((e) => path.resolve(e.cwd).toLowerCase() === path.join(L.HOME, 'cli-test').toLowerCase()), JSON.stringify(ran.map((e) => e.cwd)));
+    } else {
+      await page.getByLabel('Command that starts your AI').fill(L.CLI_COMMAND);
+      await L.clickAndWait(page, '#pf-cli-check', '/api/preflight/cli');
+      await L.waitFor(async () => pfItem(await L.apiState(), 'cli').status === 'passed', 10000, 'command found, so the AI is chosen');
+    }
+    L.assertion('no sign-in item exists', !(await L.apiState()).preflight.items.some((i) => i.id === 'signin'));
     await wizardTo(page, 'working_test');
 
-    // Working test: the same Start and Send pattern as a step.
+    // One page starts the AI window and runs the working test: Start, sign in if asked, Send. A pass proves the sign-in.
     L.countSession('preflight working test');
     await L.clickAndWait(page, '#cli-start', '/api/preflight/test/start');
     const testDir = path.join(L.HOME, 'cli-test');
@@ -125,17 +169,35 @@ async function stageSetup() {
     await L.waitReady(page, 'preflight-test');
     await L.clickAndWait(page, '#cli-send', '/api/preflight/test/send');
     await L.driveCli(page, 'preflight-test', async ({ busy, idleMs }) => hasText(path.join(testDir, 'output.txt')) && hasText(path.join(testDir, 'version.txt')) && !busy && idleMs > 1500);
-    await L.clickAndWait(page, '#pf-test-check', '/api/preflight/test/check');
-    await L.waitFor(async () => pfItem(await L.apiState(), 'working_test').status === 'passed', 10000, 'working test passed');
+    // The page re-reads the test folder by itself after Send, so no Check press is needed.
+    await L.waitFor(async () => pfItem(await L.apiState(), 'working_test').status === 'passed', 30000, 'working test passed by the quiet re-read');
     L.assertion('working test decided from the files', fs.readFileSync(path.join(testDir, 'output.txt'), 'utf8').trim() === 'HELLO FROM EVAL COACH');
     await L.waitFor(async () => !(await L.apiState()).terminal.running, 15000, 'CLI stopped after the working test');
 
-    // Item 8: project folder.
+    if (L.STANDIN) {
+      // Choosing the plain stand-in command again runs the quiet test, which passes: the AI working test counts as
+      // passed without any AI window, and the wizard moves on by itself.
+      await backTo(page, 'cli');
+      await page.getByLabel('Command that starts your AI').fill(L.CLI_COMMAND);
+      await L.clickAndWait(page, '#pf-cli-check', '/api/preflight/cli');
+      await L.waitFor(async () => (await page.locator('#pf-item-project').count()) > 0, 40000, 'the wizard to move past the AI working test after a quiet pass');
+      const quiet = await L.apiState();
+      L.assertion('a quiet pass counts as the AI working test', pfItem(quiet, 'working_test').status === 'passed' && quiet.preflight.working_test.background.state === 'passed', JSON.stringify(pfItem(quiet, 'working_test')));
+      L.assertion('the quiet pass opened no AI window', !quiet.terminal.running && (await page.locator('#col-right').isHidden()));
+      const all = oneShotEvents();
+      L.assertion('the third quiet test ran the plain command', all.length === 3 && all[2].flags.length === 0, JSON.stringify(all));
+    }
+
+    // Project folder.
     await wizardTo(page, 'project');
     await page.getByLabel('Project folder').fill(PROJECT);
     await page.getByRole('radio', { name: /Practice task/ }).check();
     await page.getByRole('button', { name: 'Set up my project' }).click();
     await L.waitFor(async () => { const s = await L.apiState(); return s.configured && s.preflight.passed; }, 15000, 'preflight to finish');
+    // The wizard ends on the Your AI window page; Finish closes it.
+    await page.locator('#pf-item-ai_window').waitFor({ timeout: 15000 });
+    L.assertion('the wizard ends on the Your AI window page', await page.locator('#pf-item-ai_window').isVisible());
+    await page.locator('#wizard-finish').click();
     const afterSetup = await L.apiState();
     // With lessons, preflight leads to the hook lesson; the generate step comes after it.
     L.assertion('setup completes and the course continues with the first lesson after preflight',     afterSetup.course ? afterSetup.current_item && afterSetup.current_item.id === 'hook' : /collect your answers/i.test(await heading(page)), JSON.stringify(afterSetup.current_item));

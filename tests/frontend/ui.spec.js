@@ -58,9 +58,10 @@ async function openApp(page, request, scenario, data) {
 }
 
 // Applies item changes before the page loads, so nothing depends on SSE timing.
-async function openPreflight(page, request, changes, set) {
+async function openPreflight(page, request, changes, set, cli) {
   await mock(request, 'reset', { scenario: 'preflight' });
   if (set) await mock(request, 'pf_set', set);
+  if (cli) await mock(request, 'pf_cli', cli);
   for (const [id, change] of Object.entries(changes || {})) await mock(request, 'pf_item', { id, changes: change });
   await page.goto(`/?t=${TOKEN}`);
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toBeVisible();
@@ -70,14 +71,29 @@ async function termText(page) {
   return page.locator('.xterm-rows').innerText();
 }
 
-// Moves the setup wizard to the page for an item: back to the start, then forward. Next only works on passed pages.
+// Moves the setup wizard to the page for an item: back to the first page, forward until at or past it, then back.
+// Forward only goes to pages that still need the participant, so going back is what lands on a passed page.
 async function wizardTo(page, id) {
-  const here = async () => (await page.locator(`#pf-item-${id}`).count()) > 0;
-  for (let i = 0; i < 8 && !(await here()) && (await page.locator('#wizard-back').getAttribute('aria-disabled')) !== 'true'; i += 1) {
-    await page.locator('#wizard-back').click();
+  const enabled = async (button) => (await page.locator(button).getAttribute('aria-disabled')) !== 'true';
+  const order = ['track', 'summary', 'python', 'node', 'promptfoo', 'cli', 'working_test', 'project', 'ai_window'];
+  const rank = async () => {
+    for (const name of order) if ((await page.locator(`#pf-item-${name}`).count()) > 0) return order.indexOf(name);
+    return -1;
+  };
+  for (let i = 0; i < 10 && (await enabled('#wizard-back')); i += 1) await page.locator('#wizard-back').click();
+  const target = order.indexOf(id);
+  for (let i = 0; i < 10 && (await rank()) < target && (await enabled('#wizard-next')); i += 1) {
+    await page.locator('#wizard-next').click();
+    await page.waitForTimeout(50);
   }
-  for (let i = 0; i < 8 && !(await here()); i += 1) await page.locator('#wizard-next').click();
+  for (let i = 0; i < 10 && (await rank()) > target && (await enabled('#wizard-back')); i += 1) await page.locator('#wizard-back').click();
   await expect(page.locator(`#pf-item-${id}`)).toBeVisible();
+}
+
+// The last wizard page, Your AI window, ends setup. Finish goes to the first screen after setup.
+async function finishWizard(page) {
+  await expect(page.locator('#pf-item-ai_window')).toBeVisible();
+  await page.locator('#wizard-finish').click();
 }
 
 test('token is removed from the URL and sent only as a header', async ({ page, request }) => {
@@ -157,6 +173,7 @@ test('preflight project item: prefills defaults, shows warnings, posts the contr
   await page.getByRole('button', { name: 'Check my files' }).click();
   await expect(page.locator('#import-status')).toContainText('Your files look ready to import');
   await page.getByRole('button', { name: 'Set up my project' }).click();
+  await finishWizard(page);
 
   await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
   const { log } = await mockLog(request);
@@ -225,6 +242,7 @@ test('import screen: blocking problems stop setup, a changed path makes the resu
   await expect(page.locator('#pf-project-submit')).not.toHaveAttribute('aria-disabled', 'true');
 
   await page.getByRole('button', { name: 'Set up my project' }).click();
+  await finishWizard(page);
   await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
   ({ log } = await mockLog(request));
   const check = log.filter((e) => e.path === '/api/setup/import-check').pop();
@@ -244,6 +262,7 @@ test('import screen: warnings are shown with the NOT CHECKED guidance and do not
   await expect(page.locator('#import-warnings')).toContainText('a number, a list of terms you choose, or a label');
   await expect(page.locator('#import-blocking')).toHaveCount(0);
   await page.getByRole('button', { name: 'Set up my project' }).click();
+  await finishWizard(page);
   await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
 });
 
@@ -289,17 +308,18 @@ test('import screen screenshot at 1280x800', async ({ page, request }) => {
 test('preflight shows each status on its own page, with detail and next action, and Next waits for the check', async ({ page, request }) => {
   await openPreflight(page, request, {
     python: { status: 'failed', detail: 'Python could not run.', next: 'Run setup.cmd again.' },
-    cli: { status: 'needs_you', detail: 'Enter a command.', next: 'Type it below.' },
-    signin: { status: 'not_checked', detail: 'Not checked yet.', next: 'Press Check everything.' },
+    cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' },
   });
   // The wizard opens on the first check that has not passed.
-  await expect(page.locator('#wizard-count')).toHaveText('2 of 6');
+  await expect(page.locator('#wizard-count')).toHaveText('3 of 7');
   await expect(page.locator('#pf-status-python')).toHaveText('Failed');
   await expect(page.locator('#pf-item-python .pf-detail')).toHaveText('Python could not run.');
   await expect(page.locator('#pf-item-python .pf-next')).toHaveText('Run setup.cmd again.');
   await expect(page.locator('#pf-item-cli')).toHaveCount(0);
   await expect(page.locator('#wizard-next')).toHaveAttribute('aria-disabled', 'true');
   await expect(page.locator('#wizard-needed')).toContainText('Finish this check');
+  await page.locator('#wizard-back').click();
+  await expect(page.locator('#pf-item-summary')).toBeVisible();
   await page.locator('#wizard-back').click();
   await expect(page.locator('#pf-status-track')).toHaveText('Passed');
   await expect(page.locator('#pf-item-track .pf-tag')).toHaveClass(/t-passed/);
@@ -308,13 +328,14 @@ test('preflight shows each status on its own page, with detail and next action, 
   await mock(request, 'pf_item', { id: 'python', changes: { status: 'passed', detail: 'Python 3.13.', next: '' } });
   await mock(request, 'emit_state');
   await wizardTo(page, 'cli');
-  await expect(page.locator('#wizard-count')).toHaveText('3 of 6');
+  await expect(page.locator('#wizard-count')).toHaveText('4 of 7');
   await expect(page.locator('#pf-status-cli')).toHaveText('Needs you');
   await expect(page.locator('#wizard-next')).toHaveAttribute('aria-disabled', 'true');
   await mock(request, 'pf_item', { id: 'cli', changes: { status: 'passed', detail: 'Found.', next: '' } });
+  await mock(request, 'pf_item', { id: 'working_test', changes: { status: 'not_checked', detail: 'Not checked yet.', next: 'Press Check everything.' } });
   await mock(request, 'emit_state');
   await page.locator('#wizard-next').click();
-  await expect(page.locator('#pf-status-signin')).toHaveText('Not checked');
+  await expect(page.locator('#pf-status-working_test')).toHaveText('Not checked');
   // Steps stay locked: there is no step list.
   await expect(page.locator('#step-heading')).toHaveText('Before you begin');
   await expect(page.locator('.step-item')).toHaveCount(0);
@@ -323,17 +344,16 @@ test('preflight shows each status on its own page, with detail and next action, 
 test('preflight: the first page has the welcome text and the track choice; promptfoo adds two pages', async ({ page, request }) => {
   await openApp(page, request, 'preflight');
   await wizardTo(page, 'track');
-  await expect(page.locator('#wizard-count')).toHaveText('1 of 6');
+  await expect(page.locator('#wizard-count')).toHaveText('1 of 7');
   await expect(page.getByText('It only needs to be able to read files, write files and run commands.')).toBeVisible();
   await expect(page.locator('#pf-item-node')).toHaveCount(0);
   await expect(page.getByRole('radio', { name: /Script track/ })).toBeChecked();
   await page.getByRole('radio', { name: /promptfoo track/ }).check();
   await expect(page.locator('#pf-track-note')).toContainText('one extra step where your AI adds your two fixtures');
-  await expect(page.locator('#wizard-count')).toHaveText('1 of 8');
-  await page.locator('#wizard-next').click();
-  await page.locator('#wizard-next').click();
+  await expect(page.locator('#wizard-count')).toHaveText('1 of 9');
+  await wizardTo(page, 'node');
   await expect(page.locator('#pf-item-node')).toBeVisible();
-  await page.locator('#wizard-next').click();
+  await wizardTo(page, 'promptfoo');
   await expect(page.locator('#pf-item-promptfoo')).toBeVisible();
   const { log } = await mockLog(request);
   expect(log.some((e) => e.path === '/api/preflight/track' && e.body.track === 'promptfoo')).toBe(true);
@@ -361,63 +381,246 @@ test('preflight: an install asks for consent showing the disk amount, and cancel
   await expect(page.locator('#pf-install-node')).toHaveAttribute('aria-disabled', 'true');
 });
 
-test('preflight: a CLI install recipe shows the exact command in its consent and runs in the terminal', async ({ page, request }) => {
-  await openPreflight(page, request, { cli: { status: 'needs_you', detail: 'Enter a command.', next: 'Type it below.' } });
-  await expect(page.locator('#pf-recipe-command-copilot')).toHaveText('winget install GitHub.Copilot');
-  await expect(page.locator('#pf-recipe-command-devin')).toHaveText('irm https://static.devin.ai/cli/setup.ps1 | iex');
-  await expect(page.locator('#pf-recipe-card-copilot')).toContainText('PowerShell 6 or later');
+test('preflight: with no AI found the three tools are offered with plain words, and the exact command sits behind a link', async ({ page, request }) => {
+  await openPreflight(page, request, { cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' } });
+  await expect(page.locator('#pf-tool-list .pf-tool-head strong')).toHaveText(['GitHub Copilot CLI', 'Claude Code', 'Devin CLI']);
+  await expect(page.getByText('Another AI tool')).toHaveCount(0);
   await expect(page.getByText('Copilot Chat', { exact: false })).toHaveCount(0);
-  await page.locator('#pf-recipe-install-claude-winget').click();
+  await expect(page.locator('#pf-install-option-claude-installer')).toContainText('about 400 MB of disk');
+  await expect(page.locator('#pf-install-option-devin')).toContainText('Installs Devin CLI');
+  // The exact command is not shown until the link is opened.
+  await expect(page.locator('#pf-command-copilot')).toBeHidden();
+  await page.locator('#pf-show-command-copilot summary').click();
+  await expect(page.locator('#pf-command-copilot')).toHaveText('winget install GitHub.Copilot');
+  await page.locator('#pf-show-command-devin summary').click();
+  await expect(page.locator('#pf-command-devin')).toHaveText('irm https://static.devin.ai/cli/setup.ps1 | iex');
+  await expect(page.locator('#pf-requirement-copilot')).toContainText('PowerShell 6 or later');
+  // Claude's second way to install is behind "Another way to install".
+  await expect(page.locator('#pf-install-claude-winget')).toBeHidden();
+  await page.locator('#pf-other-way-claude > summary').click();
+  await page.locator('#pf-install-claude-winget').click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('winget install Anthropic.ClaudeCode');
   await expect(dialog).toContainText('Free space on this drive: 500.0 GB');
-  await dialog.getByRole('button', { name: 'Run it in the terminal' }).click();
+  await dialog.getByRole('button', { name: 'Run it in my AI window' }).click();
   await expect.poll(async () => (await mockLog(request)).log.some((e) => e.path === '/api/preflight/cli/recipe' && e.body.recipe === 'claude-winget' && e.body.consent === true)).toBe(true);
+  // The AI window shows on this page while the install runs.
+  await expect(page.locator('#col-right')).toBeVisible();
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
 });
 
-test('preflight: command check, sign-in confirm and working test follow the Start and Send pattern', async ({ page, request }) => {
+test('preflight: one AI found is preselected and one press of Use this AI chooses it', async ({ page, request }) => {
+  await openPreflight(page, request, { cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' } }, null, { command: '', found: ['claude'] });
+  await expect(page.locator('#pf-ai-claude')).toBeChecked();
+  await expect(page.locator('#pf-use-ai')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#col-right')).toBeHidden();
+  await page.locator('#pf-use-ai').click();
+  await expect(page.locator('#pf-ai-chosen')).toContainText('You chose Claude Code.');
+  expect((await postsTo(request, '/api/preflight/cli')).pop().body).toEqual({ cli_command: 'claude' });
+  await expect(page.locator('#wizard-next')).not.toHaveAttribute('aria-disabled', 'true');
+});
+
+test('preflight: Use this AI starts a quiet test with no AI window, and a pass moves on by itself', async ({ page, request }) => {
+  await openPreflight(
+    page,
+    request,
+    { cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' }, working_test: { status: 'not_checked', detail: 'Not checked yet.', next: '' } },
+    { mock_bg: true },
+    { command: '', found: ['claude'] },
+  );
+  await page.locator('#pf-use-ai').click();
+  await expect(page.locator('#pf-ai-testing')).toContainText('Testing your AI');
+  await expect(page.locator('#pf-ai-testing')).not.toContainText('Nothing opens');
+  await expect(page.locator('#pf-ai-spinner')).toBeVisible();
+  await expect(page.locator('#pf-ai-spinner')).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.locator('#pf-ai-spinner')).toHaveCSS('animation-name', 'spin');
+  await expect(page.locator('#col-right')).toBeHidden();
+  await expect(page.locator('#pf-use-ai')).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#wizard-next')).toHaveAttribute('aria-disabled', 'true');
+  await page.waitForTimeout(400);
+  await expect(page.locator('#pf-item-cli')).toBeVisible();
+  await mock(request, 'pf_bg_end', { result: 'passed' });
+  // The AI working test counts as passed, so the wizard goes straight to the first page that needs the participant.
+  await expect(page.locator('#pf-item-project')).toBeVisible();
+  await expect(page.locator('#col-right')).toBeHidden();
+  expect((await postsTo(request, '/api/preflight/test/start')).length).toBe(0);
+  await page.locator('#wizard-back').click();
+  await expect(page.locator('#pf-status-working_test')).toHaveText('Passed');
+  await expect(page.locator('#pf-item-working_test')).toContainText('answered a quiet test');
+});
+
+test('preflight: a quiet test that cannot finish moves to the AI working test page with a plain line', async ({ page, request }) => {
+  await openPreflight(
+    page,
+    request,
+    { cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' }, working_test: { status: 'not_checked', detail: 'Not checked yet.', next: '' } },
+    { mock_bg: true },
+    { command: '', found: ['claude'] },
+  );
+  await page.locator('#pf-use-ai').click();
+  await expect(page.locator('#pf-ai-testing')).toBeVisible();
+  await mock(request, 'pf_bg_end', { result: 'needs_you' });
+  await expect(page.locator('#pf-item-working_test')).toBeVisible();
+  await expect(page.locator('#pf-status-working_test')).toHaveText('Needs you');
+  await expect(page.locator('#pf-item-working_test')).toContainText('The quiet test could not finish by itself');
+  await expect(page.locator('#pf-item-working_test')).toContainText('sign in');
+  // The visible AI window is where the participant signs in, and nothing was started for them.
+  await expect(page.locator('#cli-start')).toBeVisible();
+  expect((await postsTo(request, '/api/preflight/test/start')).length).toBe(0);
+});
+
+test('preflight: a quiet test that finishes setup keeps the wizard open on the page after it, then Your AI window ends setup', async ({ page, request }) => {
+  await openPreflight(
+    page,
+    request,
+    {
+      cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' },
+      working_test: { status: 'not_checked', detail: 'Not checked yet.', next: '' },
+      project: { status: 'passed', detail: 'Ready.', next: '' },
+    },
+    { mock_bg: true },
+    { command: '', found: ['claude'] },
+  );
+  await page.locator('#pf-use-ai').click();
+  await expect(page.locator('#pf-ai-testing')).toBeVisible();
+  await mock(request, 'pf_bg_end', { result: 'passed' });
+  await expect(page.locator('#pf-item-ai_window')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Before you begin' })).toBeVisible();
+});
+
+test('preflight: an AI with no quiet test leaves the page as it was', async ({ page, request }) => {
+  await openPreflight(page, request, { cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' } }, null, { command: '', found: ['claude'] });
+  await page.locator('#pf-use-ai').click();
+  await expect(page.locator('#pf-ai-chosen')).toBeVisible();
+  await expect(page.locator('#pf-ai-testing')).toHaveCount(0);
+  await page.waitForTimeout(500);
+  await expect(page.locator('#pf-item-cli')).toBeVisible();
+});
+
+test('preflight: several AIs found preselect none, and the participant picks one', async ({ page, request }) => {
+  await openPreflight(page, request, { cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' } }, null, { command: '', found: ['claude', 'copilot'] });
+  await expect(page.locator('input[name="ai"]')).toHaveCount(2);
+  await expect(page.locator('input[name="ai"]:checked')).toHaveCount(0);
+  await expect(page.locator('#pf-use-ai')).toHaveAttribute('aria-disabled', 'true');
+  await page.getByRole('radio', { name: /GitHub Copilot CLI/ }).check();
+  await page.locator('#pf-use-ai').click();
+  expect((await postsTo(request, '/api/preflight/cli')).pop().body).toEqual({ cli_command: 'copilot' });
+});
+
+test('preflight: the typed command field exists only for the test launch', async ({ page, request }) => {
+  await openPreflight(page, request, { cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' } }, { custom_ai: false });
+  await expect(page.locator('#pf-tool-list')).toBeVisible();
+  await expect(page.locator('#pf-cli-command')).toHaveCount(0);
+  await expect(page.locator('#pf-cli-check')).toHaveCount(0);
+});
+
+test('preflight: choosing an AI, then one page starts the AI window and the test, with no sign-in button', async ({ page, request }) => {
   await openPreflight(page, request, {
-    cli: { status: 'needs_you', detail: 'Enter a command.', next: 'Type it below.' },
-    signin: { status: 'needs_you', detail: 'Sign in.', next: 'Press the button.' },
-    working_test: { status: 'needs_you', detail: 'Ready.', next: 'Press Start the test.' },
+    cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' },
+    working_test: { status: 'needs_you', detail: 'Ready.', next: 'Press Start my AI window.' },
   });
-  await expect.poll(async () => (await mockLog(request)).log.some((e) => e.path.startsWith('/api/terminal/stream'))).toBe(true);
   await page.getByLabel('Command that starts your AI').fill('mycli --model mid');
   await page.locator('#pf-cli-check').click();
   await expect.poll(async () => (await mockLog(request)).log.some((e) => e.path === '/api/preflight/cli' && e.body.cli_command === 'mycli --model mid')).toBe(true);
-
-  await mock(request, 'pf_item', { id: 'cli', changes: { status: 'passed', detail: 'Your AI started.', next: '' } });
-  await mock(request, 'emit_state');
   await expect(page.locator('#wizard-next')).not.toHaveAttribute('aria-disabled', 'true');
   await page.locator('#wizard-next').click();
-  await expect(page.locator('#pf-item-signin')).toBeVisible();
-  await page.locator('#pf-signin-confirm').click();
-  await expect(page.locator('#pf-status-signin')).toHaveText('Passed');
-  await page.locator('#wizard-next').click();
   await expect(page.locator('#pf-item-working_test')).toBeVisible();
+  await expect(page.locator('#pf-signin-confirm')).toHaveCount(0);
+  await expect(page.locator('#pf-test-signin-note')).toContainText('sign in');
   await expect(page.locator('.term-line')).toContainText('Read input.txt, write its contents in uppercase to output.txt');
   await expect(page.locator('#cli-send')).toHaveAttribute('aria-disabled', 'true');
   await page.locator('#cli-start').click();
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  await expect(page.locator('#term-head h2')).toHaveText('Your AI window');
   await page.locator('#cli-send').click();
-  await expect(page.getByText('Sent. Watch the terminal')).toBeVisible();
+  await expect(page.getByText('Sent. Watch the AI window')).toBeVisible();
   await page.locator('#pf-test-check').click();
   await expect(page.locator('#pf-status-working_test')).toHaveText('Passed');
   const { log } = await mockLog(request);
   expect(log.some((e) => e.path === '/api/preflight/test/send')).toBe(true);
+  expect(log.some((e) => e.path === '/api/preflight/signin' || e.path === '/api/preflight/cli/start')).toBe(false);
+});
+
+test('preflight: after Send the page quietly re-reads the test folder and shows the pass without a Check press', async ({ page, request }) => {
+  await openPreflight(page, request, { working_test: { status: 'needs_you', detail: 'Ready.', next: 'Press Start my AI window.' } }, { mock_poll_passes: true });
+  await expect(page.locator('#pf-item-working_test')).toBeVisible();
+  await page.locator('#cli-start').click();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  // Nothing is polled before Send.
+  await page.waitForTimeout(3500);
+  expect((await postsTo(request, '/api/preflight/test/poll')).length).toBe(0);
+  await page.locator('#cli-send').click();
+  await expect(page.locator('#pf-status-working_test')).toHaveText('Passed', { timeout: 10000 });
+  expect((await postsTo(request, '/api/preflight/test/poll')).length).toBeGreaterThan(0);
+  expect((await postsTo(request, '/api/preflight/test/check')).length).toBe(0);
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI has stopped (exit code 0).');
+});
+
+test('preflight: Checking your computer starts the checks by itself, shows a row per check, and Next goes to what needs the participant', async ({ page, request }) => {
+  await openPreflight(page, request, {
+    python: { status: 'passed', detail: 'Python 3.13.', next: '' },
+    cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' },
+  });
+  await wizardTo(page, 'track');
+  const before = (await postsTo(request, '/api/preflight/check')).length;
+  await page.locator('#wizard-next').click();
+  await expect(page.locator('#pf-item-summary')).toBeVisible();
+  await expect.poll(async () => (await postsTo(request, '/api/preflight/check')).length).toBe(before + 1);
+  await expect(page.locator('#pf-summary li')).toHaveCount(4);
+  await expect(page.locator('#pf-summary-status-python')).toHaveText('Passed');
+  await expect(page.locator('#pf-summary-cli')).toContainText('No supported AI was found');
+  await expect(page.locator('#pf-summary-done')).toContainText('Press Next');
+  // The page stays until Next is pressed, which skips the passed Python page.
+  await expect(page.locator('#pf-item-summary')).toBeVisible();
+  await page.locator('#wizard-next').click();
+  await expect(page.locator('#pf-item-cli')).toBeVisible();
+  // Back reaches the passed Python page, and coming back to the summary runs the checks again.
+  await page.locator('#wizard-back').click();
+  await expect(page.locator('#pf-item-python')).toBeVisible();
+  await page.locator('#wizard-back').click();
+  await expect(page.locator('#pf-item-summary')).toBeVisible();
+  await expect.poll(async () => (await postsTo(request, '/api/preflight/check')).length).toBe(before + 2);
+  await wizardTo(page, 'python');
+  await expect(page.locator('#pf-status-python')).toHaveText('Passed');
+});
+
+test('preflight: when every check passed, Next on Checking your computer goes to the Your AI window page', async ({ page, request }) => {
+  await openApp(page, request, 'build');
+  await openSettings(page);
+  await page.locator('#settings-setup-open').click();
+  await expect(page.locator('#pf-item-track')).toBeVisible();
+  await page.locator('#wizard-next').click();
+  await expect(page.locator('#pf-item-summary')).toBeVisible();
+  await expect(page.locator('#pf-summary-done')).toContainText('Everything passed');
+  await page.locator('#wizard-next').click();
+  await expect(page.locator('#pf-item-ai_window')).toBeVisible();
+  await expect(page.locator('#wizard-next')).toHaveCount(0);
+  await expect(page.locator('#pf-check-all')).toHaveCount(0);
 });
 
 test('preflight: Check everything posts and updates the button label', async ({ page, request }) => {
   await openApp(page, request, 'preflight');
-  await expect(page.locator('#pf-check-all')).toHaveText('Check everything');
-  await page.locator('#pf-check-all').click();
+  await wizardTo(page, 'python');
   await expect(page.locator('#pf-check-all')).toHaveText('Check everything again');
-  expect((await mockLog(request)).log.some((e) => e.path === '/api/preflight/check')).toBe(true);
+  const before = (await postsTo(request, '/api/preflight/check')).length; // the Checking your computer page ran it
+  await page.locator('#pf-check-all').click();
+  await expect.poll(async () => (await postsTo(request, '/api/preflight/check')).length).toBe(before + 1);
 });
 
-test('preflight: the Project folder page waits for the CLI page, and Next is off until a check passes', async ({ page, request }) => {
-  await openPreflight(page, request, { cli: { status: 'needs_you', detail: 'Enter a command.', next: 'Type it.' } });
+test('preflight: Check everything shows only on the pages where something can be fixed outside the app', async ({ page, request }) => {
+  await openApp(page, request, 'preflight');
+  for (const id of ['track', 'summary', 'working_test']) {
+    await wizardTo(page, id);
+    await expect(page.locator('#pf-check-all'), id).toHaveCount(0);
+  }
+  for (const id of ['python', 'cli', 'project']) {
+    await wizardTo(page, id);
+    await expect(page.locator('#pf-check-all'), id).toBeVisible();
+  }
+});
+
+test('preflight: the Project folder page waits for the AI page, and Next is off until a check passes', async ({ page, request }) => {
+  await openPreflight(page, request, { cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one.' } });
   await expect(page.locator('#pf-item-cli')).toBeVisible();
   await expect(page.locator('#wizard-next')).toHaveAttribute('aria-disabled', 'true');
   await expect(page.locator('#pf-project-submit')).toHaveCount(0);
@@ -2354,26 +2557,46 @@ test('first run: setup comes first as a full-page wizard with a way to skip, no 
   await page.screenshot({ path: path.join(SHOTS, 'wizard-first-run.png') });
 });
 
-test('the wizard keeps the terminal inside the CLI pages and a running CLI survives moving between pages', async ({ page, request }) => {
-  await openPreflight(page, request, { cli: { status: 'needs_you', detail: 'Enter a command.', next: 'Type it.' } });
-  await expect(page.locator('#pf-item-cli')).toBeVisible();
+test('the wizard shows the AI window only where the participant acts, and a running AI survives moving between pages', async ({ page, request }) => {
+  await openPreflight(page, request, { working_test: { status: 'needs_you', detail: 'Ready.', next: 'Press Start my AI window.' } });
+  await expect(page.locator('#pf-item-working_test')).toBeVisible();
   await expect(page.locator('#col-right')).toBeVisible();
-  await page.locator('#wizard-back').click();
-  await expect(page.locator('#pf-item-python')).toBeVisible();
-  await expect(page.locator('#col-right')).toBeHidden();
-  await page.locator('#wizard-back').click();
-  await expect(page.locator('#col-right')).toBeHidden();
-  await mock(request, 'pf_item', { id: 'cli', changes: { status: 'passed', detail: 'Your AI started.', next: '' } });
+  await page.locator('#cli-start').click();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  await expect(page.locator('#term-head h2')).toHaveText('Your AI window');
+  await page.screenshot({ path: path.join(SHOTS, 'wizard-test-page.png') });
+  // No AI window on the pages before it, even though the AI is still running.
+  for (const id of ['cli', 'python', 'summary']) {
+    await page.locator('#wizard-back').click();
+    await expect(page.locator(`#pf-item-${id}`)).toBeVisible();
+    await expect(page.locator('#col-right')).toBeHidden();
+  }
+  await wizardTo(page, 'working_test');
+  await expect(page.locator('#col-right')).toBeVisible();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  // None on the Project folder and Your AI window pages either.
+  await mock(request, 'pf_item', { id: 'working_test', changes: { status: 'passed', detail: 'Done.', next: '' } });
   await mock(request, 'emit_state');
-  await wizardTo(page, 'cli');
-  await page.locator('#pf-cli-start').click();
-  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await page.locator('#wizard-next').click();
-  await expect(page.locator('#pf-item-signin')).toBeVisible();
-  await expect(page.locator('#col-right')).toBeVisible();
-  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
-  await page.screenshot({ path: path.join(SHOTS, 'wizard-cli-page.png') });
+  await expect(page.locator('#pf-item-project')).toBeVisible();
+  await expect(page.locator('#col-right')).toBeHidden();
   expect((await postsTo(request, '/api/preflight/stop')).length).toBe(0);
+});
+
+test('completing setup from the first-run screen ends on the Your AI window page, then the Series map, and Part 3 starts at the mission', async ({ page, request }) => {
+  await openApp(page, request, 'course-first-run');
+  await page.locator('#pf-project-submit').click();
+  await expect(page.locator('#pf-item-ai_window')).toBeVisible();
+  // Setup has passed, but the wizard stays on its last page until Finish.
+  await expect(page.locator('#wizard-count')).toHaveText('7 of 7');
+  await expect(page.locator('#pf-skip')).toHaveCount(0);
+  await expect(page.locator('#topbar')).toBeHidden();
+  await page.locator('#wizard-finish').click();
+  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#setup-reminder')).toHaveCount(0);
+  await expect(page.locator('#pf-skip')).toHaveCount(0);
+  await enterPart(page);
+  await expect(page.locator('#step-heading')).toHaveText('Your mission');
 });
 
 test('skipping setup opens the Series map with the banner, and the skip is remembered after a reload', async ({ page, request }) => {
@@ -2387,16 +2610,6 @@ test('skipping setup opens the Series map with the banner, and the skip is remem
   await expect(page.locator('#step-heading')).toHaveText('Series map');
   await expect(page.locator('#setup-reminder')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toHaveCount(0);
-  await enterPart(page);
-  await expect(page.locator('#step-heading')).toHaveText('Your mission');
-});
-
-test('completing setup from the first-run screen shows the Series map, and Part 3 starts at the mission', async ({ page, request }) => {
-  await openApp(page, request, 'course-first-run');
-  await page.locator('#pf-project-submit').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
-  await expect(page.locator('#setup-reminder')).toHaveCount(0);
-  await expect(page.locator('#pf-skip')).toHaveCount(0);
   await enterPart(page);
   await expect(page.locator('#step-heading')).toHaveText('Your mission');
 });
@@ -2623,7 +2836,7 @@ test('Settings: one panel with the text size, setup and both resets in that orde
   await expect(page.locator('.settings-group > h2')).toHaveText(['Text size', 'Setup', 'Reset']);
   await expect(page.locator('#text-size-slider')).toBeVisible();
   await expect(page.locator('#pf-check-all')).toHaveCount(0);
-  await expect(page.locator('#settings-setup-summary li')).toHaveCount(6);
+  await expect(page.locator('#settings-setup-summary li')).toHaveCount(5);
   await expect(page.locator('#settings-setup-open')).toBeVisible();
   await expect(page.locator('#reset-progress')).toBeVisible();
   await expect(page.locator('#reset-configuration')).toBeVisible();
@@ -2911,20 +3124,22 @@ test('layout: every main screen stays usable from 90% to 130% on a phone', async
   await context.close();
 });
 
-test('the wizard on a phone: one column, nothing sideways, 44 pixel buttons, the terminal below the CLI page', async ({ browser, request }) => {
+test('the wizard on a phone: one column, nothing sideways, 44 pixel buttons, the AI window below the working test page', async ({ browser, request }) => {
   const { context, page, errors } = await phonePage(browser);
   await openApp(page, request, 'course-first-run');
   await wizardTo(page, 'track');
   expect(await sideways(page)).toBeLessThanOrEqual(0);
-  for (const selector of ['#pf-skip', '#wizard-back', '#wizard-next', '#pf-check-all']) {
+  for (const selector of ['#pf-skip', '#wizard-back', '#wizard-next']) {
     const box = await page.locator(selector).boundingBox();
     expect(box.height, selector).toBeGreaterThanOrEqual(44);
   }
   await page.screenshot({ path: path.join(SHOTS, 'wizard-phone-track.png') });
-  await mock(request, 'pf_item', { id: 'cli', changes: { status: 'needs_you', detail: 'Enter a command.', next: 'Type it.' } });
+  await wizardTo(page, 'python');
+  expect((await page.locator('#pf-check-all').boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await mock(request, 'pf_item', { id: 'working_test', changes: { status: 'needs_you', detail: 'Ready.', next: 'Press Start my AI window.' } });
   await mock(request, 'emit_state');
-  await wizardTo(page, 'cli');
-  const form = await page.locator('#pf-item-cli').boundingBox();
+  await wizardTo(page, 'working_test');
+  const form = await page.locator('#pf-item-working_test').boundingBox();
   const terminal = await page.locator('#col-right').boundingBox();
   expect(terminal.y).toBeGreaterThan(form.y + form.height - 1);
   expect(await sideways(page)).toBeLessThanOrEqual(0);
@@ -2941,11 +3156,13 @@ test('Settings setup group: setup opens as the full-page wizard, the checks run 
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toBeVisible();
   await expect(page.locator('#topbar')).toBeHidden();
   await expect(page.locator('#pf-skip')).toHaveCount(0);
-  await expect(page.locator('#wizard-count')).toHaveText('1 of 6');
-  await page.locator('#pf-check-all').click();
-  expect((await postsTo(request, '/api/preflight/check')).length).toBe(1);
+  await expect(page.locator('#wizard-count')).toHaveText('1 of 7');
+  await expect(page.locator('#pf-check-all')).toHaveCount(0);
   await expect(page.locator('input[name="track"]').first()).toBeDisabled();
   await expect(page.locator('#pf-track-locked')).toBeVisible();
+  // The Checking your computer page runs the checks by itself, so no button is pressed.
+  await page.locator('#wizard-next').click();
+  await expect.poll(async () => (await postsTo(request, '/api/preflight/check')).length).toBe(1);
   await wizardTo(page, 'cli');
   await page.locator('#pf-cli-command').fill('other-cli --fast');
   await page.locator('#pf-cli-check').click();
@@ -2956,7 +3173,7 @@ test('Settings setup group: setup opens as the full-page wizard, the checks run 
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toHaveCount(0);
 });
 
-test('Settings setup group: setup can be completed from Settings on a fresh app', async ({ page, request }) => {
+test('Settings setup group: setup can be completed from Settings on a fresh app, and Finish closes back to Settings', async ({ page, request }) => {
   await openApp(page, request, 'course-first-run');
   await page.locator('#pf-skip').click();
   await openSettings(page);
@@ -2965,12 +3182,134 @@ test('Settings setup group: setup can be completed from Settings on a fresh app'
   await expect(page.locator('#wizard-close')).toBeVisible();
   await expect(page.locator('#pf-skip')).toHaveCount(0);
   await page.locator('#pf-project-submit').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#pf-item-ai_window')).toBeVisible();
+  await page.locator('#wizard-finish').click();
+  await expect(page.locator('.settings-page #step-heading')).toHaveText('Settings');
   await expect(page.locator('#setup-reminder')).toHaveCount(0);
   await expect(page.locator('#topbar')).toBeVisible();
   expect((await postsTo(request, '/api/setup')).length).toBe(1);
+  await page.locator('#settings-close').click();
+  await expect(page.locator('#step-heading')).toHaveText('Series map');
   await enterPart(page);
   await expect(page.locator('#step-heading')).toHaveText('Your mission');
+});
+
+const LESSON_WITH_SHOT = {
+  title: 'Your AI window',
+  intro: 'This is where your AI works for you.',
+  legend_heading: 'What is on the screen',
+  alt_generic: 'No picture is shown for this AI.',
+  reopen_label: 'What am I looking at?',
+  close: 'Close',
+  captured_label: 'Picture taken on {date}.',
+  tools: {
+    mycli: {
+      image: 'img/icon-glossary.svg',
+      alt: 'The AI window with the conversation at the top and the message box at the bottom',
+      captured: '2026-11-17',
+      markers: [
+        { n: 1, x: 20, y: 15, box: { x: 5, y: 5, w: 50, h: 20 }, label: 'The conversation', text: 'Your messages and the answers appear here.' },
+        { n: 2, x: 60, y: 80, box: { x: 5, y: 70, w: 80, h: 15 }, label: 'The message box', text: 'Type to your AI here.' },
+      ],
+    },
+  },
+  generic: { markers: [{ n: 1, label: 'The conversation', text: 'Generic text.' }] },
+};
+
+test('Your AI window page: a screenshot with numbered markers, a text legend, and descriptions on hover and on keyboard focus', async ({ page, request }) => {
+  await openPreflight(page, request, { project: { status: 'passed', detail: 'Ready.', next: '' } }, { ai_window_lesson: LESSON_WITH_SHOT });
+  await wizardTo(page, 'ai_window');
+  await expect(page.locator('.ai-shot-img')).toHaveAttribute('alt', /conversation at the top/);
+  await expect(page.locator('.ai-shot figcaption')).toHaveText('Picture taken on 2026-11-17.');
+  await expect(page.locator('.ai-marker')).toHaveCount(2);
+  await expect(page.locator('#ai-lesson-legend li')).toHaveText([/The conversation Your messages and the answers appear here\./, /The message box Type to your AI here\./]);
+  const first = page.locator('#ai-lesson-marker-1');
+  await expect(first).toHaveAttribute('aria-describedby', 'ai-lesson-tip-1');
+  await expect(first).toHaveAttribute('tabindex', '0');
+  await expect(page.locator('#ai-lesson-tip-1')).toBeHidden();
+  await first.hover();
+  await expect(page.locator('#ai-lesson-tip-1')).toBeVisible();
+  await expect(page.locator('#ai-lesson-tip-1')).toContainText('Your messages and the answers appear here.');
+  await page.mouse.move(0, 0);
+  await expect(page.locator('#ai-lesson-tip-1')).toBeHidden();
+  await page.locator('#ai-lesson-marker-2').focus();
+  await expect(page.locator('#ai-lesson-tip-2')).toBeVisible();
+  await expect(page.locator('#ai-lesson-tip-2')).toContainText('Type to your AI here.');
+  await page.screenshot({ path: path.join(SHOTS, 'wizard-ai-window.png') });
+  // The part of the picture a marker describes is highlighted while it is hovered or focused, and only then.
+  const region = (n) => page.locator(`.ai-region[data-n="${n}"]`);
+  await expect(region(1)).toBeHidden();
+  await expect(region(2)).toBeVisible();
+  await page.mouse.move(0, 0);
+  await page.evaluate(() => document.activeElement.blur());
+  await page.locator('#ai-lesson-marker-1').hover();
+  await expect(region(2)).toBeHidden();
+  const frame = await page.locator('.ai-shot-frame').boundingBox();
+  const box = await region(1).boundingBox();
+  expect(Math.abs(box.x - (frame.x + frame.width * 0.05))).toBeLessThan(3);
+  expect(Math.abs(box.width - frame.width * 0.5)).toBeLessThan(3);
+  await page.mouse.move(0, 0);
+  await page.locator('#ai-lesson-legend li').nth(1).hover();
+  await expect(region(2)).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(region(2)).toBeHidden();
+  // Nothing about this page is saved as progress.
+  const posts = (await mockLog(request)).log.filter((e) => e.method === 'POST').map((e) => e.path);
+  expect(posts.filter((p) => /setup|lesson|step/.test(p))).toEqual([]);
+});
+
+test('Your AI window page: with no screenshot (the stand-in) it shows the legend text only', async ({ page, request }) => {
+  await openPreflight(page, request, { project: { status: 'passed', detail: 'Ready.', next: '' } });
+  await wizardTo(page, 'ai_window');
+  await expect(page.locator('.ai-shot-img')).toHaveCount(0);
+  await expect(page.locator('#ai-lesson-generic')).toBeVisible();
+  await expect(page.locator('#ai-lesson-legend li')).toHaveCount(5);
+  await expect(page.locator('#ai-lesson-legend')).toContainText('Approval requests');
+  await expect(page.locator('#wizard-finish')).toBeVisible();
+});
+
+test('Your AI window page at a narrow width: nothing overflows and the markers stay inside the picture', async ({ page, request }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await openPreflight(page, request, { project: { status: 'passed', detail: 'Ready.', next: '' } }, { ai_window_lesson: LESSON_WITH_SHOT });
+  await wizardTo(page, 'ai_window');
+  await expect(page.locator('.ai-marker')).toHaveCount(2);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+  const frame = await page.locator('.ai-shot-frame').boundingBox();
+  for (const n of [1, 2]) {
+    const box = await page.locator(`#ai-lesson-marker-${n}`).boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(frame.x - 1);
+    expect(box.x + box.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
+  }
+  await page.screenshot({ path: path.join(SHOTS, 'wizard-ai-window-narrow.png') });
+});
+
+test('What am I looking at? opens the lesson from Settings and closes back to Settings', async ({ page, request }) => {
+  await openApp(page, request, 'generate');
+  await openSettings(page);
+  await page.locator('#settings-ai-window').click();
+  const dialog = page.locator('dialog.overlay-ai-window[open]');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('h2')).toHaveText('Your AI window');
+  await expect(dialog.locator('#ai-lesson-dialog-legend li')).toHaveCount(5);
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('.settings-page #step-heading')).toHaveText('Settings');
+  const posts = (await mockLog(request)).log.filter((e) => e.method === 'POST').map((e) => e.path);
+  expect(posts.filter((p) => /stop|reset|submit|check|complete/.test(p))).toEqual([]);
+});
+
+test('What am I looking at? in the AI window opens the lesson and the AI keeps running', async ({ page, request }) => {
+  await openApp(page, request, 'generate');
+  await page.locator('#cli-start').click();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  await page.locator('#ai-window-open').click();
+  const dialog = page.locator('dialog.overlay-ai-window[open]');
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  expect((await postsTo(request, '/api/step/stop')).length).toBe(0);
 });
 
 test('Settings reset: Reset lesson progress asks first, defaults to keeping everything, then clears and names the backup', async ({ page, request }) => {
@@ -3020,7 +3359,7 @@ test('Settings reset: Reset app configuration says progress is cleared too, then
   await page.locator('dialog.confirm[open]').getByRole('button', { name: 'Reset app configuration' }).click();
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toBeVisible();
   await expect(page.locator('#pf-skip')).toBeVisible();
-  await expect(page.locator('#wizard-count')).toHaveText('1 of 6');
+  await expect(page.locator('#wizard-count')).toHaveText('1 of 7');
   await expect(page.locator('#reset-result')).toContainText('reset-backup');
   expect(await textSizeAttr(page)).toBe('100');
   expect(await rootAttr(page, 'data-theme')).toBe('light');

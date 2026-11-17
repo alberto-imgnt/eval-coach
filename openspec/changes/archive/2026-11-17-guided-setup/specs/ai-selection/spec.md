@@ -86,3 +86,46 @@ A free-text command route SHALL remain only so the stand-in CLI and tests can ru
 - **GIVEN** the app was started with the test-only flag
 - **WHEN** a real tool is found
 - **THEN** it is still offered like any other
+
+### Requirement: Choosing an AI runs a quiet background test
+Pressing "Use this AI" SHALL save the AI and immediately start a test of it in the background, with no further action from the participant. The test SHALL run the tool's one-shot non-interactive mode, using a launch recipe from `cli-recipes.json` and a prompt that needs no file or shell access. It SHALL run with no window, no terminal and no AI window, nothing SHALL be typed into it, no permission flag SHALL be used, and it SHALL NOT answer any prompt (AGENTS.md rules 2 and 4). The result SHALL be decided only from the exit status of the process the app started, never from anything it printed (rule 3). The test SHALL end within a time limit set per tool in `cli-recipes.json`, and the process SHALL be stopped when the limit is reached. The test SHALL never record a failure: it ends as passed or as "needs you".
+
+#### Scenario: Starts at once
+- **GIVEN** the participant is on the Choose your AI page with a found tool
+- **WHEN** the participant presses "Use this AI"
+- **THEN** the AI is saved and the background test starts without another button
+- **AND** the page shows that the AI is being tested
+
+#### Scenario: Nothing visible
+- **WHEN** the background test runs
+- **THEN** no terminal, AI window or other tool interface is shown
+- **AND** nothing is typed into the tool and no permission flag is used
+
+#### Scenario: Passes
+- **GIVEN** the tool starts, is signed in and replies, and the process ends with exit status 0 within the limit
+- **WHEN** the test ends
+- **THEN** the AI working test counts as passed for this AI
+- **AND** the wizard moves by itself to the next page that still needs the participant
+
+#### Scenario: Needs the participant
+- **GIVEN** the process ends with a non-zero status, runs into the time limit, or cannot be started (for example, the participant is not signed in)
+- **WHEN** the test ends
+- **THEN** the wizard moves by itself to the AI working test page, where the visible AI window is available
+- **AND** the page says in plain words that the quiet test could not finish and that the participant may need to sign in, or answer a question, in the AI window
+- **AND** no failure is recorded
+
+#### Scenario: Sign-in happens in the AI window
+- **GIVEN** the background test ended as "needs you" because the participant is not signed in
+- **WHEN** the participant uses the AI working test page
+- **THEN** they sign in in the AI window and run the visible test, and the result is decided from the test folder as before
+
+#### Scenario: Tool without one-shot data
+- **GIVEN** the chosen command has no one-shot launch data (for example the stand-in)
+- **WHEN** the participant presses "Use this AI"
+- **THEN** no background test runs and the page stays as it is
+- **AND** Next goes to the AI working test page, where the visible AI window is available
+
+#### Scenario: Changed or interrupted
+- **GIVEN** a background test is running
+- **WHEN** the participant chooses another AI, starts the visible test or starts an install
+- **THEN** the running background test is stopped first and only one AI process runs at a time

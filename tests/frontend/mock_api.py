@@ -125,7 +125,8 @@ Ignore [this link](javascript:alert(1)) please.
 """
 
 
-ITEM_ORDER = ["track", "python", "node", "promptfoo", "cli", "signin", "working_test", "project"]
+ITEM_ORDER = ["track", "python", "node", "promptfoo", "cli", "working_test", "project"]
+RECIPES = json.loads((CONTENT_ROOT / "cli-recipes.json").read_text(encoding="utf-8"))["recipes"]
 
 
 def pf_item(item_id, status, applies=True):
@@ -136,10 +137,9 @@ def pf_item(item_id, status, applies=True):
 
 
 def recipes_view(free="500.0 GB"):
-    recipes = json.loads((CONTENT_ROOT / "cli-recipes.json").read_text(encoding="utf-8"))["recipes"]
     consent = PREFLIGHT_TEXT["consent"]
     out = []
-    for r in recipes:
+    for r in RECIPES:
         entry = {"id": r["id"], "name": r["name"], "cli_command": r.get("cli_command", ""), "command": r.get("command", ""),
                  "note": r.get("note", ""), "source": r.get("source", ""), "hidden": bool(r.get("hidden")),
                  "requirement": None, "consent": None}
@@ -152,6 +152,30 @@ def recipes_view(free="500.0 GB"):
             entry["requirement"] = {"name": req["name"], "detail": req["detail"], "recipe": req["recipe"]}
         out.append(entry)
     return out
+
+
+def cli_view(command="", found=()):
+    """The cli part of the preflight view, shaped like Preflight._cli_view: one entry per supported tool."""
+    recipes = recipes_view()
+    raw = {r["id"]: r for r in RECIPES}
+    tools, seen = [], {}
+    for entry in recipes:
+        recipe, name = raw[entry["id"]], entry["cli_command"]
+        if not name or recipe.get("participant") is False:
+            continue
+        entry = dict(entry, plain=recipe.get("plain") or recipe.get("note", ""))
+        if name in seen:
+            seen[name]["other_installs"].append(entry)
+            continue
+        tool = {"id": recipe["id"], "name": recipe.get("tool_name") or entry["name"], "cli_command": name,
+                "found": name in found, "chosen": name == command, "preselect": False, "install": entry, "other_installs": []}
+        seen[name] = tool
+        tools.append(tool)
+    found_tools = [t for t in tools if t["found"]]
+    if len(found_tools) == 1 and not command:
+        found_tools[0]["preselect"] = True
+    return {"command": command, "found": list(found), "tools": tools, "recipes": recipes,
+            "tool": command.split(" ")[0] if command else ""}
 
 
 def build_preflight(passed, skipped=False, fresh=False):
@@ -170,12 +194,17 @@ def build_preflight(passed, skipped=False, fresh=False):
         "track_note": PREFLIGHT_TEXT["track_promptfoo_note"] if TRACK["name"] == "promptfoo" else None,
         "items": [pf_item(i, statuses[i], applies=i not in ("node", "promptfoo") or TRACK["name"] == "promptfoo") for i in ITEM_ORDER],
         "job": None,
-        "cli": {"command": "mycli" if not passed else "", "launched": False, "recipes": recipes_view()},
+        "cli": cli_view("mycli" if not passed else ""),
+        "custom_ai": True,
         "ran_once": False,
-        "working_test": {"line": PREFLIGHT_TEXT["working_test"]["line"], "folder_label": PREFLIGHT_TEXT["working_test"]["folder_label"]},
+        "working_test": {"line": PREFLIGHT_TEXT["working_test"]["line"], "folder_label": PREFLIGHT_TEXT["working_test"]["folder_label"],
+                         "background": {"state": "idle"}},
         "session": {"kind": None, "sent": False},
         "disk": {"free_bytes": 500 * 10**9, "free_text": "500.0 GB"},
         "text": copy.deepcopy(PREFLIGHT_TEXT["ui"]),
+        "pages": copy.deepcopy(PREFLIGHT_TEXT["pages"]),
+        "test_only": copy.deepcopy(PREFLIGHT_TEXT["test_only"]),
+        "ai_window_lesson": copy.deepcopy(PREFLIGHT_TEXT["ai_window_lesson"]),
     }
 
 
@@ -761,27 +790,34 @@ class Handler(BaseHTTPRequestHandler):
                 if item["id"] == body["item"] and item["install"]:
                     item["install"]["available"] = False
         elif path == "/api/preflight/cli":
-            world.preflight["cli"]["command"] = body["cli_command"]
-        elif path in ("/api/preflight/cli/start", "/api/preflight/test/start", "/api/preflight/cli/recipe"):
-            kind = {"/api/preflight/test/start": "test", "/api/preflight/cli/start": "signin"}.get(path, "recipe")
-            world.terminal.update(running=True, exit_code=None, owner=f"preflight:{kind}")
-            if path == "/api/preflight/test/start":
-                world.preflight["session"] = {"kind": "test", "sent": False}
-            elif path == "/api/preflight/cli/start":
-                world.preflight["session"] = {"kind": "signin", "sent": False}
-            else:
-                world.preflight["session"] = {"kind": "recipe", "sent": False}
+            world.preflight["cli"] = cli_view(body["cli_command"], world.preflight["cli"]["found"])
+            for item in world.preflight["items"]:
+                if item["id"] == "cli":
+                    item.update(status="passed", detail=PREFLIGHT_TEXT["messages"]["cli_chosen"]["detail"], next="")
+            if world.preflight.get("mock_bg"):
+                # The quiet background test starts. A test ends it with /__mock/pf_bg_end.
+                world.preflight["working_test"]["background"] = {"state": "running"}
+        elif path in ("/api/preflight/test/start", "/api/preflight/cli/recipe"):
+            world.preflight["working_test"]["background"] = {"state": "idle"}
+            kind = "test" if path == "/api/preflight/test/start" else "recipe"
+            label = PREFLIGHT_TEXT["working_test"]["terminal_label"] if kind == "test" else PREFLIGHT_TEXT["session_labels"]["recipe"]
+            world.terminal.update(running=True, exit_code=None, owner=f"preflight:{kind}", label=label)
+            world.preflight["session"] = {"kind": kind, "sent": False}
             self._greet()
         elif path == "/api/preflight/test/send":
             world.preflight["session"] = {"kind": "test", "sent": True}
+        elif path == "/api/preflight/test/poll":
+            # A test can set mock_poll_passes through /__mock/pf_set to make the quiet re-read find the files.
+            if world.preflight.get("mock_poll_passes") and world.preflight["session"]["kind"] == "test":
+                for item in world.preflight["items"]:
+                    if item["id"] == "working_test":
+                        item.update(status="passed", detail="Your AI is signed in, and it read a file, wrote files and ran a command correctly.", next="")
+                world.terminal.update(running=False, exit_code=0)
+                world.preflight["session"] = {"kind": None, "sent": False}
         elif path == "/api/preflight/test/check":
             for item in world.preflight["items"]:
                 if item["id"] == "working_test":
                     item.update(status="passed", detail="Your AI read a file, wrote files and ran a command correctly.", next="")
-        elif path == "/api/preflight/signin":
-            for item in world.preflight["items"]:
-                if item["id"] == "signin":
-                    item.update(status="passed", detail="You confirmed that you are signed in.", next="")
         elif path == "/api/preflight/stop":
             world.terminal.update(running=False, exit_code=0)
             world.preflight["session"] = {"kind": None, "sent": False}
@@ -1065,6 +1101,19 @@ class Handler(BaseHTTPRequestHandler):
                         item.update(body["changes"])
             elif parts.path == "/__mock/pf_set":
                 world.preflight.update(body)
+            elif parts.path == "/__mock/pf_bg_end":
+                # The quiet background test ends, as passed or as needs_you, with the server's own words.
+                key = "working_test_passed_background" if body["result"] == "passed" else "ai_test_background_needs_you"
+                message = PREFLIGHT_TEXT["messages"][key]
+                for item in world.preflight["items"]:
+                    if item["id"] == "working_test":
+                        item.update(status="passed" if body["result"] == "passed" else "needs_you",
+                                    detail=message["detail"], next=message["next"])
+                world.preflight["working_test"]["background"] = {"state": body["result"]}
+                world.preflight["passed"] = all(i["status"] == "passed" for i in world.preflight["items"] if i["applies"])
+                world.emit_state()
+            elif parts.path == "/__mock/pf_cli":
+                world.preflight["cli"] = cli_view(body.get("command", ""), body.get("found", []))
             elif parts.path == "/__mock/hook_run":
                 world.course.hook_runs[int(body["n"])] = body["text"]
                 world.course.cli_key = None
