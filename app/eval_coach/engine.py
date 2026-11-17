@@ -28,8 +28,8 @@ IMPORT_READ_CODES = ("missing_prompt_path", "missing_test_cases_path", "not_abso
 _ID_RE = re.compile(r"^C\d+$")
 _CLASS_KEY_RE = re.compile(r"^C\d+:(bad|polished)$")
 ANSWER_FIELDS = ("wrong", "catches", "worst_guess")
-PF_SIGNIN, PF_TEST, PF_RECIPE = "preflight:signin", "preflight:test", "preflight:recipe"
-PF_SESSIONS = (PF_SIGNIN, PF_TEST, PF_RECIPE)
+PF_TEST, PF_RECIPE = "preflight:test", "preflight:recipe"
+PF_SESSIONS = (PF_TEST, PF_RECIPE)
 NOT_KIND = object()  # what _kind_call returns for a step that has no kind
 
 
@@ -66,7 +66,7 @@ def _preflight_errors(method):
 
 class Engine:
     def __init__(self, home, terminal, poll_interval=1.0, preflight_runner=None, registry_paths=None,
-                 lessons=None, clock=None):
+                 lessons=None, clock=None, custom_ai=False):
         self.home = Path(home)
         self.home.mkdir(parents=True, exist_ok=True)
         self.terminal = terminal
@@ -91,7 +91,7 @@ class Engine:
         self._checker_running = False
         pf_kwargs = {"runner": preflight_runner, "python_path": self.python_path,
                      "publish": self.terminal.publish_state if hasattr(self.terminal, "publish_state") else None,
-                     "paths_provider": lambda: self.paths}
+                     "paths_provider": lambda: self.paths, "custom_ai": custom_ai}
         if registry_paths is not None:
             pf_kwargs["registry_paths"] = registry_paths
         self.preflight = Preflight(self.home, self.terminal, **pf_kwargs)
@@ -802,6 +802,7 @@ class Engine:
             if self.progress is not None and self.preflight.command_usable():
                 self.progress["cli_command"] = self.preflight.cli_command
                 self._save()
+            self.preflight.start_ai_test()
 
     def _start_preflight_session(self, command, cwd, label, session):
         try:
@@ -817,31 +818,12 @@ class Engine:
         return None
 
     @_preflight_errors
-    def preflight_cli_start(self):
-        """Item 5: start the CLI in the terminal, so the participant can sign in (item 6)."""
-        with self._lock:
-            command = self.preflight.require_cli_ready()
-            self._stop_cli()
-            folder = self.home / "cli-signin"
-            project.clear_dir(folder)
-            label = self.preflight.content["session_labels"]["signin"]
-            error = self._start_preflight_session(command, folder, label, PF_SIGNIN)
-            if error is not None:
-                self.preflight.cli_start_failed(error)
-                return
-            self.preflight.cli_launched(command)
-
-    @_preflight_errors
-    def preflight_signin_confirm(self):
-        with self._lock:
-            self.preflight.confirm_signin()
-
-    @_preflight_errors
     def preflight_recipe(self, recipe_id, consent):
         with self._lock:
             if self.preflight.job_running():
                 raise PreflightError("job_busy", self.preflight.content["errors"]["job_busy"])
             argv = self.preflight.recipe_argv(recipe_id, consent)
+            self.preflight.cancel_ai_test()
             self._stop_cli()
             folder = self.home / "cli-install"
             project.clear_dir(folder)
@@ -856,6 +838,7 @@ class Engine:
     def preflight_test_start(self):
         with self._lock:
             command = self.preflight.require_test_ready()
+            self.preflight.cancel_ai_test()
             self._stop_cli()
             folder = self.preflight.prepare_test_folder()
             label = self.preflight.content["working_test"]["terminal_label"]
@@ -884,6 +867,16 @@ class Engine:
             if passed and self._cli_step == PF_TEST:
                 self._stop_cli()  # that chat was only for the test
             self._after_preflight_change()
+
+    @_preflight_errors
+    def preflight_test_poll(self):
+        """Quiet re-read of the test folder after Send. Records a pass only, never a failure."""
+        with self._lock:
+            if self._cli_step != PF_TEST:
+                return
+            if self.preflight.poll_test_result():
+                self._stop_cli()  # that chat was only for the test
+                self._after_preflight_change()
 
     @_preflight_errors
     def preflight_stop(self):

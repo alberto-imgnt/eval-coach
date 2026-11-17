@@ -39,17 +39,50 @@ The working tree can hold unrelated edits. Never use `git add -A`, `git add .` o
 3. Everything else is **unrelated**. Show the user the two lists (belongs, unrelated), then ask which unrelated files, if any, to add. The default is none. Do not stage a path that is unclear without asking.
 4. Never stage ignored or generated output: `dist/`, `e2e-work/` scratch (everything but `e2e-work/harness/`), `spikes/*/transcripts/`, `__pycache__/`, `node_modules/`. Never stage anything that looks like a secret, token or personal data (AGENTS.md "Sensitive items"). Warn and leave it out.
 
-## Step 3 - Preflight tests
+## Step 3 - Preflight tests (receipt first, then ask)
 
-Run the backend suite from the repo root and stop on any failure:
+`/opsx-apply` does not run the full suites at completion. The archive gate (the lifecycle's Step 8, or the `operations.archive.guidance` in `openspec/config.yaml`) records the single run in a verification receipt (`verification.json` in the change folder, which moves to the archive with it). The receipt is tied to a git tree hash of the working tree (everything except `openspec/` and ignored files), so it proves the tests passed on exactly the files about to be committed. This step uses it to avoid running the same checks twice. When the archive hook hands off straight to this skill, the receipt is normally `valid`. Never write or edit a receipt by hand; only `tools\verify_receipt.py` writes one.
+
+### 3a - Check the receipt (no prompt)
 
 ```powershell
-python -m unittest discover -s tests
+python tools\verify_receipt.py check --change <change-name> --require backend
 ```
+
+It prints JSON and exits 0 (`valid`), 1 (`stale`), 2 (`missing`) or 3 (`incomplete`).
+
+| Status | Do this |
+|---|---|
+| `valid` | Skip the run without asking. Tell the user once: "Tests already passed on this exact state of the files (receipt from `<finished>`); skipping." Go to Step 4. |
+| `stale` | Show the `changed` list (files that differ from what was verified) and go to 3b. |
+| `incomplete` | Name the missing checks and go to 3b. |
+| `missing` | Go to 3b. |
+
+Record for the PR body and final report, for `valid`: "Tests: `<command>` passed (`<n>` tests) at `<finished>`; verified by receipt, files unchanged since (tree `<first 10 characters of recorded_tree>`)". Use the receipt's `checks` for every check it holds, not only `backend`.
+
+### 3b - Ask whether to run (receipt not valid)
+
+Ask the user, with the ask-user tool, whether to run the backend suite before branching. Use a single yes/no choice, default yes, and say in the question that it can take a few minutes and why the receipt did not apply (for example "3 files changed since the last verification"). Do not decide for them and do not skip the question.
+
+- **Yes**: run it through the receipt tool, so the result is recorded and the later steps can reuse it. Stop on any failure:
+
+  ```powershell
+  python tools\verify_receipt.py write --change <change-name> --name backend -- python -m unittest discover -s tests
+  ```
+
+- **No** (or the question is declined): skip the run. Record one of these for the PR body and the final report, and never claim a result you did not see:
+  - stale receipt: "Tests: not run now (skipped at the user's request). Earlier round: `<checks>` passed at `<finished>`, but these files changed after it: `<changed list>`."
+  - missing or incomplete receipt: "Tests: not run (skipped at the user's request). No valid verification receipt for these changes."
+
+  Then continue to Step 4. As a secondary hint only, the archived `tasks.md`, `docs/IMPLEMENTATION-PLAN.md` or the conversation may mention an earlier run; cite it as "reported earlier, not machine-checked", never as verified.
+
+When the suite runs:
 
 - Do not run it at the same time as another backend suite.
 - `test_conpty.RealConsole.test_type_line_sends_enter_separately` is timing-sensitive: rerun it once before treating that single failure as real.
 - If it fails, show the failing tests and stop. Do not branch, commit or push. Do not fix code from this skill; hand the failure back to the user.
+- `write` refuses to record a pass if files changed while the suite ran (exit 5); rerun it.
+- Running anything that edits files (formatters, builds that write outside `dist/`) after a receipt is written makes it stale; do not do that between Step 3 and the commit.
 
 ## Step 4 - Create the branch
 
@@ -150,7 +183,7 @@ gh pr create --base main --head <branch> --title "<commit header>" --body-file "
 <bullets from the proposal, or "Nothing noted.">
 
 ## Verification
-- `python -m unittest discover -s tests`: passed (<n> tests)
+- Verification, from Step 3: the receipt's passed checks with test counts and time ("verified by receipt, files unchanged since"), or "passed (<n> tests)" from a run just made, or the skipped wording (with the changed files, or "no valid verification receipt")
 <other checks the tasks ran and that passed, if known>
 
 ## OpenSpec
@@ -179,7 +212,7 @@ Changing the repo setting affects every future PR in the repo. Say that when ask
 Branch: <branch> (from main)
 Commit: <short sha> <header>
 Files: <n> committed; <m> left out (<list or "none">)
-Tests: python -m unittest discover -s tests - passed
+Tests: passed via valid receipt (files unchanged since) | passed (run now) | not run (skipped at the user's request); <changed files since the earlier round, or "no valid receipt">
 PR: <url>
 Delete branch after merge: <what happened in step 8>
 ```
@@ -192,6 +225,7 @@ If it stops early, report the step reached, what is already done (branch, commit
 - Stage by explicit path. Never `git add -A`, `-a`, `--force`, `--no-verify`, or `git reset --hard`.
 - Never merge the PR, and never change repo settings, protection or rulesets without the user's confirmation in this conversation.
 - Never write or change code, specs or docs from this skill. A failing test stops it.
+- Trust a verification receipt only when `verify_receipt.py check` says `valid`; never write or edit one by hand. With a valid receipt, do not ask and do not rerun. Otherwise always ask whether to run the tests (Step 3); never run them or skip them without the user's answer, and never report tests as passed when they were skipped. Report an earlier round as earlier, never as a result of this run.
 - Do not initialize a repo, add remotes, or change git config.
 - Run `git` and `gh` only against `origin` for this repo. Do not touch other repos or forks.
 - Re-read `git status` from disk before each stage; the user may have edited files.

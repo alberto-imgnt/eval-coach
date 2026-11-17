@@ -2,6 +2,7 @@
 // All words come from the server (content/preflight.json).
 
 import { h } from './dom.js';
+import { aiWindowLink, renderAiWindowLesson } from './ai-window.js';
 import { actionButton, textField } from './ui.js';
 
 function statusWord(pf, status) {
@@ -19,6 +20,11 @@ function itemById(pf, id) {
 function isPassed(pf, id) {
   const item = itemById(pf, id);
   return Boolean(item && item.status === 'passed');
+}
+
+// The quiet background test of the chosen AI is running. Nothing is shown of the AI itself while it does.
+export function aiTesting(pf) {
+  return Boolean(pf.working_test && pf.working_test.background && pf.working_test.background.state === 'running');
 }
 
 function renderProgress(pf) {
@@ -80,129 +86,208 @@ function installControls(ctx, pf, item) {
   );
 }
 
-function recipeCard(ctx, pf, recipe) {
+function fmt(template, vars) {
+  return String(template || '').replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] !== undefined ? vars[k] : m));
+}
+
+// One way to install a tool: its plain-words description, an install button and the exact command behind a link.
+function installOption(ctx, pf, tool, option, { primary }) {
   const t = pf.text;
   return h(
-    'li',
-    { key: `recipe-${recipe.id}`, class: 'pf-recipe', id: `pf-recipe-card-${recipe.id}` },
-    h('strong', { class: 'block' }, recipe.name),
-    recipe.note ? h('p', { class: 'hint' }, recipe.note) : null,
-    recipe.command
+    'div',
+    { class: 'pf-install-option', key: `opt-${option.id}`, id: `pf-install-option-${option.id}` },
+    h('p', { class: 'hint', key: 'plain' }, option.plain),
+    option.requirement
       ? h(
           'div',
-          { key: 'cmd' },
-          h('span', { class: 'hint block' }, t.recipe_exact),
-          h('code', { class: 'pf-command', id: `pf-recipe-command-${recipe.id}` }, recipe.command),
-        )
-      : null,
-    recipe.requirement
-      ? h(
-          'div',
-          { class: 'callout callout-attn', key: 'req' },
-          h('strong', null, `${t.recipe_requirement_missing} ${recipe.requirement.name}. `),
-          recipe.requirement.detail,
+          { class: 'callout callout-attn', key: 'req', id: `pf-requirement-${option.id}` },
+          h('strong', null, `${t.ai_requirement_missing} ${option.requirement.name}. `),
+          option.requirement.detail,
+          h(
+            'div',
+            { class: 'row' },
+            actionButton(ctx, {
+              label: fmt(t.ai_install_requirement, { name: option.requirement.name }),
+              id: `pf-install-${option.requirement.recipe}`,
+              busyKey: `pf-recipe-${option.requirement.recipe}`,
+              disabled: jobBusy(pf) || aiTesting(pf),
+              onClick: () => ctx.actions.pfRecipe(option.requirement.recipe),
+            }),
+          ),
         )
       : null,
     h(
       'div',
       { class: 'row', key: 'buttons' },
-      recipe.cli_command
-        ? actionButton(ctx, {
-            label: t.recipe_use,
-            id: `pf-recipe-use-${recipe.id}`,
-            onClick: () => {
-              ctx.setDraft('pf.cli_command', recipe.cli_command);
-              ctx.rerender();
-            },
-          })
-        : null,
-      recipe.requirement
-        ? actionButton(ctx, {
-            label: `${t.recipe_install}: ${recipe.requirement.name}`,
-            id: `pf-recipe-install-${recipe.requirement.recipe}`,
-            busyKey: `pf-recipe-${recipe.requirement.recipe}`,
-            disabled: jobBusy(pf),
-            onClick: () => ctx.actions.pfRecipe(recipe.requirement.recipe),
-          })
-        : null,
-      recipe.command
-        ? actionButton(ctx, {
-            label: t.recipe_install,
-            id: `pf-recipe-install-${recipe.id}`,
-            busyKey: `pf-recipe-${recipe.id}`,
-            disabled: jobBusy(pf),
-            onClick: () => ctx.actions.pfRecipe(recipe.id),
-          })
-        : null,
+      actionButton(ctx, {
+        label: fmt(t.ai_install, { name: tool.name }),
+        id: `pf-install-${option.id}`,
+        busyKey: `pf-recipe-${option.id}`,
+        kind: primary ? 'primary' : null,
+        disabled: jobBusy(pf) || aiTesting(pf),
+        onClick: () => ctx.actions.pfRecipe(option.id),
+      }),
     ),
+    h(
+      'details',
+      { class: 'pf-show-command', key: 'command', id: `pf-show-command-${option.id}` },
+      h('summary', null, t.ai_show_command),
+      h('span', { class: 'hint block' }, t.ai_exact),
+      h('code', { class: 'pf-command', id: `pf-command-${option.id}` }, option.command),
+    ),
+  );
+}
+
+function missingToolCard(ctx, pf, tool) {
+  const t = pf.text;
+  return h(
+    'li',
+    { key: `tool-${tool.cli_command}`, class: 'pf-tool', id: `pf-tool-${tool.cli_command}` },
+    h('div', { class: 'pf-tool-head' }, h('strong', null, tool.name), h('span', { class: 'pf-tag t-not_checked' }, t.ai_missing_tag)),
+    installOption(ctx, pf, tool, tool.install, { primary: false }),
+    tool.other_installs.length
+      ? h(
+          'details',
+          { class: 'pf-other-way', key: 'other', id: `pf-other-way-${tool.cli_command}` },
+          h('summary', null, t.ai_other_way),
+          tool.other_installs.map((option) => installOption(ctx, pf, tool, option, { primary: false })),
+        )
+      : null,
   );
 }
 
 function cliControls(ctx, pf, item) {
   const t = pf.text;
-  const found = item.status === 'passed' || (pf.cli.command && item.status === 'needs_you' && !ctx.hasDraft('pf.cli_command'));
+  const tools = pf.cli.tools;
+  const found = tools.filter((tool) => tool.found);
+  const missing = tools.filter((tool) => !tool.found);
+  const defaultChoice = (found.find((tool) => tool.chosen) || found.find((tool) => tool.preselect) || {}).cli_command || '';
+  const selected = ctx.draft('pf.ai', defaultChoice);
+  const chosen = tools.find((tool) => tool.chosen);
   return h(
     'div',
     { key: 'cli-controls' },
-    textField(ctx, { id: 'pf-cli-command', label: t.cli_label, hint: t.cli_hint, draftKey: 'pf.cli_command', value: pf.cli.command, mono: true }),
-    h(
-      'div',
-      { class: 'row', key: 'cli-buttons' },
-      actionButton(ctx, { label: t.cli_check, id: 'pf-cli-check', busyKey: 'pf-cli-check', busyLabel: t.cli_checking, onClick: () => ctx.actions.pfCliCheck() }),
-      actionButton(ctx, {
-        label: t.cli_start,
-        id: 'pf-cli-start',
-        busyKey: 'pf-cli-start',
-        busyLabel: t.cli_starting,
-        kind: 'primary',
-        disabled: !found,
-        onClick: () => ctx.actions.pfCliStart(),
-      }),
-    ),
-    h(
-      'details',
-      { class: 'pf-recipes', key: 'recipes', open: item.status !== 'passed' },
-      h('summary', null, t.recipe_heading),
-      h('p', { class: 'hint' }, t.recipe_hint),
-      h('ul', { class: 'pf-recipe-list' }, pf.cli.recipes.filter((r) => !r.hidden).map((r) => recipeCard(ctx, pf, r))),
-    ),
-  );
-}
-
-function signinControls(ctx, pf, item) {
-  const t = pf.text;
-  const cliReady = isPassed(pf, 'cli');
-  return h(
-    'div',
-    { class: 'row', key: 'signin-row' },
-    item.status !== 'passed'
-      ? actionButton(ctx, {
-          label: t.signin_confirm,
-          id: 'pf-signin-confirm',
-          busyKey: 'pf-signin',
-          kind: 'primary',
-          disabled: !cliReady,
-          onClick: () => ctx.actions.pfSignin(),
-        })
+    h('p', { class: 'hint', key: 'intro' }, t.ai_intro),
+    item.status === 'passed' && chosen ? h('p', { class: 'callout callout-good', id: 'pf-ai-chosen', key: 'chosen' }, fmt(t.ai_chosen, { name: chosen.name })) : null,
+    pf.session.kind === 'recipe' ? h('p', { class: 'callout callout-attn', id: 'pf-ai-installing', key: 'installing', role: 'status' }, t.ai_installing) : null,
+    aiTesting(pf)
+      ? h(
+          'p',
+          { class: 'callout callout-attn pf-testing', id: 'pf-ai-testing', key: 'testing', role: 'status' },
+          h('span', { class: 'pf-spinner', id: 'pf-ai-spinner', 'aria-hidden': 'true' }),
+          h('span', null, t.ai_testing),
+        )
+      : null,
+    found.length
+      ? h(
+          'fieldset',
+          { class: 'field', key: 'found' },
+          h('legend', { class: 'field-label' }, t.ai_found_legend),
+          found.map((tool) =>
+            h(
+              'label',
+              { class: 'radio-card', key: `found-${tool.cli_command}`, id: `pf-ai-card-${tool.cli_command}` },
+              h('input', {
+                type: 'radio',
+                name: 'ai',
+                value: tool.cli_command,
+                id: `pf-ai-${tool.cli_command}`,
+                checked: selected === tool.cli_command,
+                onChange: () => {
+                  ctx.setDraft('pf.ai', tool.cli_command);
+                  ctx.rerender();
+                },
+              }),
+              h('span', null, h('strong', null, tool.name), h('span', { class: 'hint block' }, t.ai_found_tag)),
+            ),
+          ),
+          h(
+            'div',
+            { class: 'row', key: 'use-row' },
+            actionButton(ctx, {
+              label: t.ai_use,
+              id: 'pf-use-ai',
+              busyKey: 'pf-use-ai',
+              kind: 'primary',
+              disabled: !selected || aiTesting(pf),
+              onClick: () => ctx.actions.pfUseAi(selected),
+            }),
+          ),
+        )
+      : null,
+    missing.length
+      ? h(
+          'div',
+          { class: 'pf-missing', key: 'missing' },
+          h('h3', { class: 'pf-missing-title' }, t.ai_missing_legend),
+          h('ul', { class: 'pf-tool-list', id: 'pf-tool-list' }, missing.map((tool) => missingToolCard(ctx, pf, tool))),
+        )
+      : null,
+    pf.custom_ai
+      ? h(
+          'div',
+          { class: 'pf-test-only', key: 'test-only', id: 'pf-test-only' },
+          textField(ctx, { id: 'pf-cli-command', label: pf.test_only.cli_label, hint: pf.test_only.cli_hint, draftKey: 'pf.cli_command', value: pf.cli.command, mono: true }),
+          h(
+            'div',
+            { class: 'row', key: 'cli-buttons' },
+            actionButton(ctx, { label: pf.test_only.cli_check, id: 'pf-cli-check', busyKey: 'pf-cli-check', busyLabel: pf.test_only.cli_checking, disabled: aiTesting(pf), onClick: () => ctx.actions.pfCliCheck() }),
+          ),
+        )
       : null,
   );
 }
 
 function workingTestControls(ctx, pf, item) {
   const t = pf.text;
-  const ready = isPassed(pf, 'cli') && isPassed(pf, 'signin');
+  const ready = isPassed(pf, 'cli');
   if (!ready || item.status === 'passed') return null;
   return h(
     'div',
-    { class: 'row', key: 'test-row' },
-    actionButton(ctx, {
-      label: t.test_check,
-      id: 'pf-test-check',
-      busyKey: 'pf-test-check',
-      busyLabel: t.test_checking,
-      kind: 'primary',
-      onClick: () => ctx.actions.pfTestCheck(),
-    }),
+    { key: 'test-controls' },
+    h('p', { class: 'hint', key: 'signin-note', id: 'pf-test-signin-note' }, t.test_signin_note),
+    h('p', { class: 'hint', key: 'waiting', id: 'pf-test-waiting' }, t.test_waiting),
+    h(
+      'div',
+      { class: 'row', key: 'test-row' },
+      actionButton(ctx, {
+        label: t.test_check,
+        id: 'pf-test-check',
+        busyKey: 'pf-test-check',
+        busyLabel: t.test_checking,
+        kind: 'primary',
+        onClick: () => ctx.actions.pfTestCheck(),
+      }),
+    ),
+  );
+}
+
+// The Checking your computer page: one row per check, and the AIs that were found. The checks run by themselves.
+function summaryControls(ctx, pf) {
+  const t = pf.text;
+  const rows = pf.items.filter((i) => i.applies && i.id !== 'track');
+  const names = pf.cli.tools.filter((tool) => tool.found).map((tool) => tool.name);
+  const cliDetail = (row) => (row.status === 'passed' ? row.detail : names.length ? fmt(t.summary_ai_found, { names: names.join(', ') }) : t.summary_ai_none);
+  return h(
+    'div',
+    { key: 'summary-controls' },
+    h('p', { class: 'hint', key: 'lede' }, t.summary_lede),
+    h(
+      'ul',
+      { class: 'setup-summary pf-summary', id: 'pf-summary', key: 'rows' },
+      rows.map((row) =>
+        h(
+          'li',
+          { key: `sum-${row.id}`, id: `pf-summary-${row.id}`, class: 'pf-summary-row' },
+          h('span', { class: 'pf-summary-title' }, row.title),
+          h('span', { class: `pf-tag t-${row.status}`, id: `pf-summary-status-${row.id}` }, statusWord(pf, row.status)),
+          (row.id === 'cli' ? cliDetail(row) : row.detail) ? h('p', { class: 'hint pf-summary-detail' }, row.id === 'cli' ? cliDetail(row) : row.detail) : null,
+        ),
+      ),
+    ),
+    ctx.wizard.summaryDone
+      ? h('p', { class: 'callout callout-good', id: 'pf-summary-done', key: 'done', role: 'status' }, pf.items.filter((i) => i.applies).every((i) => i.status === 'passed') ? t.summary_all_passed : t.summary_done)
+      : h('p', { class: 'hint', id: 'pf-summary-wait', key: 'wait', role: 'status' }, t.summary_running),
   );
 }
 
@@ -326,9 +411,10 @@ function projectControls(ctx, pf) {
 function renderItem(ctx, pf, item) {
   let controls = null;
   if (item.id === 'track') controls = trackControls(ctx, pf);
+  else if (item.id === 'summary') controls = summaryControls(ctx, pf);
+  else if (item.id === 'ai_window') controls = renderAiWindowLesson(ctx);
   else if (item.install) controls = installControls(ctx, pf, item);
   else if (item.id === 'cli') controls = cliControls(ctx, pf, item);
-  else if (item.id === 'signin') controls = signinControls(ctx, pf, item);
   else if (item.id === 'working_test') controls = workingTestControls(ctx, pf, item);
   else if (item.id === 'project') controls = projectControls(ctx, pf);
   return h(
@@ -339,7 +425,7 @@ function renderItem(ctx, pf, item) {
       { class: 'pf-head' },
       h('span', { class: 'pf-num' }, String(item.number)),
       h('h2', { class: 'pf-title' }, item.title),
-      h('span', { class: `pf-tag t-${item.status}`, id: `pf-status-${item.id}` }, statusWord(pf, item.status)),
+      item.virtual ? null : h('span', { class: `pf-tag t-${item.status}`, id: `pf-status-${item.id}` }, statusWord(pf, item.status)),
     ),
     item.detail ? h('p', { class: 'pf-detail', key: 'detail' }, item.detail) : null,
     item.next ? h('p', { class: 'pf-next', key: 'next' }, item.next) : null,
@@ -347,21 +433,33 @@ function renderItem(ctx, pf, item) {
   );
 }
 
-// Setup is a full-page wizard: one page per applicable check, with the same controls and ids as before.
-// The pages that use the participant's CLI show the terminal beside (or below) the page.
-const TERMINAL_ITEMS = ['cli', 'signin', 'working_test'];
-
+// Setup is a full-page wizard: one page per applicable check, with the same controls and ids as before, and two
+// pages that are not checks: Checking your computer (after Track) runs the checks by itself, and Your AI window
+// (last) is a lesson that is never recorded as progress.
 export function wizardPages(pf) {
-  return pf.items.filter((i) => i.applies);
+  const pages = pf.items.filter((i) => i.applies).map((i) => ({ ...i }));
+  const checked = pf.ran_once && !jobBusy(pf);
+  pages.splice(1, 0, { id: 'summary', virtual: true, title: pf.pages.summary.title, status: checked ? 'passed' : 'not_checked', detail: '', next: '' });
+  pages.push({ id: 'ai_window', virtual: true, title: pf.pages.ai_window.title, status: 'passed', detail: '', next: '' });
+  return pages;
 }
 
 // The page the wizard opens on: the first check that has not passed. A fresh setup starts on the Track page,
 // which carries the welcome text and the track choice even though its check passes by default.
 export function firstWizardItem(pf) {
-  const pages = wizardPages(pf);
+  const pages = wizardPages(pf).filter((p) => !p.virtual);
   if (!pages.slice(1).some((i) => i.status === 'passed')) return pages[0].id;
   const open = pages.find((i) => i.status !== 'passed');
   return (open || pages[0]).id;
+}
+
+// Moving forward goes to the next page that still needs the participant. Passed checks are skipped; Back and
+// the page list still reach them. The two pages that are not checks are never skipped.
+export function nextWizardPage(pages, index) {
+  for (let i = index + 1; i < pages.length; i += 1) {
+    if (pages[i].virtual || pages[i].status !== 'passed') return pages[i];
+  }
+  return pages[pages.length - 1];
 }
 
 export function wizardIndex(ctx) {
@@ -371,9 +469,15 @@ export function wizardIndex(ctx) {
   return index < 0 ? 0 : index;
 }
 
+export function wizardPageId(ctx) {
+  return wizardPages(ctx.state.preflight)[wizardIndex(ctx)].id;
+}
+
+// The AI window shows on the working test page, and on Choose your AI only while an install runs.
 export function wizardUsesTerminal(ctx) {
-  const pages = wizardPages(ctx.state.preflight);
-  return TERMINAL_ITEMS.includes(pages[wizardIndex(ctx)].id);
+  const id = wizardPageId(ctx);
+  if (id === 'working_test') return true;
+  return id === 'cli' && ctx.state.preflight.session.kind === 'recipe';
 }
 
 function wizardHead(ctx, pf, canSkip) {
@@ -411,6 +515,9 @@ function wizardProgress(pf, pages, index) {
   );
 }
 
+// Check everything is offered only where the participant can fix something outside the app and look again.
+const RECHECK_PAGES = ['python', 'node', 'promptfoo', 'cli', 'project'];
+
 export function renderWizard(ctx) {
   const pf = ctx.state.preflight;
   const t = pf.text;
@@ -418,9 +525,9 @@ export function renderWizard(ctx) {
   const index = wizardIndex(ctx);
   const page = pages[index];
   const last = index === pages.length - 1;
-  const passed = page.status === 'passed';
+  const passed = page.id === 'summary' ? Boolean(ctx.wizard.summaryDone) : page.status === 'passed';
   const busy = jobBusy(pf);
-  const unfinished = pages.filter((i) => i.status !== 'passed').map((i) => i.title);
+  const unfinished = pages.filter((i) => !i.virtual && i.status !== 'passed').map((i) => i.title);
   // First run offers to skip. Opened from Settings or the reminder, it offers to close instead.
   const canSkip = !ctx.wizard.byChoice && !pf.passed && !pf.skipped;
   const result = ctx.wizard.byChoice ? null : ctx.local('reset-result');
@@ -448,22 +555,25 @@ export function renderWizard(ctx) {
         'div',
         { class: 'row' },
         actionButton(ctx, { label: t.wizard_back, id: 'wizard-back', disabled: index === 0, onClick: () => goTo(pages[index - 1]) }),
-        actionButton(ctx, {
-          label: pf.ran_once ? t.check_all_again : t.check_all,
-          id: 'pf-check-all',
-          busyKey: 'pf-check',
-          busyLabel: t.checking,
-          disabled: busy,
-          onClick: () => ctx.actions.pfCheckAll(),
-        }),
-        last ? null : actionButton(ctx, { label: t.wizard_next, id: 'wizard-next', kind: 'primary', disabled: !passed, onClick: () => goTo(pages[index + 1]) }),
+        RECHECK_PAGES.includes(page.id)
+          ? actionButton(ctx, {
+              label: pf.ran_once ? t.check_all_again : t.check_all,
+              id: 'pf-check-all',
+              busyKey: 'pf-check',
+              busyLabel: t.checking,
+              disabled: busy,
+              onClick: () => ctx.actions.pfCheckAll(),
+            })
+          : null,
+        last
+          ? actionButton(ctx, { label: t.wizard_finish, id: 'wizard-finish', kind: 'primary', onClick: () => ctx.actions.wizardFinish() })
+          : actionButton(ctx, { label: t.wizard_next, id: 'wizard-next', kind: 'primary', disabled: !passed || (page.id === 'cli' && aiTesting(pf)), onClick: () => goTo(nextWizardPage(pages, index)) }),
       ),
-      !last && !passed ? h('p', { class: 'hint', id: 'wizard-needed', key: 'needed' }, t.wizard_needed) : null,
-      unfinished.length ? h('p', { class: 'hint', id: 'wizard-unfinished', key: 'unfinished' }, t.still_to_finish.replace('{items}', unfinished.join(', '))) : null,
+      !last && !passed ? h('p', { class: 'hint', id: 'wizard-needed', key: 'needed' }, page.id === 'summary' ? t.summary_wait : t.wizard_needed) : null,
+      unfinished.length && !last ? h('p', { class: 'hint', id: 'wizard-unfinished', key: 'unfinished' }, t.still_to_finish.replace('{items}', unfinished.join(', '))) : null,
     ),
   );
 }
-
 
 export function renderPreflightTermHead(ctx) {
   const { state } = ctx;
@@ -472,7 +582,7 @@ export function renderPreflightTermHead(ctx) {
   const { terminal } = state;
   const running = terminal.running;
   const testItem = itemById(pf, 'working_test');
-  const testReady = isPassed(pf, 'cli') && isPassed(pf, 'signin') && testItem && testItem.status !== 'passed';
+  const testReady = ctx.wizard.item === 'working_test' && isPassed(pf, 'cli') && testItem && testItem.status !== 'passed';
   const statusLine =
     running ? t.term_running : terminal.exit_code !== null && terminal.exit_code !== undefined ? t.term_stopped.replace('{code}', terminal.exit_code) : t.term_not_running;
   return [
@@ -482,6 +592,7 @@ export function renderPreflightTermHead(ctx) {
       h('h2', { class: 'term-label' }, terminal.label || t.term_title),
       h('span', { class: `term-status${running ? ' is-on' : ''}`, role: 'status' }, statusLine),
     ),
+    h('div', { class: 'row term-ai-link', key: 'ai-window-link' }, aiWindowLink(ctx)),
     testReady
       ? h(
           'div',

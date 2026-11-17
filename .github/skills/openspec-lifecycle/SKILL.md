@@ -76,19 +76,25 @@ OpenSpec's core profile has no verify command, so do it here:
 
 1. `openspec list --json`: the change's `completedTasks` must equal `totalTasks`.
 2. `openspec validate "<name>" --strict --json`: still valid (the plan may have been edited during apply).
-3. Run the project's test and build commands named in the tasks and in AGENTS.md or the config guidance. Run them one at a time when the project says not to overlap them. Use stand-ins, never real external tools, unless the user approved them.
-4. Walk the delta specs: for each `#### Scenario:` confirm the code or a test covers it. List any scenario with no coverage.
-5. Check the docs the project requires to be updated with the change (for example its main spec or plan document).
+3. Walk the delta specs: for each `#### Scenario:` confirm the code or a test covers it. List any scenario with no coverage.
+4. Check the docs the project requires to be updated with the change (for example its main spec or plan document).
 
-If anything fails, fix it within the change's scope and re-verify, or pause (checkpoint B). Report a short verification table: check, result.
+The test and build suites are not run here. They run once, in the archive gate (Step 8), so they are never run twice.
 
-## Step 8 - Sync and archive (checkpoint C)
+If anything fails, fix it within the change's scope, or pause (checkpoint B). Report a short verification table: check, result.
 
-1. Run `openspec instructions archive --change "<name>" --json` (advisory; ignore failure) and apply its `context` and `operationGuidance`.
-2. Show the user: change name, tasks complete, verification result, delta specs and whether the main specs need syncing, and what will move to `changes/archive/`. Ask to confirm. Wait for the answer.
-3. On confirmation follow the `openspec-archive-change` skill, which assesses the sync, runs `openspec-sync-specs` inline, verifies the merged main specs, and moves the change. Do not sync in the background.
-4. Afterwards run `openspec validate --all --strict --json` and `openspec list --json`; the change must no longer be active and the specs must be valid.
-5. Follow any archive guidance from the config (for example summarising which existing docs are superseded) in the final report.
+## Step 8 - Verification gate, sync and archive (checkpoint C)
+
+1. **Verification gate** (before anything is synced or moved). Run `python tools\verify_receipt.py check --change "<name>" --require backend`.
+   - `valid`: skip the suites and say the receipt is current.
+   - Otherwise run each check the tasks and AGENTS.md name, one at a time, through the receipt tool: `python tools\verify_receipt.py write --change "<name>" --name <backend|interface|build|e2e> -- <command>`. Use stand-ins, never real external tools, unless the user approved them. If a check fails, fix it within the change's scope and rerun, or pause (checkpoint B); never archive on a failure. A fix invalidates earlier receipts, so rerun every required check after the last edit.
+   - Never write or edit a receipt by hand.
+2. Run `openspec instructions archive --change "<name>" --json` (advisory; ignore failure) and apply its `context` and `operationGuidance`.
+3. Show the user: change name, tasks complete, verification result (from the receipt), delta specs and whether the main specs need syncing, and what will move to `changes/archive/`. Ask to confirm. Wait for the answer.
+4. On confirmation follow the `openspec-archive-change` skill, which assesses the sync, runs `openspec-sync-specs` inline, verifies the merged main specs, and moves the change. Do not sync in the background.
+5. Afterwards run `openspec validate --all --strict --json` and `openspec list --json`; the change must no longer be active and the specs must be valid.
+6. Follow any archive guidance from the config (for example summarising which existing docs are superseded) in the final report.
+7. **Completion hook**: ask the user whether to open the branch and pull request now. On yes, follow the `post-archive-pr` skill; its Step 3 finds the receipt valid and does not run the tests again. On no, say they can ask for it later. Never start it without the yes.
 
 ## Final report
 
@@ -96,9 +102,10 @@ If anything fails, fix it within the change's scope and re-verify, or pause (che
 ## Lifecycle complete: <name>
 Stages: explore (skipped|done) > propose > validate > approve > apply > verify > archive
 Plan: <n> capabilities, <m> tasks, all complete
-Verification: <checks and results>
+Verification: <checks and results, from the receipt>
 Specs: <synced to main specs | no delta specs | skipped>
 Archived to: <path>
+Pull request: <opened (url) | declined | later>
 Follow-ups: <anything deferred, assumed defaults the user confirmed, docs to review>
 ```
 

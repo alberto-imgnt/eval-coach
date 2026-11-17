@@ -132,12 +132,17 @@ function renderSetupGroup(ctx) {
           h(
             'li',
             { key: `sum-${i.id}`, id: `settings-setup-${i.id}` },
-            h('span', null, i.title),
+            h('span', null, (s.summary_names && s.summary_names[i.id]) || i.title),
             h('span', { class: `pf-tag t-${i.status}` }, pf.text[`status_${i.status}`] || i.status),
           ),
         ),
     ),
-    h('div', { class: 'row' }, actionButton(ctx, { label: s.setup_open, id: 'settings-setup-open', kind: 'primary', onClick: () => ctx.actions.openSetup() })),
+    h(
+      'div',
+      { class: 'row' },
+      actionButton(ctx, { label: s.setup_open, id: 'settings-setup-open', kind: 'primary', onClick: () => ctx.actions.openSetup() }),
+      actionButton(ctx, { label: s.setup_ai_window, id: 'settings-ai-window', onClick: () => ctx.actions.openAiWindowLesson() }),
+    ),
   );
 }
 

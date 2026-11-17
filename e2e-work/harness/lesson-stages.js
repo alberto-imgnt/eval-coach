@@ -1208,7 +1208,7 @@ async function spawnApp(home) {
   const log = path.join(L.WORK, 'server-migrate.out');
   fs.writeFileSync(log, '');
   const out = fs.openSync(log, 'a');
-  const child = spawn(L.PYTHON, [L.PYZ, '--no-browser', '--home', home], { detached: true, stdio: ['ignore', out, out], env: L.filteredEnv(), windowsHide: true, cwd: L.WORK });
+  const child = spawn(L.PYTHON, [L.PYZ, '--no-browser', '--custom-ai', '--home', home], { detached: true, stdio: ['ignore', out, out], env: L.filteredEnv(), windowsHide: true, cwd: L.WORK });
   child.unref();
   fs.closeSync(out);
   for (let i = 0; i < 100; i += 1) {

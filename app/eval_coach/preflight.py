@@ -21,7 +21,7 @@ from . import project, resources
 from . import state as store
 from .state import CorruptStateError
 
-ITEM_IDS = ("track", "python", "node", "promptfoo", "cli", "signin", "working_test", "project")
+ITEM_IDS = ("track", "python", "node", "promptfoo", "cli", "working_test", "project")
 PROMPTFOO_ITEMS = ("node", "promptfoo")
 TRACKS = ("script", "promptfoo")
 STATUSES = ("not_checked", "passed", "failed", "needs_you")
@@ -46,7 +46,7 @@ EXTRACT_TIMEOUT = 300
 NPM_TIMEOUT = 1800
 SIZE_POLL_SECONDS = 3.0
 PUBLISH_SECONDS = 1.0
-
+AI_TEST_SECONDS = 120  # the quiet test's limit when a recipe does not name one
 CREATE_NO_WINDOW = 0x08000000
 _SYSTEM32 = os.path.join(os.environ.get("SystemRoot") or r"C:\Windows", "System32")
 CURL = os.path.join(_SYSTEM32, "curl.exe")
@@ -255,9 +255,20 @@ class Job:
                 "total_bytes": self.total_bytes, "percent": percent, "detail": self.detail}
 
 
+class _AiTest:
+    """One quiet background test of the chosen AI. `state` is running, passed or needs_you."""
+
+    def __init__(self, command):
+        self.command = command
+        self.state = "running"
+        self.cancel = threading.Event()
+        self.thread = None
+
+
 class Preflight:
     def __init__(self, home, terminal, publish=None, runner=None, registry_paths=read_registry_paths,
-                 python_path=None, paths_provider=None):
+                 python_path=None, paths_provider=None, custom_ai=False):
+        self.custom_ai = bool(custom_ai)
         self.home = Path(home)
         self.home.mkdir(parents=True, exist_ok=True)
         self.terminal = terminal
@@ -271,8 +282,10 @@ class Preflight:
         self.path = self.home / "preflight.json"
         self._lock = threading.RLock()
         self._job = None
+        self._ai_test = None
         self._last_publish = 0.0
         self.load_problem = False
+        self._found_commands = []
         self._data = self._load()
 
     # --- persistence -------------------------------------------------------
@@ -301,9 +314,9 @@ class Preflight:
     def _new_data(self):
         m = self.content["messages"]["not_checked"]
         items = {item: {"status": "not_checked", "detail": m["detail"], "next": m["next"]} for item in ITEM_IDS}
-        data = {"version": 1, "track": "script", "cli_command": "", "launched_command": "",
-                "signed_in_command": "", "test_passed_command": "", "recipe_ran": False, "ran_once": False,
-                "setup_skipped": False, "items": items}
+        data = {"version": 1, "track": "script", "cli_command": "", "test_passed_command": "",
+                "test_passed_quietly": False,
+                "recipe_ran": False, "ran_once": False, "setup_skipped": False, "items": items}
         self._apply_track_item(data)
         return data
 
@@ -339,6 +352,7 @@ class Preflight:
     def reset_state(self):
         """Forget every saved setup result, as on first run. The caller has moved preflight.json away."""
         with self._lock:
+            self._cancel_ai_test()
             self._data = self._new_data()
             self.load_problem = False
 
@@ -482,8 +496,12 @@ class Preflight:
             job = self._job
             if job is not None:
                 job.cancel.set()
+            test = self._ai_test
+            self._cancel_ai_test()
         if job is not None and job.thread is not None:
             job.thread.join(15)
+        if test is not None and test.thread is not None:
+            test.thread.join(15)
 
     # --- check everything --------------------------------------------------
 
@@ -501,11 +519,12 @@ class Preflight:
         steps = [("python", self._check_python)]
         if self._applies("node"):
             steps += [("node", self._check_node), ("promptfoo", self._check_promptfoo)]
-        steps += [("cli", self._check_cli), ("signin", self._check_signin),
-                  ("working_test", self._check_working_test)]
+        steps += [("cli", self._check_cli), ("working_test", self._check_working_test)]
         for item, check in steps:
             job.detail = self.content["items"][item]["title"]
             self.publish()
+            if item == "cli":
+                self._detect_ais()
             self._guarded(item, check)
         self._guarded("project", self.check_project, self.paths_provider())
         with self._lock:
@@ -597,7 +616,6 @@ class Preflight:
     def _check_cli(self):
         with self._lock:
             command = self._data["cli_command"]
-            launched = self._data["launched_command"]
             recipe_ran = self._data["recipe_ran"]
         if not command:
             self._set("cli", "needs_you", "cli_enter_command")
@@ -608,28 +626,41 @@ class Preflight:
             key = "cli_not_found_after_install" if recipe_ran else "cli_not_found"
             self._set("cli", "failed", key, command=command)
             return
-        if launched == command:
-            self._set("cli", "passed", "cli_launched")
-        else:
-            self._set("cli", "needs_you", "cli_found", command=command)
+        self._set("cli", "passed", "cli_chosen", command=command)
 
-    def _check_signin(self):
+    def _detect_ais(self):
+        """Which supported AIs resolve on this computer. Names are resolved; no tool is started."""
+        env = self.env()
+        found = []
+        for command in self._tool_commands():
+            try:
+                self.terminal.check_command(command, env)
+            except (ValueError, OSError):
+                continue
+            found.append(command)
         with self._lock:
-            command = self._data["cli_command"]
-            confirmed = self._data["signed_in_command"]
-        if self._status("cli") != "passed":
-            self._set("signin", "needs_you", "signin_needs_cli")
-        elif confirmed and confirmed == command:
-            self._set("signin", "passed", "signin_confirmed")
-        else:
-            self._set("signin", "needs_you", "signin_waiting")
+            self._found_commands = found
+
+    def _tool_commands(self):
+        """One launch command per supported tool, in recipe order. The free-text recipe is left out."""
+        commands = []
+        for recipe in self.recipes:
+            command = recipe.get("cli_command", "")
+            if command and recipe.get("participant") is not False and command not in commands:
+                commands.append(command)
+        return commands
 
     def _check_working_test(self):
         with self._lock:
             command = self._data["cli_command"]
             tested = self._data["test_passed_command"]
-        if self._status("signin") != "passed":
+            quietly = self._data["test_passed_quietly"] is True
+            if self._ai_test is not None and self._ai_test.state == "running":
+                return
+        if self._status("cli") != "passed":
             self._set("working_test", "not_checked", "working_test_needs_previous")
+        elif tested and tested == command and quietly:
+            self._set("working_test", "passed", "working_test_passed_background")  # no test files to re-read
         elif tested and tested == command:
             self.check_test_result()
         else:
@@ -843,14 +874,20 @@ class Preflight:
             raise self._error("needs_cli_command")
         with self._lock:
             if command != self._data["cli_command"]:
+                self._cancel_ai_test()
                 self._data["cli_command"] = command
-                self._data["launched_command"] = ""
-                self._data["signed_in_command"] = ""
                 self._data["test_passed_command"] = ""
-                self._set("signin", "not_checked", "signin_needs_cli")
                 self._set("working_test", "not_checked", "working_test_needs_previous")
             self._save()
         self._check_cli()
+        self._check_working_test_gate()
+
+    def _check_working_test_gate(self):
+        """After the command is checked, the working test is open only when the command was found."""
+        if self._status("cli") == "passed":
+            self._set("working_test", "needs_you", "working_test_ready")
+        else:
+            self._set("working_test", "not_checked", "working_test_needs_previous")
 
     def command_usable(self):
         with self._lock:
@@ -863,32 +900,89 @@ class Preflight:
             raise self._error("needs_cli_command")
         return command
 
-    def cli_launched(self, command):
-        with self._lock:
-            self._data["launched_command"] = command
-            self._save()
-        self._set("cli", "passed", "cli_launched")
-        self._check_signin()
-
     def cli_start_failed(self, error):
-        self._set("cli", "failed", "cli_start_failed", error=str(error))
-
-    def confirm_signin(self):
-        with self._lock:
-            if self._status("cli") != "passed":
-                raise self._error("needs_cli_command")
-            self._data["signed_in_command"] = self._data["cli_command"]
-            self._save()
-        self._set("signin", "passed", "signin_confirmed")
-        self._check_working_test()
+        self._set("working_test", "failed", "cli_start_failed", error=str(error))
 
     def require_test_ready(self):
         command = self.require_cli_ready()
         if self._status("cli") != "passed":
             raise self._error("needs_cli_command")
-        if self._status("signin") != "passed":
-            raise self._error("needs_signin")
         return command
+
+    # --- quiet background test of the chosen AI ------------------------------
+
+    def _headless(self, command):
+        """(args, seconds) of the one-shot run for this exact command, or None when its recipe has none."""
+        for recipe in self.recipes:
+            data = recipe.get("headless")
+            if recipe.get("cli_command") != command or not isinstance(data, dict):
+                continue
+            args, seconds = data.get("args"), data.get("timeout_seconds", AI_TEST_SECONDS)
+            if (isinstance(args, list) and all(isinstance(a, str) for a in args) and any("{line}" in a for a in args)
+                    and isinstance(seconds, int) and not isinstance(seconds, bool) and seconds > 0):
+                return args, seconds
+        return None
+
+    def start_ai_test(self):
+        """Test the chosen AI in the background with its one-shot mode. True when a test was started.
+
+        Nothing is typed, no window opens, and no permission flag is used. Only the process's exit status
+        decides: it never records a failure, so an AI that cannot finish quietly goes to the visible test.
+        """
+        with self._lock:
+            command = self._data["cli_command"]
+            if (not command or self._status("cli") != "passed" or self._data["test_passed_command"] == command
+                    or self.terminal.running):
+                return False
+            headless = self._headless(command)
+            if headless is None:
+                return False
+            self._cancel_ai_test()
+            record = _AiTest(command)
+            self._ai_test = record
+            record.thread = threading.Thread(target=self._run_ai_test, args=(record, headless), daemon=True)
+            record.thread.start()
+        self.publish()
+        return True
+
+    def cancel_ai_test(self):
+        with self._lock:
+            self._cancel_ai_test()
+        self.publish()
+
+    def _cancel_ai_test(self):
+        record, self._ai_test = self._ai_test, None
+        if record is not None:
+            record.cancel.set()
+
+    def _run_ai_test(self, record, headless):
+        args, seconds = headless
+        passed = False
+        try:
+            env = self.env()
+            argv = self.terminal.argv_for(record.command, env)
+            argv[0] = self._find_tool(argv[0], env) or argv[0]
+            line = self.content["working_test"]["headless_line"]
+            argv += [arg.replace("{line}", line) for arg in args]
+            folder = self.home / "cli-test"
+            folder.mkdir(parents=True, exist_ok=True)
+            result = self.runner.run(argv, seconds, env=env, cwd=str(folder), cancel=record.cancel)
+            passed = result.started and result.code == 0 and not result.timed_out and not result.cancelled
+        except Exception:  # noqa: BLE001 - whatever went wrong, the visible test is the way forward
+            passed = False
+        with self._lock:
+            if self._ai_test is not record or record.cancel.is_set():
+                return
+            if passed:
+                record.state = "passed"
+                self._data["test_passed_command"] = record.command
+                self._data["test_passed_quietly"] = True
+                self._save()
+                self._set("working_test", "passed", "working_test_passed_background")
+            else:
+                record.state = "needs_you"
+                self._set("working_test", "needs_you", "ai_test_background_needs_you")
+        self.publish()
 
     def prepare_test_folder(self):
         folder = self.home / "cli-test"
@@ -900,6 +994,24 @@ class Preflight:
     @property
     def test_line(self):
         return self.content["working_test"]["line"]
+
+    def poll_test_result(self):
+        """Quiet re-read of the test folder: records a pass, never a failure. True when it passed."""
+        wt = self.content["working_test"]
+        folder = self.home / "cli-test"
+        output = _read_decoded(folder / "output.txt")
+        version = _read_decoded(folder / "version.txt")
+        if (output is None or version is None or output.rstrip() != wt["expected_output"]
+                or wt["expected_version"] not in version):
+            return False
+        with self._lock:
+            if self._status("cli") != "passed":
+                return False
+            self._data["test_passed_command"] = self._data["cli_command"]
+            self._data["test_passed_quietly"] = False
+            self._save()
+        self._set("working_test", "passed", "working_test_passed")
+        return True
 
     def check_test_result(self):
         wt = self.content["working_test"]
@@ -923,6 +1035,7 @@ class Preflight:
             return False
         with self._lock:
             self._data["test_passed_command"] = self._data["cli_command"]
+            self._data["test_passed_quietly"] = False
             self._save()
         self._set("working_test", "passed", "working_test_passed")
         return True
@@ -1000,6 +1113,41 @@ class Preflight:
             result.append(entry)
         return result
 
+    def _cli_view(self, free):
+        """The chosen command, and one entry per supported tool for the Choose your AI page."""
+        recipes = self._recipes_view(free)
+        found = list(self._found_commands)
+        chosen = self._data["cli_command"]
+        tools, seen = [], {}
+        for entry in recipes:
+            command = entry["cli_command"]
+            recipe = next(r for r in self.recipes if r["id"] == entry["id"])
+            if not command or recipe.get("participant") is False:
+                continue
+            entry = dict(entry, plain=recipe.get("plain") or recipe.get("note", ""))
+            if command in seen:
+                seen[command]["other_installs"].append(entry)
+                continue
+            tool = {"id": recipe["id"], "name": recipe.get("tool_name") or entry["name"], "cli_command": command,
+                    "found": command in found, "chosen": command == chosen, "preselect": False,
+                    "install": entry, "other_installs": []}
+            seen[command] = tool
+            tools.append(tool)
+        found_tools = [t for t in tools if t["found"]]
+        if len(found_tools) == 1 and not chosen:
+            found_tools[0]["preselect"] = True
+        return {"command": chosen, "found": found, "tools": tools, "recipes": recipes,
+                "tool": self._tool_key(chosen)}
+
+    @staticmethod
+    def _tool_key(command):
+        """The launch name of the chosen tool, whatever options or path were typed."""
+        parts = (command or "").strip().split()
+        if not parts:
+            return ""
+        name = parts[0].replace("\\", "/").rsplit("/", 1)[-1].lower()
+        return name[:-4] if name.endswith(".exe") else name
+
     def view(self, paths, session):
         free = self._disk_free()
         with self._lock:
@@ -1016,8 +1164,7 @@ class Preflight:
                 project_item = next(i for i in items if i["id"] == "project")
                 m = self.content["messages"]["project_needs_choice"]
                 project_item.update(status="needs_you", detail=m["detail"], next=m["next"])
-            cli = {"command": self._data["cli_command"], "launched": bool(self._data["launched_command"]),
-                   "recipes": self._recipes_view(free)}
+            cli = self._cli_view(free)
             wt = self.content["working_test"]
             passed = self.is_passed(paths)
             view = {
@@ -1030,9 +1177,14 @@ class Preflight:
                 "job": job,
                 "cli": cli,
                 "ran_once": self._data["ran_once"],
-                "working_test": {"line": wt["line"], "folder_label": wt["folder_label"]},
+                "custom_ai": self.custom_ai,
+                "working_test": {"line": wt["line"], "folder_label": wt["folder_label"],
+                                 "background": {"state": self._ai_test.state if self._ai_test else "idle"}},
                 "session": session,
                 "disk": {"free_bytes": free, "free_text": human_bytes(free)},
                 "text": copy.deepcopy(self.content["ui"]),
+                "pages": copy.deepcopy(self.content["pages"]),
+                "test_only": copy.deepcopy(self.content["test_only"]),
+                "ai_window_lesson": copy.deepcopy(self.content["ai_window_lesson"]),
             }
         return view

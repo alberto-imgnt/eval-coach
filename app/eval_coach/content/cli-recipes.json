@@ -3,38 +3,49 @@
     {
       "id": "copilot",
       "name": "GitHub Copilot CLI",
+      "tool_name": "GitHub Copilot CLI",
       "cli_command": "copilot",
+      "headless": {"args": ["-p", "{line}"], "timeout_seconds": 120},
       "shell": "cmd",
       "command": "winget install GitHub.Copilot",
       "needs_mb": 400,
+      "plain": "Installs GitHub Copilot CLI, GitHub's AI tool, from GitHub. It takes about 400 MB of disk and needs a GitHub Copilot license.",
       "source": "GitHub's official Copilot CLI documentation",
       "requires": {"command": "pwsh", "name": "PowerShell 6 or later", "recipe": "powershell", "detail": "GitHub Copilot CLI needs PowerShell 6 or later. Windows only includes PowerShell 5.1, so install PowerShell first with the option below."}
     },
     {
       "id": "claude-installer",
       "name": "Claude Code (installer script)",
+      "tool_name": "Claude Code",
       "cli_command": "claude",
+      "headless": {"args": ["-p", "{line}"], "timeout_seconds": 120},
       "shell": "cmd",
       "command": "curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd",
       "needs_mb": 400,
+      "plain": "Installs Claude Code, Anthropic's AI tool, from Anthropic's own installer. It takes about 400 MB of disk and needs a Claude account that includes Claude Code.",
       "source": "Anthropic's official Claude Code documentation"
     },
     {
       "id": "claude-winget",
       "name": "Claude Code (winget)",
+      "tool_name": "Claude Code",
       "cli_command": "claude",
       "shell": "cmd",
       "command": "winget install Anthropic.ClaudeCode",
       "needs_mb": 400,
+      "plain": "Installs Claude Code through winget, the Windows package manager. It takes about 400 MB of disk.",
       "source": "Anthropic's official Claude Code documentation"
     },
     {
       "id": "devin",
       "name": "Devin CLI",
+      "tool_name": "Devin CLI",
       "cli_command": "devin",
+      "headless": {"args": ["-p", "{line}"], "timeout_seconds": 120},
       "shell": "powershell",
       "command": "irm https://static.devin.ai/cli/setup.ps1 | iex",
       "needs_mb": 400,
+      "plain": "Installs Devin CLI, Devin's AI tool, from Devin's own setup script. It takes about 400 MB of disk and needs a Devin account.",
       "source": "Devin's official documentation"
     },
     {
@@ -44,6 +55,7 @@
       "shell": "cmd",
       "command": "winget install Microsoft.PowerShell",
       "needs_mb": 400,
+      "plain": "Installs PowerShell, which GitHub Copilot CLI needs. It takes about 400 MB of disk.",
       "source": "Microsoft's official PowerShell documentation",
       "hidden": true
     },
@@ -51,6 +63,7 @@
       "id": "other",
       "name": "Another AI tool",
       "cli_command": "",
+      "participant": false,
       "shell": "none",
       "command": "",
       "needs_mb": 0,

@@ -104,10 +104,26 @@ The wizard SHALL show the terminal, framed as "your AI window", only on the AI w
 - **WHEN** the participant is on the Python, Choose your AI (with no install running), Project folder or Your AI window page
 - **THEN** no terminal is shown
 
+#### Scenario: No terminal during the background test
+- **GIVEN** the participant pressed "Use this AI" and the background test is running
+- **WHEN** the Choose your AI page is shown
+- **THEN** no terminal or AI window is shown
+
 #### Scenario: Running AI while moving
 - **GIVEN** the participant started their AI on the AI working test page
 - **WHEN** the participant moves to the Project folder page
 - **THEN** the same AI process is still running
+
+### Requirement: Check everything is offered only where the participant can act on it
+The wizard footer SHALL offer "Check everything" only on the Python, Node.js, promptfoo, Choose your AI and Project folder pages, where a participant can fix something outside the app and look again. It SHALL NOT be offered on Track, Checking your computer, AI working test or Your AI window. Its label and its effect (running the applicable checks again) SHALL be unchanged.
+
+#### Scenario: Offered where a check can be fixed outside the app
+- **WHEN** the participant is on the Python, Node.js, promptfoo, Choose your AI or Project folder page
+- **THEN** the footer offers Check everything and pressing it runs the checks again
+
+#### Scenario: Not offered where it adds nothing
+- **WHEN** the participant is on the Track, Checking your computer, AI working test or Your AI window page
+- **THEN** the footer shows no Check everything button
 
 ### Requirement: Checking your computer runs by itself
 The Checking your computer page SHALL start the checks as soon as it is shown, with no Check button needed: Python, for the promptfoo track Node.js and promptfoo (offline only, nothing downloaded), the project folder, and which supported AIs are installed. While it runs it SHALL show progress and SHALL NOT move to another page by itself. When it ends it SHALL show the result of each check in plain words and a Next control that goes to the first page that needs the participant, or to the Your AI window page when every check has passed. Checks SHALL read only files and resolve command names, never terminal text (AGENTS.md rule 3). Source: series review items 5 and 5b.
@@ -139,7 +155,7 @@ The Checking your computer page SHALL start the checks as soon as it is shown, w
 - **THEN** the checks run again
 
 ### Requirement: Sign-in and the AI working test are one page
-The AI working test page SHALL replace the separate "Sign in and license" page. The participant starts their AI window there, signs in if the AI asks, and presses Send for the test line. The app SHALL decide the result from the files in the test folder, never from terminal text. A passing test SHALL count as proof of sign-in, and no "I signed in" confirmation SHALL be asked. While the participant has pressed Send and the AI window is running, the page SHALL re-read the test folder every few seconds and show success when the files are right, without reporting a failure until the participant presses the Check button. Source: series review item 5b.
+The AI working test page SHALL replace the separate "Sign in and license" page. It is where the participant goes when the background test (see `ai-selection`) did not pass, and it stays reachable with Back and the page list. The participant starts their AI window there, signs in if the AI asks, and presses Send for the test line. When the participant arrives because the background test could not finish, the page SHALL say so in plain words. The app SHALL decide the result from the files in the test folder, never from terminal text. A passing test SHALL count as proof of sign-in, and no "I signed in" confirmation SHALL be asked. While the participant has pressed Send and the AI window is running, the page SHALL re-read the test folder every few seconds and show success when the files are right, without reporting a failure until the participant presses the Check button. When the background test has already passed for the chosen AI, the page counts as passed and is skipped going forward. Source: series review item 5b.
 
 #### Scenario: One page for both
 - **WHEN** the participant reaches the working test page
@@ -160,6 +176,16 @@ The AI working test page SHALL replace the separate "Sign in and license" page. 
 - **GIVEN** the participant pressed Send and the files are not there yet
 - **WHEN** the page re-reads the test folder
 - **THEN** no failure message appears until the participant presses the Check button
+
+#### Scenario: Arriving after the quiet test
+- **GIVEN** the background test ended as "needs you"
+- **WHEN** the wizard shows the AI working test page
+- **THEN** a plain line says the quiet test could not finish and that the participant may need to sign in in the AI window
+
+#### Scenario: Skipped after a background pass
+- **GIVEN** the background test passed for the chosen AI
+- **WHEN** the participant moves forward
+- **THEN** the AI working test page is skipped, and it is still reachable with Back and the page list
 
 #### Scenario: The participant sends the line
 - **GIVEN** the AI window is running

@@ -41,6 +41,7 @@ app/eval_coach/        the app (stdlib only); module roles are listed in SPEC.md
   web/                 static UI, no build step
 tests/                 unittest suite; tests/frontend holds the Playwright interface tests
 tools/build_pyz.py     builds dist/eval-coach.pyz
+tools/verify_receipt.py  records and checks verification receipts for OpenSpec changes
 packaging/setup.cmd    participant entry point
 dist/                  build output (generated)
 e2e-work/              stand-in harness and its scratch homes, logs and screenshots (generated, except harness/)
@@ -53,10 +54,10 @@ Do not hand-edit `dist/`, or the scratch output under `e2e-work/` (everything ex
 
 1. **Python standard library only at runtime**, Python 3.9-compatible syntax, `from __future__ import annotations`. No pip packages. The browser UI has no build step.
 2. **No permission flags** on the participant's CLI, and the app **never answers a CLI prompt**.
-3. **Never parse terminal output to decide anything.** Decide by reading files and by running the checker directly.
+3. **Never parse terminal output to decide anything.** Decide by reading files and by running the checker directly. One addition (guided-setup, 2026-11-17): a process the app started itself, with no terminal, may be judged by its exit status alone, never by what it printed. Only the quiet background test of the chosen AI does this.
 4. "New chat" means a new CLI process; only one CLI process runs at a time.
 5. Network use by the app is limited to consented preflight downloads (python.org, nodejs.org, the npm registry). No telemetry, no API keys, the app never calls a model.
-6. The participant chooses the CLI and model. No allowlist and no CLI-specific logic, except data in `cli-recipes.json`.
+6. The participant chooses the CLI and model, from a fixed list of three tools (GitHub Copilot CLI, Claude Code, Devin CLI) that lives in `cli-recipes.json`. No CLI-specific logic outside that data. A free-text command route stays only so the stand-in and the tests can run: the server accepts any command, and the interface shows the typed field only when the app is started with the hidden `--custom-ai` flag (OpenSpec change `guided-setup`).
 7. Never suggest Copilot Chat in Teams. Northwind is a learning example and never a submission option.
 8. Bundled skills stay **byte-identical** to their source files (the Part 3 skills come from the Session 3 materials); changes go in the typed line.
 9. No answer key exists until predictions are locked (`key` step, `key-work` folder, sealed storage outside the project). `progress.json` never holds answer keys, fixture text or course answers.
@@ -88,6 +89,7 @@ Run from the repo root on Windows.
 | Approval rule checks | `node e2e-work\harness\classifier-check.js` |
 
 Notes:
+- Verification receipts: the archive gate records each passed check with `python tools\verify_receipt.py write --change <name> --name <backend|interface|build|e2e> -- <command>` (the lifecycle's Step 8 and `operations.archive.guidance` in `openspec/config.yaml`). `post-archive-pr` skips its own test run when `python tools\verify_receipt.py check --change <name> --require backend` says `valid` (the working tree, minus `openspec/` and ignored files, is unchanged since the run).
 - Run the two backend suites one after the other, never at the same time: the `setup.cmd` integration test fails when runs overlap.
 - `test_conpty.RealConsole.test_type_line_sends_enter_separately` is timing-sensitive; rerun it once before treating a failure as real.
 - Two tests are skipped by design. `test_promptfoo_real.py` skips when the spike's private Node and npm cache are absent.
@@ -99,7 +101,7 @@ Notes:
 - Use the stand-in `e2e-work/harness/fake_cli.py` unless the user has approved a real-CLI run. Lesson harness stages refuse to run unless `E2E_PROFILE=standin`.
 - Real approvals are single-use "Yes" only, after the full command text is verified. Never choose "switch to auto mode" or "don't ask again".
 - If a command is refused, bring it to the user. Do not widen the verifier on your own judgment.
-- The real-CLI test budget is 17 sessions (15 used) unless the user changes it.
+- The user lifted the real-CLI test budget on 2026-11-16 (it was 17 sessions, 15 used) for the `guided-setup` screenshots. Real-CLI runs still need the user's approval each time. Folder-trust questions are answered only with the user's explicit approval, one single-use Yes per tool, and never for any other prompt.
 - Never run a real CLI install recipe in a test. Never edit CLI settings or credentials.
 
 ## Sensitive items

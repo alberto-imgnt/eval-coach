@@ -33,9 +33,12 @@ operations:
       - Use the stand-in CLI (e2e-work/harness/fake_cli.py); never run a real CLI without the user's approval.
       - Run the two backend suites one after the other, never at the same time.
       - Update docs/SPEC.md and the master task table in docs/IMPLEMENTATION-PLAN.md in the same change.
+      - Run each task's own verification command as the task says, but do not run the full verification suites again when all tasks are done; the archive gate runs them once and records the result.
   archive:
     guidance:
+      - 'Verification gate (before syncing specs or moving anything): run `python tools\verify_receipt.py check --change "<name>" --require backend`. On `valid`, skip the suites and say so. Otherwise run each check the tasks name through `python tools\verify_receipt.py write --change "<name>" --name <backend|interface|build|e2e> -- <command>` (backend is `python -m unittest discover -s tests`), one at a time, and stop the archive if one fails. Never write a receipt by hand, and do not edit files outside openspec/ between this gate and the commit, because that makes the receipt stale.'
       - Summarize which docs/SPEC.md sections are now superseded by the archived specs.
+      - 'Completion hook: when the archive succeeds, ask the user whether to open the branch and pull request now (the post-archive-pr skill). Only start it on yes; on no, say they can ask for it later.'
 
 # Project context (optional)
 # Add only constraints that should guide OpenSpec artifacts and workflows.
