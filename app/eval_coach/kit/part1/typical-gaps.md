@@ -1,8 +1,8 @@
 # Typical gaps in a first prompt
 
-These are the gaps people typically notice when they compare a first answer with the five things they knew but never said. They are examples, not other people's data. People will not always agree on which kind a gap is. What matters is that every gap fits somewhere, and that each one was something the prompt never said. The five kinds are an example, not a complete list: if a gap fits none of them, it points to a kind you may need to add.
+These are the gaps people typically notice when they compare a first answer with the five things they knew but never said. They are examples, not other people's data. People will not always agree on which category a gap is. What matters is that every gap fits somewhere, and that each one was something the prompt never said. The five categories are an example, not a complete list: if a gap fits none of them, it points to a category you may need to add.
 
-## Five common kinds of missing information
+## Five common categories of missing information
 
 1. Who the AI should act as
 2. What exactly to produce
@@ -12,7 +12,7 @@ These are the gaps people typically notice when they compare a first answer with
 
 ## Typical gaps and where they fit
 
-| Gap people noticed | Kind of missing information | Why it fits there |
+| Gap people noticed | Category of missing information | Why it fits there |
 |---|---|---|
 | Sounds like I'm bragging | 1. Who the AI should act as | The prompt never said whose voice to write in or how that person sounds. |
 | Reads like a formal report, not a quick note | 1. Who the AI should act as | The prompt never said who is writing, so the AI chose a voice. |

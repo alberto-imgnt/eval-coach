@@ -256,7 +256,7 @@ class ConfigScan(unittest.TestCase):
                      "providers:\n  - echo\nassert:\n  - provider: x\n"):
             for message in self.problems(text):
                 self.assertTrue(message.startswith("promptfooconfig.yaml"), message)
-                self.assertRegex(message, r"(?i)ask your cli")
+                self.assertRegex(message, r"(?i)ask your AI")
                 self.assertTrue(message.rstrip().endswith("."), message)
 
     def test_bytes_and_a_byte_order_mark_are_accepted(self):

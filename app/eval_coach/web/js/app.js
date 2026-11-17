@@ -618,7 +618,7 @@ const actions = {
       if (app.state.terminal.running) {
         const ok = await confirmDialog({
           title: 'Start again?',
-          body: 'This stops your CLI and starts a new chat. Anything it has not saved will be lost.',
+          body: 'This stops your AI and starts a new chat. Anything it has not saved will be lost.',
           confirmLabel: 'Start again',
         });
         if (!ok) return;
@@ -886,7 +886,7 @@ const actions = {
     return act('quit', async () => {
       const ok = await confirmDialog({
         title: 'Quit eval-coach?',
-        body: 'This stops your CLI and closes the app. Your progress is saved, and you can pick up where you left off next time.',
+        body: 'This stops your AI and closes the app. Your progress is saved, and you can pick up where you left off next time.',
         confirmLabel: 'Quit',
       });
       if (!ok) return;

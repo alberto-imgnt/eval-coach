@@ -141,16 +141,6 @@ def leak_findings(text, names=True):
     return found
 
 
-def mission_stops(data):
-    body = next(x for x in data["lessons"] if "you-are-here" in x["body"] and x["id"].endswith("mission"))["body"]
-    block = body.split("```you-are-here", 1)[1].split("```", 1)[0]
-    stops = []
-    for line in block.strip().splitlines():
-        status, number, title, outcome = [p.strip() for p in line.split("|", 3)]
-        stops.append((status, int(number), title, outcome))
-    return stops
-
-
 class KitFiles(unittest.TestCase):
     def test_the_part_two_kit_holds_exactly_these_files(self):
         self.assertEqual({p.name for p in PART2_KIT.iterdir()}, KIT_FILES)
@@ -282,30 +272,23 @@ class Lessons(unittest.TestCase):
         for item in lessons_data()["lessons"]:
             self.assertIs(item["skippable"], False, item["id"])
 
-    def test_the_mission_is_one_page_with_no_questions_and_opens_on_the_question_from_part_one(self):
+    def test_the_mission_follows_the_shape_and_opens_on_the_question_from_part_one(self):
         mission = lesson("p2-mission")
         self.assertEqual((mission["activities"], mission["retrieval"]), ([], []))
         body = mission["body"]
-        self.assertTrue(body.startswith("**The goal:"))
-        self.assertLess(body.index("So how do you know the second answer is better?"), body.index("**In plain words.**"))
+        self.assertTrue(body.startswith("**The goal.**"))
+        for label in ("**The goal.**", "**Why it matters to you.**", "**What you will do.**", "**What you leave with.**"):
+            self.assertEqual(body.count(label), 1, label)
+        self.assertIn("how do you know the second answer is better?", body)
         self.assertIn("You write down what good means, before you look at any answer.", body)
-        self.assertIn("because you checked it", body)
-        self.assertIn("blind trust or blind distrust", body)
         self.assertRegex(body, r"(?i)nothing is run in this part")
         self.assertIn("Running the rules on real answers starts in Part 3", body)
-        self.assertIn("Ask clearly, know what you need, turn it into rules, score the result, improve, and keep a record.", body)
-        self.assertIn("Northwind is for practice only and is never a task you can submit", body)
-        for reason in ("sounds sure of itself even when it is wrong", "only an opinion until you measure it"):
-            self.assertIn(reason, body)
-        self.assertIn("It is Part 2 of a six-part series", body)
-
-    def test_the_mission_map_has_six_rows_with_part_two_marked_as_here(self):
-        stops = mission_stops(lessons_data())
-        self.assertEqual([s[1] for s in stops], [1, 2, 3, 4, 5, 6])
-        self.assertEqual([s[0] for s in stops], ["done", "here", "next", "next", "next", "next"])
-        self.assertEqual([s[2] for s in stops], list(PART_NAMES))
-        for _status, _n, _title, outcome in stops:
-            self.assertTrue(outcome.startswith("I "), outcome)
+        self.assertIn("The Practice task is a ready-made example, for practice only and never something to submit", body)
+        self.assertNotIn("Northwind", body)
+        self.assertNotIn("you-are-here", body)
+        self.assertNotIn("blind trust", body)
+        self.assertNotIn("sounds sure of itself", body)
+        self.assertIn("A rule written down before you see an answer cannot bend", body)
 
     def test_each_lesson_after_the_mission_has_the_shape_of_the_other_parts(self):
         for lesson_id in LESSON_ORDER[1:]:
@@ -404,7 +387,7 @@ class Lessons(unittest.TestCase):
                        "You write the list for your own task", "Writing the rules first keeps the score honest",
                        "In Part 3, an AI agent turns a file like this into a checker and runs it on real answers",
                        "saved in your project folder", "A script or a promptfoo file can hold the same rules",
-                       "The Northwind update is a learning example and cannot be submitted",
+                       "The Practice task is a ready-made example for practice only, and it cannot be submitted",
                        "repeats, has clear requirements and could be checked by rules"):
             with self.subTest(needle=needle):
                 self.assertIn(needle, body)
@@ -582,34 +565,19 @@ class SeriesRow(unittest.TestCase):
         self.assertEqual([item for g in groups for item in g["items"]], [item for _, item in state.PART_2.course])
         self.assertEqual(len({g["id"] for g in groups}), 4)
 
-    def test_the_finished_screen_names_the_file_says_what_part_three_does_and_that_northwind_is_practice(self):
+    def test_the_finished_screen_names_the_file_says_what_part_three_does_and_that_the_practice_task_is_practice(self):
         body = series_part("part-2")["ui"]["finished_body"]
         self.assertIn("part-2\\test-cases.md", body)
         self.assertRegex(body, r"In Part 3 an AI agent turns a file like this into a checker")
         self.assertIn("distinct criteria", body)
         self.assertIn("threshold a script could decide", body)
         self.assertIn("test cases", body)
-        self.assertRegex(body, r"Northwind update is practice only and is not something to submit")
+        self.assertRegex(body, r"The Practice task is for practice only and is not something to submit")
         self.assertIsNone(GROUP_WORK.search(body))
 
     def test_part_two_is_a_course_and_parts_four_and_five_are_still_coming_soon(self):
         kinds = {p["n"]: p["kind"] for p in json.loads(resources.read_text("content/series.json"))["parts"]}
         self.assertEqual(kinds, {1: "course", 2: "course", 3: "course", 4: "soon", 5: "soon", 6: "live"})
-
-    def test_every_mission_map_agrees_with_the_series_map(self):
-        parts = json.loads(resources.read_text("content/series.json"))["parts"]
-        maps = {"part 3": mission_stops(json.loads(resources.read_text("content/lessons.json"))),
-                "part 1": mission_stops(json.loads(resources.read_text("content/part-1-lessons.json"))),
-                "part 2": mission_stops(lessons_data())}
-        for name, stops in maps.items():
-            self.assertEqual(len(stops), 6, name)
-            for part, (_status, number, title, outcome) in zip(parts, stops):
-                with self.subTest(map=name, part=number):
-                    self.assertEqual((part["n"], part["title"]), (number, title))
-                    if number != 6:
-                        self.assertEqual(part["outcome"], outcome)
-        sixth = {stops[5][3] for stops in maps.values()}
-        self.assertEqual(len(sixth), 1)
 
     def test_the_part_two_words_reach_the_page_only_for_part_two(self):
         home = Path(tempfile.mkdtemp(prefix="eval-coach-series-"))

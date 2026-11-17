@@ -11,7 +11,7 @@ Source material: the Part 1 and Part 2 session plans, decks and handouts (OneDri
 The series is "Evaluated Systems (Stage 3)". Its goal: **every participant, technical or not, can submit a Stage 3-ready task with documented, runnable test cases.**
 
 Series principles:
-- Parts 1 to 5 use the same example throughout (the Northwind weekly update). It is a learning sample and is never a submission option.
+- Parts 1 to 5 use the same example throughout (the Northwind weekly update). It is a learning sample and is never a submission option. Participants read it as the "Practice task"; "Northwind" appears only inside the example's own text. Participants read "your AI" and "AI window" where this document says CLI. Mission lessons (Parts 1 to 3) share one shape (the goal, why it matters to you, what you will do, what you leave with), show no map of the Parts, and Part 1's mission alone carries the series framing (OpenSpec change `content-clarity`).
 - Part 6 is reserved for the participant's own task.
 - Two lanes for evaluations: non-technical participants write markdown test cases and have an AI agent build and run a deterministic checker (the app's **Script track**); developers can use promptfoo (the **promptfoo track**).
 - Tool-agnostic: any agentic tool that can run code (for example GitHub Copilot or Claude).

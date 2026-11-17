@@ -150,7 +150,7 @@ def parse_command(text):
     """
     s = text.strip()
     if not s:
-        raise ValueError("The CLI command is empty.")
+        raise ValueError("The AI command is empty.")
     tokens, flags = [], []
     i, n = 0, len(s)
     while i < n:
@@ -167,7 +167,7 @@ def parse_command(text):
                 i += 1
                 while True:
                     if i >= n:
-                        raise ValueError("The CLI command has a quote that is never closed.")
+                        raise ValueError("The AI command has a quote that is never closed.")
                     ch = s[i]
                     if ch == '"':
                         i += 1
@@ -237,7 +237,7 @@ def resolve_command(argv, path=None):
     re-interpret them.
     """
     if not argv:
-        raise ValueError("The CLI command is empty.")
+        raise ValueError("The AI command is empty.")
     target = shutil.which(argv[0], path=path)
     if not target and os.path.isfile(argv[0]):  # which() rejects extensionless paths
         target = os.path.abspath(argv[0])

@@ -335,7 +335,7 @@ class Gate(BaselineCase):
         result, items = self.gate()
         self.assertFalse(result["ok"])
         self.assertIn("iteration-log.md was not found", items["iteration-log.md exists"]["detail"])
-        self.assertIn("Press Start my CLI", items["iteration-log.md exists"]["detail"])
+        self.assertIn("Press Start my AI", items["iteration-log.md exists"]["detail"])
         self.assertFalse(items["Iteration 0 entry found"]["ok"])
 
     def test_an_unusable_log(self):

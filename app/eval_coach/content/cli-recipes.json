@@ -35,7 +35,7 @@
       "shell": "powershell",
       "command": "irm https://static.devin.ai/cli/setup.ps1 | iex",
       "needs_mb": 400,
-      "source": "Devin's official CLI documentation"
+      "source": "Devin's official documentation"
     },
     {
       "id": "powershell",
@@ -49,13 +49,13 @@
     },
     {
       "id": "other",
-      "name": "Another CLI",
+      "name": "Another AI tool",
       "cli_command": "",
       "shell": "none",
       "command": "",
       "needs_mb": 0,
       "source": "",
-      "note": "Install your own agentic CLI the way its vendor recommends, then enter the command above and press Check this command. It must be able to read files, write files and run commands."
+      "note": "Install your own agentic AI tool the way its vendor recommends, then enter the command above and press Check this command. It must be able to read files, write files and run commands."
     }
   ]
 }

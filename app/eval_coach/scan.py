@@ -22,7 +22,7 @@ def _blocked_name(module):
 
 def _message(name):
     return (f'check.py imports "{name}", which can reach the network, an AI model, or '
-            "other programs. A checker uses rules only. Ask your CLI to remove it, "
+            "other programs. A checker uses rules only. Ask your AI to remove it, "
             "and check again.")
 
 
@@ -32,7 +32,7 @@ def scan_source(source):
         tree = ast.parse(source)
     except (SyntaxError, ValueError):
         return [{"message": "check.py is not valid Python, so it could not be scanned. "
-                            "Ask your CLI to fix the error, without changing any threshold."}]
+                            "Ask your AI to fix the error, without changing any threshold."}]
     found = []
 
     def note(module):
@@ -97,21 +97,21 @@ def scan_config_source(source):
             seen.add(graded)
             found.append({"message": (
                 f'promptfooconfig.yaml uses the "{graded}" check, which needs an AI model or the network. '
-                "The checks must be rules only. Ask your CLI to replace it with a rule, or to mark that "
+                "The checks must be rules only. Ask your AI to replace it with a rule, or to mark that "
                 "criterion NOT CHECKED, without changing any other threshold, then check again.")})
     for provider in config["providers"]:
         if provider.strip().lower() != "echo":
             found.append({"message": (
                 f'promptfooconfig.yaml uses the provider "{provider}". Only the "echo" provider is allowed, '
-                "because it hands each saved file to the checks unchanged. Ask your CLI to change the "
+                "because it hands each saved file to the checks unchanged. Ask your AI to change the "
                 "provider back to echo, and check again.")})
     if config["provider_keys"] and not found:
         found.append({"message": (
             "promptfooconfig.yaml names a provider inside a check, which means a model would grade the "
-            "output. The checks must be rules only. Ask your CLI to remove it, and check again.")})
+            "output. The checks must be rules only. Ask your AI to remove it, and check again.")})
     if not config["providers"]:
         found.append({"message": (
-            "promptfooconfig.yaml does not name the echo provider. Ask your CLI to add "
+            "promptfooconfig.yaml does not name the echo provider. Ask your AI to add "
             "'providers: - echo', and check again.")})
     return found
 
@@ -142,32 +142,32 @@ def scan_live_config_source(source, allowed_clis=()):
             seen.add(graded)
             found.append({"message": (
                 f'{LIVE_FILE} uses the "{graded}" check, which needs an AI model or the network. '
-                "The checks must be rules only, and the AI only writes the outputs. Ask your CLI to copy the "
+                "The checks must be rules only, and the AI only writes the outputs. Ask your AI to copy the "
                 "checks from promptfooconfig.yaml unchanged, then check again.")})
     for provider in config["providers"]:
         if not LIVE_PROVIDER.match(provider.strip()):
             found.append({"message": (
                 f'{LIVE_FILE} uses the provider "{provider}". Live mode may use only the helper, written as '
-                "'exec: node ./agent-provider.js'. Ask your CLI to use exactly that provider, and check again.")})
+                "'exec: node ./agent-provider.js'. Ask your AI to use exactly that provider, and check again.")})
     if not config["providers"]:
         found.append({"message": (
-            f"{LIVE_FILE} does not name a provider. Ask your CLI to add the helper, "
+            f"{LIVE_FILE} does not name a provider. Ask your AI to add the helper, "
             "'exec: node ./agent-provider.js', and check again.")})
     if config["secret_keys"]:
         found.append({"message": (
             f"{LIVE_FILE} sets an API key or an API address ({', '.join(config['secret_keys'])}). "
-            "Live mode uses your CLI's own sign-in and needs no API key. Ask your CLI to remove it, "
+            "Live mode uses your AI's own sign-in and needs no API key. Ask your AI to remove it, "
             "and check again.")})
     if config["provider_keys"] and not any("names a provider inside a check" in f["message"] for f in found):
         found.append({"message": (
             f"{LIVE_FILE} names a provider inside a check, which means a model would grade the output. "
-            "The checks must be rules only. Ask your CLI to remove it, and check again.")})
+            "The checks must be rules only. Ask your AI to remove it, and check again.")})
     if allowed_clis:
         for cli in config["clis"]:
             if cli not in allowed_clis:
                 found.append({"message": (
-                    f'{LIVE_FILE} names the CLI "{cli}", and live mode supports only {", ".join(allowed_clis)}. '
-                    "Choose one of those in the list, ask your CLI to use it on the cli: line, and check again.")})
+                    f'{LIVE_FILE} names the AI tool "{cli}", and live mode supports only {", ".join(allowed_clis)}. '
+                    "Choose one of those in the list, ask your AI to use it on the cli: line, and check again.")})
     return found
 
 

@@ -580,7 +580,7 @@ async function stageMission() {
   check('mission can be completed at once, because no question holds Continue back', lesson.can_complete === true && lesson.can_skip === false);
   check('the lesson view holds no retrieval answers', !('retrieval' in lesson));
   check('the mission is a plain page: no activities, no retrieval, no placement questions', lesson.activities.length === 0 && lessonDef('mission').retrieval.length === 0 && CONTENT.placement.length === 0 && Array.isArray(lesson.placement) && lesson.placement.length === 0, JSON.stringify(lesson.activities));
-  check('the mission body names the six-part series', lesson.body.includes('six-part series'));
+  check('the mission body has the four passages and no map of the Parts', ['**The goal.**', '**Why it matters to you.**', '**What you will do.**', '**What you leave with.**'].every((p) => lesson.body.includes(p)) && !lesson.body.includes('you-are-here'));
   const again = lessonOf(await viewLesson('mission'));
   check('viewing again gives the same page', again.body === lesson.body && again.activities.length === 0 && again.placement.length === 0);
   check('viewing created no learning record', (lessonsBlock().records || []).length === 0);
@@ -1041,7 +1041,7 @@ async function stageBaseline() {
   // Refusals before any work.
   const early = await post('/api/step/check', { step: 'baseline' });
   const earlyItems = (await stepDetail()).last_check.items;
-  check('baseline: the gate fails with no log and says what to do', early.ok && earlyItems.some((i) => !i.ok && i.detail.includes('iteration-log.md was not found') && i.detail.includes('Send to CLI')), JSON.stringify(earlyItems.filter((i) => !i.ok).map((i) => i.detail)));
+  check('baseline: the gate fails with no log and says what to do', early.ok && earlyItems.some((i) => !i.ok && i.detail.includes('iteration-log.md was not found') && i.detail.includes('Send to AI')), JSON.stringify(earlyItems.filter((i) => !i.ok).map((i) => i.detail)));
   const wrongWhich = await post('/api/step/run-checker', { step: 'baseline', which: 'fixtures' });
   check('baseline: the app run accepts only which=baseline', wrongWhich.status === 400 && wrongWhich.code === 'bad_input', wrongWhich.code);
 

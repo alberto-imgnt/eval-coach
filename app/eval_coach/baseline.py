@@ -63,7 +63,7 @@ def _consistency_problem(result):
         ids = [r["id"] for r in section["rows"]]
         if ids != first:
             return (f"The checker reported different criteria for run-{n}.txt than for run-1.txt, "
-                    "so the five runs cannot be compared. Ask your CLI to fix check.py without "
+                    "so the five runs cannot be compared. Ask your AI to fix check.py without "
                     "changing any threshold, then run it again.")
     return None
 
