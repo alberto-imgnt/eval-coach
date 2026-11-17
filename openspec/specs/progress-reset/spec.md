@@ -33,7 +33,7 @@ After confirmation, all course progress SHALL be cleared: lessons and activities
 - **THEN** the track can be changed again before the first step is done
 
 ### Requirement: Reset lesson progress leaves no course files
-After confirmation, no file that the app or the participant's CLI produced during the course SHALL remain in the project folder: the checker, fixtures, saved runs, saved results, the iteration log, the saved outputs of Part 1 and any other course output. The starting prompt and starting test cases, and the prompts the participant wrote in Part 1 (cold, framework, and the own-work before and after), SHALL stay in place, and every other file in the project folder SHALL be left untouched.
+After confirmation, no file that the app or the participant's CLI produced during the course SHALL remain in the project folder: the checker, fixtures, saved runs, saved results, the iteration log, the saved outputs of Part 1 and any other course output. The starting prompt and starting test cases, the prompts the participant wrote in Part 1 (cold, framework, and the own-work before and after) and the worksheet and test cases the participant wrote in Part 2 SHALL stay in place, and every other file in the project folder SHALL be left untouched.
 
 #### Scenario: Course outputs gone
 - **GIVEN** the project folder holds a checker, fixtures, saved runs, an iteration log and Part 1 outputs
@@ -45,6 +45,11 @@ After confirmation, no file that the app or the participant's CLI produced durin
 - **GIVEN** the project folder holds the participant's Part 1 prompts and outputs
 - **WHEN** the participant confirms the reset
 - **THEN** the prompts and own-work files are still there, unchanged, and the outputs are in the backup
+
+#### Scenario: Part 2 files stay
+- **GIVEN** the project folder holds the participant's Part 2 worksheet and test cases
+- **WHEN** the participant confirms the reset
+- **THEN** both files are still there, unchanged, and the Part 2 steps show as not started
 
 #### Scenario: Unknown files untouched
 - **GIVEN** the project folder holds a file the app never created

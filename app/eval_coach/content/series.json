@@ -29,7 +29,7 @@
          {"id": "compare", "label": "Compare with an example", "items": ["reference"]}
        ],
        "finished_title": "You have finished Part 2",
-       "finished_body": "Your work is saved in your project folder: your worksheet and your test cases in part-2\\test-cases.md. You can now turn what you need from an answer into distinct criteria, give each one a pass or fail threshold a script could decide, and record them as test cases. In Part 3 an AI agent turns a file like this into a checker and runs it on real answers. The Northwind update is practice only and is not something to submit. Reviews will still appear here when they are due."
+       "finished_body": "Your work is saved in your project folder: your worksheet and your test cases in part-2\\test-cases.md. You can now turn what you need from an answer into distinct criteria, give each one a pass or fail threshold a script could decide, and record them as test cases. In Part 3 an AI agent turns a file like this into a checker and runs it on real answers. The Practice task is for practice only and is not something to submit. Reviews will still appear here when they are due."
      }},
     {"n": 3, "id": "part-3", "title": "Running evals and baseline", "kind": "course",
      "outcome": "I check five AI answers against my rules and record a starting score."},
@@ -42,7 +42,7 @@
   ],
   "ui": {
     "brand_sub": "Evaluated Systems (Stage 3)",
-    "intro": "Six Parts, one method. Open a Part to work on it, or look ahead at what comes next.",
+    "intro": "Six Parts, one method. Do each one yourself: copying someone else's prompt or rules gives you their answers, not the skill to check your own.",
     "list_label": "The six Parts",
     "part_label": "Part {n}",
     "soon": "Coming soon",

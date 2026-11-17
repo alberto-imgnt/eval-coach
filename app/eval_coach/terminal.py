@@ -192,7 +192,7 @@ class TerminalManager:
     def type_line(self, text):
         pty = self._current_pty()
         if pty is None:
-            raise OSError("No CLI is running.")
+            raise OSError("No AI is running.")
         pty.type_line(text)
 
     def resize(self, cols, rows):

@@ -27,7 +27,8 @@ PRE_REVEAL_STEPS = ("cold", "score")
 FRAMEWORK_NAMES = re.compile(r"\b(RTCC|RISE|CO-STAR|RISEN)\b|framework", re.I)
 STAGE_THREE = re.compile(r"stage\s*3|certif", re.I)
 TAKEAWAY = "Give the AI what it needs. Use a framework, or build your own."
-CAPS = {"p1-mission": 450, "p1-gaps": 300, "p1-frameworks": 300, "p1-benefits": 400}
+# p1-frameworks holds the list of five categories and one table per framework, so it is capped at 420.
+CAPS = {"p1-mission": 450, "p1-gaps": 300, "p1-frameworks": 420, "p1-benefits": 400}
 NOTE_HEADING = "**Stage 3 note (optional).**"
 SUBMISSION_STEPS = re.compile(r"https?://|@|\bupload\b|\bsubmission form\b|\bsend (it|them) to\b|\bhow to submit\b", re.I)
 RECOMMENDS = re.compile(
@@ -68,6 +69,24 @@ def refs_of(lesson_data):
     return [s["ref"] for s in lesson_data["sources"]] + [lesson_data["primary_source"]["ref"]]
 
 
+EXPECTED_TABLES = {
+    "RTCC": [("R", "Role", "1"), ("T", "Task", "2"), ("C", "Context", "3"), ("C", "Constraints", "4")],
+    "RISE": [("R", "Role", "1"), ("I", "Input", "3"), ("S", "Steps", "2"), ("E", "Expectation", "5")],
+}
+
+
+def framework_tables(text):
+    """The rows of each framework's table as (letter, label, first category number), keyed by framework."""
+    found = {}
+    for name in ("RTCC", "RISE"):
+        block = text.split(f"{name}:", 1)[1]
+        rows = [line for line in block.split("\n\n", 2)[1].splitlines()]
+        assert rows[0].startswith("| Letter | Label | What you write there | Covers category |"), rows[0]
+        cells = [[c.strip() for c in row.strip("|").split("|")] for row in rows[2:]]
+        found[name] = [(c[0], c[1], c[3][0]) for c in cells]
+    return found
+
+
 def northwind_notes():
     reference = (KIT / "northwind" / "northwind-test-cases-reference.md").read_text(encoding="utf-8")
     block = reference.split("## Test input", 1)[1].split("##", 1)[0]
@@ -103,12 +122,13 @@ class KitFiles(unittest.TestCase):
         text = (PART1_KIT / "frameworks-map.md").read_text(encoding="utf-8")
         for name in ("RTCC", "RISE", "CO-STAR", "RISEN"):
             self.assertIn(name, text)
-        self.assertEqual(text.count("(partly)"), 2)
-        self.assertIn("Expectation (partly)", text)
-        self.assertIn("Constraints (partly)", text)
+        self.assertEqual(text.count("(also touches"), 2)
+        self.assertIn("4. Limits and format (also touches 5)", text)
+        self.assertIn("(also touches 4)", text)
         self.assertRegex(text, r"(?i)covering what your task needs matters more than the letters")
-        self.assertRegex(text, r"(?i)other kinds exist")
+        self.assertRegex(text, r"(?i)more exist")
         self.assertRegex(text, r"(?i)build your own labels")
+        self.assertEqual(framework_tables(text), EXPECTED_TABLES)
 
     def test_the_samples_carry_the_notes_and_no_placeholder(self):
         notes = northwind_notes()
@@ -177,8 +197,9 @@ class Lessons(unittest.TestCase):
         body = mission["body"]
         self.assertIn("blind trust or blind distrust", body)
         self.assertIn("because you checked it", body)
-        self.assertIn("Northwind is for practice only and is never a task you can submit", body)
-        self.assertIn("Ask clearly, know what you need, turn it into rules, score the result, improve, and keep a record.", body)
+        self.assertIn("the Practice task: a ready-made example, for practice only and never something to submit", body)
+        self.assertNotIn("Northwind", body)
+        self.assertIn("ask clearly, know what you need, turn it into rules, score the result, improve, and keep a record.", body)
         for reason in ("sounds sure of itself even when it is wrong", "only an opinion until you measure it",
                        "Answers change from one try to the next"):
             self.assertIn(reason, body)
@@ -240,26 +261,27 @@ class Lessons(unittest.TestCase):
         self.assertRegex(body, r"(?i)belong to evaluation")
         self.assertRegex(body, r"(?i)typical gaps")
         self.assertRegex(body, r"(?i)not from other people using this app")
-        self.assertRegex(body, r"(?i)five common kinds")
+        self.assertRegex(body, r"(?i)five common categories")
         self.assertRegex(body, r"(?i)an example, not a complete list")
-        self.assertRegex(body, r"(?i)other kinds exist")
+        self.assertRegex(body, r"(?i)other categories exist")
 
     def test_the_frameworks_lesson_names_the_mapping_the_partial_fits_and_the_others(self):
         body = lesson("p1-frameworks")["body"]
-        for needle in ("RTCC stands for Role, Task, Context, Constraints", "RISE stands for Role, Input, Steps, Expectation",
-                       "samples, not recommendations", "common expansions that other sources define differently",
-                       "fit only partly", "Covering what your task needs matters more than the letters", "CO-STAR and RISEN",
-                       "build your own labels", "Our five are an example, not a full list", "add the kinds your task needs"):
+        for needle in ("samples, not recommendations", "common expansions that other sources define differently",
+                       "also touches", "Covering what your task needs matters more than the letters", "CO-STAR and RISEN",
+                       "build your own labels", "These are the five categories this course uses. Others exist.",
+                       "add the categories your task needs", "The five categories of what a prompt needs"):
             with self.subTest(needle=needle):
                 self.assertIn(needle, body)
-        self.assertIn("Expectation (partly)", body)
-        self.assertIn("Constraints (partly)", body)
+        self.assertEqual(body.count("| Letter | Label | What you write there | Covers category |"), 2)
+        self.assertEqual(framework_tables(body), EXPECTED_TABLES)
+        self.assertLess(body.index("The five categories of what a prompt needs"), body.index("RTCC:"))
 
     def test_the_frameworks_sort_names_the_partial_fits_in_its_feedback(self):
         sort = next(a for a in lesson("p1-frameworks")["activities"] if a["id"] == "fw-map")
         feedback = text_of([i["feedback"] for i in sort["items"]])
-        self.assertIn("kind 5 fits only partly", feedback)
-        self.assertIn("kind 4 fits only partly", feedback)
+        self.assertIn("category 5 fits only partly", feedback)
+        self.assertIn("category 4 fits only partly", feedback)
         self.assertEqual(len(sort["items"]), 8)
 
     def test_the_benefits_lesson_names_four_benefits_the_takeaway_and_the_open_question(self):

@@ -78,7 +78,7 @@ class SettingsContent(unittest.TestCase):
         self.assertIn("{min}", self.data["settings"]["text_size_range"])
 
     def test_the_banner_says_hands_on_work_needs_setup_and_names_the_choice(self):
-        self.assertIn("exercises that use your CLI", self.data["banner"]["text"])
+        self.assertIn("exercises that use your AI", self.data["banner"]["text"])
         self.assertIn("setup", self.data["banner"]["button"].lower())
 
     def test_the_setup_screen_has_skip_words(self):

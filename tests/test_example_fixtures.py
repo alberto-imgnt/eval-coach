@@ -126,7 +126,7 @@ class ExampleFixtures(base.EngineCase):
         self.assert_work_untouched()
         self.assert_no_key_in_tmp()
         message = self.capture_message(self.use)
-        self.assertIn("Northwind", message)
+        self.assertIn("Practice task", message)
         self.assertIn("Press Start", message)
         self.assertFalse(self.check("fixtures")["ok"])
 
@@ -247,8 +247,8 @@ class ExampleFixtures(base.EngineCase):
         for key in ("example_heading", "example_blurb", "example_button", "example_confirm_title",
                     "example_confirm_body", "example_confirm_label"):
             self.assertTrue(ui[key], key)
-        self.assertIn("Northwind example", ui["example_blurb"])
-        self.assertIn("fit the example's test cases only", ui["example_blurb"])
+        self.assertIn("Practice task", ui["example_blurb"])
+        self.assertIn("fit its test cases only", ui["example_blurb"])
         self.use()
         self.assertEqual(self.data("fixtures")["example"], {"offered": True, "would_replace": True})
         self.assertEqual(self.data("fixtures")["files"], [{"name": n, "present": True} for n in FIXTURE_NAMES])
@@ -278,7 +278,7 @@ class ExampleFixturesPromptfoo(PfCase):
     def test_the_troubleshooting_entry_is_on_both_tracks_for_the_fixtures_step(self):
         self.setup_project()
         text = self.state("fixtures")["step"]["troubleshooting"]
-        self.assertTrue([t for t in text if "Northwind example" in t["problem"]])
+        self.assertTrue([t for t in text if "Practice task" in t["problem"]])
 
 
 class ExampleFixturesHttp(ServerCase):

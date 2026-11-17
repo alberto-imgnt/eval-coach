@@ -443,7 +443,7 @@ class ScreenText(unittest.TestCase):
 
     def test_northwind_is_a_learning_example_and_not_a_submission(self):
         note = self.ui["northwind_note"]
-        self.assertIn("Northwind is a learning example", note)
+        self.assertIn("The Practice task is a ready-made example", note)
         self.assertIn("cannot be your submission", note)
         self.assertIn("no way to submit it as your own work", note)
         self.assertIn("for practice only", self.ui["starter_northwind_hint"])

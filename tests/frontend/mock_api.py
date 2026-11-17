@@ -103,7 +103,7 @@ LINES = {
     "baseline": "Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are runs/run-1.txt to runs/run-5.txt. The prompt file is prompt-v0.md. The model was {model}.",
 }
 FOLDER = {"generate": "A blind folder", "build": "Your project", "fixtures": "A clean folder", "key": "Answer key folder", "readback": "Your project", "fix": "Your project", "baseline": "Your project"}
-MODEL_MISSING = "The model name is empty, so the line cannot be sent. Write the name of the model you used for your five runs in the box, then press Send to CLI."
+MODEL_MISSING = "The model name is empty, so the line cannot be sent. Write the name of the model you used for your five runs in the box, then press Send to AI."
 
 ANSWER_KEY = """# Answer key
 
@@ -231,7 +231,7 @@ def base_detail(step_id):
         "track": TRACK["name"],
         "goal": f"The goal of {title_of(step_id).lower()}.",
         "why": ["You decide what good means. The agent writes the code."],
-        "instructions": ["Start your CLI.", "Press Send to CLI when it is ready.", "Answer any approvals in the terminal."],
+        "instructions": ["Start your AI.", "Press Send to AI when it is ready.", "Answer any approvals in the terminal."],
         "cli": cli,
         "checklist": [],
         "last_check": None,
@@ -389,7 +389,7 @@ class World:
             if self.course_mode or scenario in ("setup", "preflight", "generate"):                self.current_index = 0
             else:
                 self.current_index = STEP_ORDER.index(scenario) if scenario not in ("done", "live") else len(STEP_ORDER)
-            self.terminal = {"running": False, "label": "Your CLI", "exit_code": None, "owner": None}
+            self.terminal = {"running": False, "label": "Your AI", "exit_code": None, "owner": None}
             self.setup = {
                 "project_path": "",
                 "cli_command": "",
@@ -777,7 +777,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/preflight/test/check":
             for item in world.preflight["items"]:
                 if item["id"] == "working_test":
-                    item.update(status="passed", detail="Your CLI read a file, wrote files and ran a command correctly.", next="")
+                    item.update(status="passed", detail="Your AI read a file, wrote files and ran a command correctly.", next="")
         elif path == "/api/preflight/signin":
             for item in world.preflight["items"]:
                 if item["id"] == "signin":
@@ -842,7 +842,7 @@ class Handler(BaseHTTPRequestHandler):
         if world.setup["starter"] != "northwind":
             raise MockError("example_fixtures_northwind_only", "These fixtures belong to the Northwind example, so they would not test the checker for your own task.")
         if world.terminal["running"]:
-            raise MockError("cli_running", "Your CLI is still running. Press Stop, then use the example's fixtures.")
+            raise MockError("cli_running", "Your AI is still running. Press Stop, then use the example's fixtures.")
         example = world.details["fixtures"]["data"]["example"]
         if example["would_replace"] and body.get("replace") is not True:
             raise MockError("confirm_replace", "The fixtures folder already has text in it. Confirm that you want to replace it with the example's two fixtures, then try again.")
@@ -870,7 +870,7 @@ class Handler(BaseHTTPRequestHandler):
             data = detail["data"]
             items = [
                 {"label": "Warning read", "ok": data["acknowledged"], "detail": "" if data["acknowledged"] else "Read the warning and tick the box that says you have read it."},
-                {"label": "promptfooconfig.live.yaml exists", "ok": data["config_exists"], "detail": "" if data["config_exists"] else "promptfooconfig.live.yaml was not found in your project folder. Press Start my CLI, then Send to CLI, so your CLI writes it."},
+                {"label": "promptfooconfig.live.yaml exists", "ok": data["config_exists"], "detail": "" if data["config_exists"] else "promptfooconfig.live.yaml was not found in your project folder. Press Start my AI, then Send to AI, so your AI writes it."},
             ]
             ok = all(i["ok"] for i in items)
             detail["last_check"] = {"ok": ok, "items": items, "nudges": []}

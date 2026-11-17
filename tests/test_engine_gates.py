@@ -476,7 +476,7 @@ class Fixtures(EngineCase):
         self.write_stray("notes/deep/answer-key.md")
         result = self.check("fixtures")
         self.assertTrue(result["ok"], result)
-        self.assertEqual(result["nudges"], ["Your CLI wrote an answer key anyway. The app deleted it, and a new one "
+        self.assertEqual(result["nudges"], ["Your AI wrote an answer key anyway. The app deleted it, and a new one "
                                             "will be written after you lock your predictions. If you saw what it "
                                             "said, predict as honestly as you can."])
         self.assert_no_key_anywhere()

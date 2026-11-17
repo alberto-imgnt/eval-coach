@@ -714,7 +714,7 @@ class Engine:
                     self._warn(message)
                     raise EngineError("corrupt_progress", message) from exc
             if not resume and not cli:
-                raise EngineError("cli_required", "Enter the command that starts your AI CLI.")
+                raise EngineError("cli_required", "Enter the command that starts your AI.")
             if cli:
                 try:
                     self.terminal.check_command(cli, self._cli_env())
@@ -1014,7 +1014,7 @@ class Engine:
             self._require_active(step)
             text = self._text(step)
             if not (text.get("line") or text.get("line_template")):
-                raise EngineError("no_cli", "This step does not use your CLI.")
+                raise EngineError("no_cli", "This step does not use your AI.")
             if step == LIVE:
                 self._require_live_ready()
             run_n = None
@@ -1033,7 +1033,7 @@ class Engine:
             try:
                 self.terminal.start(self.progress["cli_command"], str(cwd), label, env=self._cli_env(), owner=step)
             except (ValueError, OSError) as exc:
-                raise EngineError("cli_start_failed", f"Your CLI could not be started: {exc}") from exc
+                raise EngineError("cli_start_failed", f"Your AI could not be started: {exc}") from exc
             self._cli_step = step
             self._sent = False
             if step == LIVE and self._step(LIVE)["start_hashes"] is None:
@@ -1056,13 +1056,13 @@ class Engine:
             self._require_active(step)
             line, blocked = self._step_line(step)
             if not line:
-                raise EngineError("no_cli", "This step does not use your CLI.")
+                raise EngineError("no_cli", "This step does not use your AI.")
             if step == LIVE:
                 self._require_live_ready()
             if blocked:
                 raise EngineError("no_model", blocked)
             if not self._cli_active(step):
-                raise EngineError("cli_not_running", "Start your CLI first.")
+                raise EngineError("cli_not_running", "Start your AI first.")
         try:
             self.terminal.type_line(line)  # outside the lock: it takes 400 ms
         except OSError as exc:

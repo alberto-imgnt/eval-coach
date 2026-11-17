@@ -205,7 +205,7 @@ def check_live(paths, step, allowed_clis, report):
     problems = live_scan_messages(paths, allowed_clis)
     report.add("scan", exists and not problems,
                messages=" ".join(p["message"] for p in problems)
-               or "promptfooconfig.live.yaml was not found. Press Start my CLI, then Send to CLI, so your CLI writes it.")
+               or "promptfooconfig.live.yaml was not found. Press Start my AI, then Send to AI, so your AI writes it.")
     report.add("provider", provider_is_bundled(paths))
     start = step["start_hashes"]
     report.add("started", start is not None)

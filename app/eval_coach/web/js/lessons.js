@@ -1102,7 +1102,7 @@ export function renderLessonTermHead(ctx, lesson, activity) {
       h(
         'div',
         { class: 'term-title-row', key: 'title' },
-        h('h2', { class: 'term-label' }, terminal.label || 'Your CLI'),
+        h('h2', { class: 'term-label' }, terminal.label || 'Your AI'),
         h('span', { class: `term-status${mine ? ' is-on' : ''}`, role: 'status' }, terminalStatus(ctx, mine)),
       ),
       h(
@@ -1120,7 +1120,7 @@ export function renderLessonTermHead(ctx, lesson, activity) {
     h(
       'div',
       { class: 'term-title-row', key: 'title' },
-      h('h2', { class: 'term-label' }, terminal.label || 'Your CLI'),
+      h('h2', { class: 'term-label' }, terminal.label || 'Your AI'),
       h('span', { class: `term-status${mine ? ' is-on' : ''}`, role: 'status' }, terminalStatus(ctx, mine)),
     ),
     h(
@@ -1197,7 +1197,7 @@ export function renderLessonTermHead(ctx, lesson, activity) {
 
 function terminalStatus(ctx, mine) {
   const { terminal } = ctx.state;
-  if (mine) return 'Your CLI is running.';
-  if (terminal.exit_code !== null && terminal.exit_code !== undefined) return `Your CLI has stopped (exit code ${terminal.exit_code}).`;
-  return 'Your CLI is not running.';
+  if (mine) return 'Your AI is running.';
+  if (terminal.exit_code !== null && terminal.exit_code !== undefined) return `Your AI has stopped (exit code ${terminal.exit_code}).`;
+  return 'Your AI is not running.';
 }

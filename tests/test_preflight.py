@@ -889,7 +889,7 @@ class TerminalOutputIsIgnored(unittest.TestCase):
     def test_signin_session_is_labelled_your_cli(self):
         self.engine.preflight_cli("fake-cli")
         self.engine.preflight_cli_start()
-        self.assertEqual(self.engine.get_state()["terminal"]["label"], "Your CLI")
+        self.assertEqual(self.engine.get_state()["terminal"]["label"], "Your AI")
 
     def test_items_are_numbered_without_gaps(self):
         def numbers():

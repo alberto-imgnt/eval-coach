@@ -23,7 +23,7 @@ Read `docs/SPEC.md` first; its non-negotiable rules apply. Task IDs refer to `do
 
 | Item | Kind | Method link |
 |---|---|---|
-| `mission` | lesson, one page, no activities | purpose, why checking matters, the six-Part map |
+| `mission` | lesson, one page, no activities | the goal, why it matters to you, what you will do, what you leave with (no map of the Parts; the series framing is in Part 1's `p1-mission` only) |
 | preflight | existing screen | |
 | `hook` | lesson, CLI (`hook-compare`) | turn it into rules: a fixed rule beats an AI opinion |
 | `several-runs` | lesson (skippable) | score the result: one answer proves little |
@@ -120,5 +120,6 @@ Now specified in `SPEC.md`: the `lessons` block in `progress.json`, the migratio
 ## Content quality rules
 - Plain language for non-technical readers. Short paragraphs.
 - Never mention a presenter, facilitator, room, breakout, chat waterfall, handout, neighbor or clock. Say "Script track" and "promptfoo track", not Room A and Room B.
-- Copilot Chat in Teams is never suggested. Northwind is a learning example and never a submission option.
+- Copilot Chat in Teams is never suggested. The ready-made example is called the "Practice task" (the other starter is "My own task") and is never a submission option; "Northwind" stays only inside the example's own text.
+- Say "your AI" or "AI window", never a bare "CLI" (vendor names such as GitHub Copilot CLI stay). The five groups of what a prompt needs are "categories", not "kinds".
 - Lessons must not give away what is wrong with a participant's own fixture. `verify` must not reveal Northwind's answer key.

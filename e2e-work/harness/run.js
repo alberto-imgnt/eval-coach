@@ -95,7 +95,7 @@ async function stageSetup() {
 
     // A command that does not exist explains itself, and nothing crashes.
     await wizardTo(page, 'cli');
-    await page.getByLabel('Command that starts your AI CLI').fill('no-such-cli-e2e-xyz --flag');
+    await page.getByLabel('Command that starts your AI').fill('no-such-cli-e2e-xyz --flag');
     await L.clickAndWait(page, '#pf-cli-check', '/api/preflight/cli');
     await L.waitFor(async () => pfItem(await L.apiState(), 'cli').status === 'failed', 10000, 'bad command fails item 5');
     const message = pfItem(await L.apiState(), 'cli').detail;
@@ -103,7 +103,7 @@ async function stageSetup() {
     L.assertion('next action given for a missing command', pfItem(await L.apiState(), 'cli').next.length > 0);
     L.assertion('preflight screen still shown after bad command', await page.getByRole('heading', { name: 'Before you begin' }).isVisible());
 
-    await page.getByLabel('Command that starts your AI CLI').fill(L.CLI_COMMAND);
+    await page.getByLabel('Command that starts your AI').fill(L.CLI_COMMAND);
     await L.clickAndWait(page, '#pf-cli-check', '/api/preflight/cli');
     await L.waitFor(async () => pfItem(await L.apiState(), 'cli').status === 'needs_you', 10000, 'command found');
 
@@ -133,7 +133,7 @@ async function stageSetup() {
     // Item 8: project folder.
     await wizardTo(page, 'project');
     await page.getByLabel('Project folder').fill(PROJECT);
-    await page.getByRole('radio', { name: /Northwind/ }).check();
+    await page.getByRole('radio', { name: /Practice task/ }).check();
     await page.getByRole('button', { name: 'Set up my project' }).click();
     await L.waitFor(async () => { const s = await L.apiState(); return s.configured && s.preflight.passed; }, 15000, 'preflight to finish');
     const afterSetup = await L.apiState();
@@ -330,7 +330,7 @@ async function fixturesRecovery(page, wf) {
   L.assertion('recovery: the CLI made nothing usable', names.every((n) => !hasText(wf(n))), L.listTree(FIX_WORK).join(','));
 
   const note = await page.locator('#example-fixtures-note').innerText();
-  L.assertion('recovery: the page says these are the Northwind example\'s own fixtures', /Northwind example's own fixtures/.test(note) && /test cases only/.test(note) && /No answer key is written now/.test(note), note);
+  L.assertion('recovery: the page says these are the Practice task\'s own fixtures', /Practice task's own fixtures/.test(note) && /test cases only/.test(note) && /No answer key is written now/.test(note), note);
   L.assertion('recovery: the button waits while the CLI runs', (await page.locator('#use-example-fixtures').getAttribute('aria-disabled')) === 'true');
   const refused = await postApi('/api/step/use-example-fixtures', { step: 'fixtures' });
   L.assertion('recovery: refused while the CLI runs', refused.status === 400 && refused.body.error.code === 'cli_running', JSON.stringify(refused.body.error));

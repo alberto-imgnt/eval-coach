@@ -100,7 +100,7 @@ def run_eval(project, env, npx_argv, runner=None, timeout=EVAL_TIMEOUT):
                          + " Open the setup page, choose Check everything again, then try again.")
     if outcome.timed_out:
         return -1, raw, (f"promptfoo did not finish within {timeout // 60} minutes, so it was stopped. Press the "
-                         "button again. If it keeps happening, ask your CLI to look for a test in "
+                         "button again. If it keeps happening, ask your AI to look for a test in "
                          "promptfooconfig.yaml that points at a file that does not exist.")
     if not os.path.isfile(results):
         if _CACHE_MISS.search(raw):
@@ -109,7 +109,7 @@ def run_eval(project, env, npx_argv, runner=None, timeout=EVAL_TIMEOUT):
         detail = _tail(raw)
         return outcome.code, raw, ("promptfoo stopped before it wrote results.json"
                                    + (f":\n{detail}" if detail else ".")
-                                   + "\nAsk your CLI to fix the error in promptfooconfig.yaml without changing "
+                                   + "\nAsk your AI to fix the error in promptfooconfig.yaml without changing "
                                      "any threshold, then try again.")
     return outcome.code, raw, None
 
