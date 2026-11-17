@@ -85,9 +85,9 @@ If anything fails, fix it within the change's scope, or pause (checkpoint B). Re
 
 ## Step 8 - Verification gate, sync and archive (checkpoint C)
 
-1. **Verification gate** (before anything is synced or moved). Run `python tools\verify_receipt.py check --change "<name>" --require backend`.
-   - `valid`: skip the suites and say the receipt is current.
-   - Otherwise run each check the tasks and AGENTS.md name, one at a time, through the receipt tool: `python tools\verify_receipt.py write --change "<name>" --name <backend|interface|build|e2e> -- <command>`. Use stand-ins, never real external tools, unless the user approved them. If a check fails, fix it within the change's scope and rerun, or pause (checkpoint B); never archive on a failure. A fix invalidates earlier receipts, so rerun every required check after the last edit.
+1. **Verification gate** (before anything is synced or moved). Determine every required check from the tasks and AGENTS.md, with a distinct receipt label for each command/runtime (for example, `backend` and `backend-embedded`). Run `python tools\verify_receipt.py check --change "<name>" --require backend` with an additional `--require <check>` for every other required label.
+   - `valid`: skip the suites only when every required check is present for the current tree, and say the receipt is current.
+   - Otherwise run each required check, one at a time, through the receipt tool using its assigned label: `python tools\verify_receipt.py write --change "<name>" --name <check> -- <command>`. Use stand-ins, never real external tools, unless the user approved them. If a check fails, fix it within the change's scope and rerun, or pause (checkpoint B); never archive on a failure. A fix invalidates earlier receipts, so rerun every required check after the last edit.
    - Never write or edit a receipt by hand.
 2. Run `openspec instructions archive --change "<name>" --json` (advisory; ignore failure) and apply its `context` and `operationGuidance`.
 3. Show the user: change name, tasks complete, verification result (from the receipt), delta specs and whether the main specs need syncing, and what will move to `changes/archive/`. Ask to confirm. Wait for the answer.
