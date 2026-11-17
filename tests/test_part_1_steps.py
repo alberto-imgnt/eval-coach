@@ -61,10 +61,14 @@ class PartOneBase(ch.CourseBase):
     # --- doing -----------------------------------------------------------
 
     def do_run(self, step, prompt, model="everyday-model", output=ANSWER, **extra):
-        body = {"prompt": prompt, "model_name": model}
+        body = {"prompt": prompt}
         body.update(extra)
         self.engine.step_submit(step, body)
         self.engine.step_start(step)
+        if model is not None:
+            # The app records the model at the start. The typed route stands in for a toggle change, so a test can
+            # compare two different recorded models; model=None keeps what the start recorded.
+            self.engine.step_submit(step, {"model_name": model})
         self.engine.step_send(step)
         (self.paths.part1_work(step) / "output.txt").write_text(output, encoding="utf-8")
         self.assertTrue(wait_until(lambda: self.paths.part1_output(step).is_file()), "the run was never saved")
@@ -321,6 +325,12 @@ class WriteAndRunCold(PartOneBase):
         self.assertEqual(self.done(), ["cold"])
         self.assertFalse(self.terminal.running)
 
+    def test_the_start_records_the_model_so_the_gate_needs_no_typing(self):
+        self.do_run("cold", COLD_PROMPT, model=None)
+        self.assertEqual(self.record("cold")["model_name"], "the AI's own default model")
+        self.assertNotIn("model_name", self.data("cold"))
+        self.assertTrue(self.check("cold")["ok"])
+
     def test_a_done_step_shows_the_prompt_and_output_and_offers_no_second_run(self):
         self.do_cold()
         self.assert_code("step_done", self.engine.step_start, "cold")
@@ -487,6 +497,13 @@ class RewriteAndCompare(PartOneBase):
         self.assertTrue(result["ok"])
         self.assertEqual(len(result["nudges"]), 1)
         self.assertIn("less fair", result["nudges"][0])
+
+    def test_the_same_recorded_model_in_both_runs_gets_no_nudge(self):
+        self.do_run("rewrite", LABELLED, framework="rtcc", model=None)
+        self.assertEqual(self.record("rewrite")["model_name"], "the AI's own default model")
+        self.engine._step("cold")["model_name"] = "the AI's own default model"
+        self.assertIsNone(self.detail("rewrite")["data"]["model_note"])
+        self.assertEqual(self.check("rewrite")["nudges"], [])
 
     def test_the_same_model_in_other_case_or_spacing_gets_no_nudge(self):
         self.do_run("rewrite", LABELLED, framework="rtcc", model="  Everyday-MODEL ")

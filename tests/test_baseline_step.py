@@ -140,15 +140,15 @@ class Order(BaselineCase):
 
 
 class TypedLine(BaselineCase):
-    def test_the_line_names_the_saved_model(self):
+    def test_the_line_names_the_model_the_app_recorded(self):
         self.to_baseline()
         self.engine.step_start("baseline")
         self.assertEqual(self.terminal.starts[-1]["cwd"], str(self.project))
         cli = self.state()["step"]["cli"]
-        self.assertEqual(cli["line"], LINE.format(model="mid-tier-model"))
+        self.assertEqual(cli["line"], LINE.format(model="sonnet"))
         self.assertIsNone(cli["blocked"])
         self.engine.step_send("baseline")
-        self.assertEqual(self.terminal.typed[-1], LINE.format(model="mid-tier-model"))
+        self.assertEqual(self.terminal.typed[-1], LINE.format(model="sonnet"))
 
     def test_the_template_in_the_content_is_the_exact_line(self):
         text = self.engine.content["steps"]["baseline"]
@@ -158,13 +158,13 @@ class TypedLine(BaselineCase):
 
     def test_the_model_is_forced_to_one_line(self):
         self.to_baseline()
+        self.engine.step_start("baseline")
         for raw, expected in (("  Model\nName  v2 ", "Model Name v2"),
                               ("a\r\nb\tc\x07d\x1b[0me", "a b c d [0me"),
                               ("x\u2028y\u00a0z\x85w", "x y z w"),
                               ("line one\n\n\nline two", "line one line two")):
             with self.subTest(raw=raw):
                 self.engine.step_submit("baseline", {"model_name": raw})
-                self.engine.step_start("baseline")
                 self.engine.step_send("baseline")
                 typed = self.terminal.typed[-1]
                 self.assertEqual(typed, LINE.format(model=expected))
@@ -176,25 +176,28 @@ class TypedLine(BaselineCase):
         self.engine.step_submit("baseline", {"model_name": "a\nb"})
         progress = json.loads(self.paths.progress_file.read_text(encoding="utf-8"))
         self.assertEqual(progress["steps"]["generate"]["model_name"], "a\nb")
-        self.assertEqual(self.data("generate")["model_name"], "a\nb")
 
-    def test_an_empty_model_cannot_be_sent_and_says_why(self):
+    def test_a_start_always_records_a_model_so_the_line_is_never_blocked(self):
         self.to_baseline()
-        for empty in ("", "   ", "\n\t\x07 "):
-            with self.subTest(empty=empty):
-                self.engine.step_submit("baseline", {"model_name": empty})
-                self.engine.step_start("baseline")
-                cli = self.state()["step"]["cli"]
-                self.assertIn("model name is empty", cli["blocked"])
-                self.assertTrue(cli["blocked"].rstrip().endswith("."))
-                before = list(self.terminal.typed)
-                self.assert_code("no_model", self.engine.step_send, "baseline")
-                self.assertEqual(self.terminal.typed, before)
+        self.engine.step_submit("baseline", {"model_name": ""})
+        self.engine.step_start("baseline")
+        self.assertEqual(self.engine.progress["steps"]["generate"]["models_used"], ["sonnet"])
+        self.assertIsNone(self.state()["step"]["cli"]["blocked"])
+        self.engine.step_send("baseline")
+        self.assertEqual(self.terminal.typed[-1], LINE.format(model="sonnet"))
+
+    def test_every_model_used_is_named_once_in_the_line(self):
+        self.to_baseline()
+        self.engine.step_start("baseline")
+        self.engine._record_model("haiku")
+        self.engine.step_start("baseline")
+        self.engine.step_send("baseline")
+        self.assertEqual(self.terminal.typed[-1], LINE.format(model="sonnet and haiku"))
 
     def test_a_model_with_braces_is_typed_as_written(self):
         self.to_baseline()
-        self.engine.step_submit("baseline", {"model_name": "m {x} {0}"})
         self.engine.step_start("baseline")
+        self.engine.step_submit("baseline", {"model_name": "m {x} {0}"})
         self.engine.step_send("baseline")
         self.assertEqual(self.terminal.typed[-1], LINE.format(model="m {x} {0}"))
 
@@ -233,7 +236,7 @@ class AppRun(BaselineCase):
         self.assertTrue(data["runs_ready"])
         self.assertTrue(data["checker_exists"])
         self.assertFalse(data["log_exists"])
-        self.assertEqual(data["model_name"], "mid-tier-model")
+        self.assertNotIn("model_name", data)
         self.assertEqual([r["done"] for r in data["runs"]], [True] * 5)
 
     def test_it_needs_all_five_runs(self):

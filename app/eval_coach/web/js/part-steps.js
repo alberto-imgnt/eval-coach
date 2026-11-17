@@ -174,22 +174,13 @@ function renderRunPanel(ctx, step) {
       h('p', { class: 'hint' }, ui.preview_note),
       data.prompt_saved ? plainText('run-preview', data.preview, ui.preview_heading) : h('p', { class: 'hint', id: 'run-preview-empty' }, ui.preview_empty),
     ),
-    section(
-      'model',
-      null,
-      textField(ctx, {
-        id: 'model-name',
-        label: ui.model_label,
-        hint: ui.model_hint,
-        draftKey: draftKey(step, 'model_name'),
-        value: data.model_name,
-        saveStep: step.id,
-        disabled: ctx.readOnly,
-      }),
-      data.model_note
-        ? h('div', { class: 'callout callout-attn', id: 'model-note', role: 'status' }, h('strong', { class: 'block' }, ui.model_note_heading), data.model_note)
-        : null,
-    ),
+    data.model_note
+      ? section(
+          'model',
+          null,
+          h('div', { class: 'callout callout-attn', id: 'model-note', role: 'status' }, h('strong', { class: 'block' }, ui.model_note_heading), data.model_note),
+        )
+      : null,
     section(
       'output',
       ui.output_heading,
@@ -203,7 +194,7 @@ function renderRunPanel(ctx, step) {
 function collectRunPanel(step, drafts) {
   const data = {};
   const keys = [];
-  for (const field of ['model_name', 'framework']) {
+  for (const field of ['framework']) {
     const key = draftKey(step, field);
     if (drafts.has(key)) {
       data[field] = drafts.get(key);

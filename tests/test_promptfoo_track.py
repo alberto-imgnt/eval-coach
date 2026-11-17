@@ -132,7 +132,7 @@ class Steps(PfCase):
         self.assertEqual(lines["fixtures-config"], CONFIG_LINE)
         self.assertEqual(lines["readback"], READBACK_LINE)
         self.assertEqual(lines["fix"], FIX_LINE)
-        self.assertEqual(lines["baseline"], BASELINE_LINE.format(model="mid-tier-model"))
+        self.assertEqual(lines["baseline"], BASELINE_LINE.format(model="sonnet"))
         for step in ("fixtures", "key"):
             self.assertEqual(lines[step], base.EXPECTED_LINES[step])
         self.assertEqual(self.engine._detail("generate")["cli"]["line"], base.EXPECTED_LINES["generate"])
@@ -154,12 +154,11 @@ class Steps(PfCase):
 
     def test_the_baseline_model_is_forced_to_one_line_on_this_track_too(self):
         self.to_pf("baseline")
-        self.engine.step_submit("baseline", {"model_name": "  my\nmodel\t\x07 v2 "})
         self.engine.step_start("baseline")
+        self.engine.step_submit("baseline", {"model_name": "  my\nmodel\t\x07 v2 "})
         self.engine.step_send("baseline")
         self.assertEqual(self.terminal.typed[-1], BASELINE_LINE.format(model="my model v2"))
-        self.engine.step_submit("baseline", {"model_name": "  "})
-        self.assert_code("no_model", self.engine.step_send, "baseline")
+        self.assertEqual(self.engine.progress["steps"]["generate"]["models_used"], ["  my\nmodel\t\x07 v2 "])
 
 
 class Text(PfCase):

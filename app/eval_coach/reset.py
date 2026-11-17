@@ -44,10 +44,10 @@ PROJECT_KEPT_BY_PROGRESS = PROJECT_STARTING_FILES + (PROJECT_SKILLS_DIR,)
 HOME_SCRATCH = ("blind", "fixtures-work", "key-work", "hook", "demo", "practice", "part1")
 HOME_PENDING = "pending-lessons.json"  # course progress from before a project existed
 # In the app's own folder, setup state: moved only by "Reset app configuration".
-HOME_SETUP_FILES = ("preflight.json", "app.json")
+HOME_SETUP_FILES = ("preflight.json", "app.json", "model-cache.json")
 HOME_SETUP_DIRS = ("cli-test", "cli-signin", "cli-install")
 # Kept by both resets: downloads and caches, the CLI recipe override, and the backup itself.
-HOME_KEPT = ("runtime", "npm-cache", "promptfoo", "promptfoo-work", "cli-recipes.json", BACKUP_NAME,
+HOME_KEPT = ("runtime", "npm-cache", "promptfoo", "promptfoo-work", "cli-recipes.json", "cli-models", BACKUP_NAME,
              STAGING_NAME, OLD_NAME)
 # Deleted, never backed up.
 HOME_SEALED = "sealed"

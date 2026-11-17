@@ -17,7 +17,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import project, resources
+from . import models, project, resources
 from . import state as store
 from .state import CorruptStateError
 
@@ -268,12 +268,13 @@ class _AiTest:
 
 class Preflight:
     def __init__(self, home, terminal, publish=None, runner=None, registry_paths=read_registry_paths,
-                 python_path=None, paths_provider=None, custom_ai=False):
+                 python_path=None, paths_provider=None, custom_ai=False, on_ai_test_passed=None):
         self.custom_ai = bool(custom_ai)
         self.home = Path(home)
         self.home.mkdir(parents=True, exist_ok=True)
         self.terminal = terminal
         self.publish = publish or (lambda: None)
+        self.on_ai_test_passed = on_ai_test_passed or (lambda command: None)
         self.runner = runner or SystemRunner()
         self.registry_paths = registry_paths
         self.python_path = python_path or sys.executable
@@ -317,8 +318,8 @@ class Preflight:
         m = self.content["messages"]["not_checked"]
         items = {item: {"status": "not_checked", "detail": m["detail"], "next": m["next"]} for item in ITEM_IDS}
         data = {"version": 1, "track": "script", "cli_command": "", "test_passed_command": "",
-                "test_passed_quietly": False,
-                "recipe_ran": False, "ran_once": False, "setup_skipped": False, "items": items}
+                "test_passed_quietly": False, "recipe_ran": False, "ran_once": False,
+                "setup_skipped": False, "model_preference": models.DEFAULT, "items": items}
         self._apply_track_item(data)
         return data
 
@@ -345,6 +346,8 @@ class Preflight:
                 data["items"][item] = default["items"][item]
         if data["track"] not in TRACKS:
             data["track"] = "script"
+        if data["model_preference"] not in models.CHOICES:
+            data["model_preference"] = models.DEFAULT
         self._apply_track_item(data)
         return data
 
@@ -394,6 +397,17 @@ class Preflight:
         """True once the participant chose to skip setup for now. It is forgotten by a configuration reset."""
         with self._lock:
             return self._data.get("setup_skipped") is True
+
+    @property
+    def model_preference(self):
+        """"sonnet" or "haiku": the model the next AI window starts on. Setup state, not course progress."""
+        with self._lock:
+            return self._data["model_preference"]
+
+    def set_model_preference(self, value):
+        with self._lock:
+            self._data["model_preference"] = value
+            self._save()
 
     def skip_setup(self):
         with self._lock:
@@ -988,6 +1002,7 @@ class Preflight:
             passed = result.started and result.code == 0 and not result.timed_out and not result.cancelled
         except Exception:  # noqa: BLE001 - whatever went wrong, the visible test is the way forward
             passed = False
+        recorded = False
         with self._lock:
             if self._ai_test is not record or record.cancel.is_set():
                 return
@@ -997,9 +1012,12 @@ class Preflight:
                 self._data["test_passed_quietly"] = True
                 self._save()
                 self._set("working_test", "passed", "working_test_passed_background")
+                recorded = True
             else:
                 record.state = "needs_you"
                 self._set("working_test", "needs_you", "ai_test_background_needs_you")
+        if recorded:
+            self.on_ai_test_passed(record.command)
         self.publish()
 
     def prepare_test_folder(self):

@@ -60,6 +60,8 @@ class Session:
         self.home, self.project = self.tmp / "home", self.tmp / "project"
         if scenario != "no-setup":
             helpers.write_passed_preflight(self.home)
+        # Give the stand-in AI model options, so the Sonnet / Haiku switch shows and each start passes the model.
+        helpers.write_recipes(self.home, "fake-cli", helpers.ALIAS_MODELS)
         self.terminal = TerminalManager(pty_factory=FakePty, argv_parser=lambda c, env=None: c.split(),
                                         command_checker=lambda c, env=None: None)
         self.course = load_bundled()
@@ -84,7 +86,7 @@ class Session:
             if kind == "lesson":
                 engine.lesson_complete(name)
             elif name == "cold":
-                engine.step_submit("cold", {"prompt": COLD_PROMPT, "model_name": "everyday-model"})
+                engine.step_submit("cold", {"prompt": COLD_PROMPT, "model_name": "sonnet"})
                 paths.part1_output("cold").parent.mkdir(parents=True, exist_ok=True)
                 paths.part1_output("cold").write_text(answer, encoding="utf-8")
                 engine.step_check("cold")
@@ -92,7 +94,7 @@ class Session:
                 engine.step_submit("score", {"answers": marks(2), "gap": "No ask for my lead", "in_prompt": "no"})
                 engine.step_check("score")
             elif name == "rewrite":
-                engine.step_submit("rewrite", {"prompt": LABELLED, "model_name": "everyday-model", "framework": "rtcc"})
+                engine.step_submit("rewrite", {"prompt": LABELLED, "model_name": "sonnet", "framework": "rtcc"})
                 paths.part1_output("rewrite").write_text(second_answer, encoding="utf-8")
                 engine.step_check("rewrite")
             elif name == "rescore":
@@ -150,7 +152,9 @@ class Control(BaseHTTPRequestHandler):
             paths = session.current.paths
             listing = {"part1": sorted(p.name for p in paths.part1.iterdir()) if paths.part1.exists() else [],
                        "cold_work": sorted(p.name for p in paths.part1_work("cold").iterdir()) if paths.part1_work("cold").exists() else [],
-                       "typed": [line for pty in FakePty.created for line in pty.lines]}
+                       "typed": [line for pty in FakePty.created for line in pty.lines],
+                       "launched": [pty.argv for pty in FakePty.created],
+                       "model_preference": session.current.engine.preflight.model_preference}
             self._json(200, listing)
         elif self.path.startswith("/control/read?"):
             name = self.path.split("=", 1)[1]

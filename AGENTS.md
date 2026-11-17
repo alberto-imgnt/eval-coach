@@ -54,10 +54,10 @@ Do not hand-edit `dist/`, or the scratch output under `e2e-work/` (everything ex
 
 1. **Python standard library only at runtime**, Python 3.9-compatible syntax, `from __future__ import annotations`. No pip packages. The browser UI has no build step.
 2. **No permission flags** on the participant's CLI, and the app **never answers a CLI prompt**.
-3. **Never parse terminal output to decide anything.** Decide by reading files and by running the checker directly. One addition (guided-setup, 2026-11-17): a process the app started itself, with no terminal, may be judged by its exit status alone, never by what it printed. Only the quiet background test of the chosen AI does this.
+3. **Never parse terminal output to decide anything.** Decide by reading files and by running the checker directly. Two scoped exceptions. (a) Guided-setup, 2026-11-17: a process the app started itself, with no terminal, may be judged by its exit status alone, never by what it printed. Only the quiet background test of the chosen AI does this. (b) OpenSpec change `model-preference`: a tool's own `/model` list may be read in memory only to get a model ID, and the text before it only to avoid typing into a question; never for a result. The text is never written to a file.
 4. "New chat" means a new CLI process; only one CLI process runs at a time.
 5. Network use by the app is limited to consented preflight downloads (python.org, nodejs.org, the npm registry). No telemetry, no API keys, the app never calls a model.
-6. The participant chooses the CLI and model, from a fixed list of three tools (GitHub Copilot CLI, Claude Code, Devin CLI) that lives in `cli-recipes.json`. No CLI-specific logic outside that data. A free-text command route stays only so the stand-in and the tests can run: the server accepts any command, and the interface shows the typed field only when the app is started with the hidden `--custom-ai` flag (OpenSpec change `guided-setup`).
+6. The participant chooses the CLI from a fixed list of three tools (GitHub Copilot CLI, Claude Code, Devin CLI) that lives in `cli-recipes.json`. The only model choice is Sonnet or Haiku, a stored preference with a toggle in every AI window; the launch option for each tool (alias or exact ID, with a shipped fallback and the keyword used to find the ID) is `models` data in `cli-recipes.json`. No CLI-specific logic outside that data. A free-text command route stays only so the stand-in and the tests can run: the server accepts any command, and the interface shows the typed field only when the app is started with the hidden `--custom-ai` flag (OpenSpec change `guided-setup`). A command with no `models` data (the stand-in, a typed command) starts with no model option and shows no toggle.
 7. Never suggest Copilot Chat in Teams. Northwind is a learning example and never a submission option.
 8. Bundled skills stay **byte-identical** to their source files (the Part 3 skills come from the Session 3 materials); changes go in the typed line.
 9. No answer key exists until predictions are locked (`key` step, `key-work` folder, sealed storage outside the project). `progress.json` never holds answer keys, fixture text or course answers.
@@ -101,7 +101,7 @@ Notes:
 - Use the stand-in `e2e-work/harness/fake_cli.py` unless the user has approved a real-CLI run. Lesson harness stages refuse to run unless `E2E_PROFILE=standin`.
 - Real approvals are single-use "Yes" only, after the full command text is verified. Never choose "switch to auto mode" or "don't ask again".
 - If a command is refused, bring it to the user. Do not widen the verifier on your own judgment.
-- The user lifted the real-CLI test budget on 2026-11-16 (it was 17 sessions, 15 used) for the `guided-setup` screenshots. Real-CLI runs still need the user's approval each time. Folder-trust questions are answered only with the user's explicit approval, one single-use Yes per tool, and never for any other prompt.
+- Each real-CLI run needs the user's approval. There is no session budget (the user lifted it on 2026-11-16). Folder-trust questions are answered only with the user's explicit approval, one single-use Yes per tool, and never for any other prompt.
 - Never run a real CLI install recipe in a test. Never edit CLI settings or credentials.
 
 ## Sensitive items

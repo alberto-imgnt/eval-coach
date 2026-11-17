@@ -36,6 +36,39 @@ export function actionButton(ctx, { label, busyKey, busyLabel, onClick, kind, di
   );
 }
 
+// The Sonnet / Haiku choice in the head of every AI window. One stored value, so every view shows the same one.
+// It is hidden when the chosen AI has no model options, and a change applies the next time the AI starts.
+export function modelToggle(ctx) {
+  const model = ctx.state.ai_model;
+  if (!model || !model.available) return null;
+  const chosen = ctx.local('model-choice') || model.preference;
+  return h(
+    'div',
+    { class: 'term-model', key: 'model', role: 'radiogroup', 'aria-label': model.text.toggle_label },
+    h('span', { class: 'hint', 'aria-hidden': 'true' }, model.text.toggle_label),
+    h(
+      'div',
+      { class: 'seg' },
+      model.options.map((option) =>
+        h(
+          'label',
+          { class: 'seg-opt', key: option.id },
+          h('input', {
+            type: 'radio',
+            name: 'ai-model',
+            value: option.id,
+            checked: chosen === option.id,
+            'aria-describedby': 'ai-model-note',
+            onChange: () => ctx.actions.setModel(option.id),
+          }),
+          h('span', null, option.label),
+        ),
+      ),
+    ),
+    h('span', { class: 'hint', id: 'ai-model-note' }, model.text.applies_next),
+  );
+}
+
 export function textField(ctx, opts) {
   const { id, label, hint, draftKey, value, saveStep, multiline, rows, disabled, placeholder, mono } = opts;
   const current = ctx.draft(draftKey, value === null || value === undefined ? '' : value);

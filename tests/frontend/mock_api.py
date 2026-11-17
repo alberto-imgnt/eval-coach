@@ -30,6 +30,7 @@ CONTENT_ROOT = PACKAGE_ROOT / "content"
 PREFLIGHT_TEXT = json.loads((CONTENT_ROOT / "preflight.json").read_text(encoding="utf-8"))
 SETTINGS_FULL = json.loads((CONTENT_ROOT / "settings.json").read_text(encoding="utf-8"))
 SETTINGS_TEXT = {k: v for k, v in SETTINGS_FULL.items() if k != "errors"}
+AI_MODEL_TEXT = json.loads((CONTENT_ROOT / "lesson-ui.json").read_text(encoding="utf-8"))["ai_model"]
 SERIES = json.loads((CONTENT_ROOT / "series.json").read_text(encoding="utf-8"))
 # Part 1 is a real Part with its own course; the mock only needs its row on the Series map (its screens are
 # tested against the real engine in part1.spec.js).
@@ -103,7 +104,7 @@ LINES = {
     "baseline": "Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are runs/run-1.txt to runs/run-5.txt. The prompt file is prompt-v0.md. The model was {model}.",
 }
 FOLDER = {"generate": "A blind folder", "build": "Your project", "fixtures": "A clean folder", "key": "Answer key folder", "readback": "Your project", "fix": "Your project", "baseline": "Your project"}
-MODEL_MISSING = "The model name is empty, so the line cannot be sent. Write the name of the model you used for your five runs in the box, then press Send to AI."
+MOCK_MODEL = "mid-tier-model"  # the model the stand-in server says the app recorded for the runs
 
 ANSWER_KEY = """# Answer key
 
@@ -251,7 +252,7 @@ def base_detail(step_id):
     text = resolved_text(step_id)
     if step_id in LINES or text.get("line"):
         raw = text.get("line") or text.get("line_template") if TRACK["name"] == "promptfoo" else LINES[step_id]
-        line = raw.replace("{model}", "mid-tier-model")
+        line = raw.replace("{model}", MOCK_MODEL)
         cli = {"line": line, "folder_label": text.get("folder_label") or FOLDER[step_id], "started": False, "sent": False, "blocked": None}
     return {
         "id": step_id,
@@ -274,10 +275,9 @@ def live_cli_view(detail):
     """The typed line and the reason Start is blocked, rebuilt like the real engine does."""
     data, cli = detail["data"], detail["cli"]
     ids = [c["id"] for c in data["clis"]]
-    name = " ".join(data["model_name"].split())
     chosen = data["cli"] if data["cli"] in ids else ""
-    cli["line"] = LIVE_LINE.format(cli=chosen or "<" + " | ".join(ids) + ">", model=name or "<model>")
-    cli["blocked"] = None if name else MODEL_MISSING
+    cli["line"] = LIVE_LINE.format(cli=chosen or "<" + " | ".join(ids) + ">", model=MOCK_MODEL)
+    cli["blocked"] = None
     cli["start_blocked"] = (LIVE_TEXT["messages"]["not_acknowledged"] if not data["acknowledged"]
                             else None if chosen else LIVE_TEXT["messages"]["no_cli"])
 
@@ -290,7 +290,7 @@ def live_detail():
                 "start_blocked": None},
         "checklist": [], "last_check": None, "troubleshooting": LIVE_TEXT["troubleshooting"],
         "ui": copy.deepcopy(LIVE_TEXT["ui"]),
-        "data": {"clis": copy.deepcopy(LIVE_TEXT["clis"]), "cli": "", "acknowledged": False, "model_name": "mid-tier-model",
+        "data": {"clis": copy.deepcopy(LIVE_TEXT["clis"]), "cli": "", "acknowledged": False,
                  "config_exists": False, "provider_exists": False, "provider_ok": False, "scan": [], "started": False},
     }
     live_cli_view(detail)
@@ -310,7 +310,6 @@ def build_details():
             {"n": 5, "done": False, "words": 0},
         ],
         "current_run": 3,
-        "model_name": "",
     }
     d["build"]["data"] = {"checker_exists": True, "first_look": None, "scan": [{"message": (
         "promptfooconfig.yaml uses the \"llm-rubric\" check, which needs an AI model or the network."
@@ -358,7 +357,6 @@ def build_details():
         "runs": [{"n": n, "done": True} for n in range(1, 6)],
         "runs_ready": True,
         "checker_exists": True,
-        "model_name": "mid-tier-model",
         "result": None,
         "summary": None,
         "fresh": False,
@@ -419,6 +417,7 @@ class World:
             else:
                 self.current_index = STEP_ORDER.index(scenario) if scenario not in ("done", "live") else len(STEP_ORDER)
             self.terminal = {"running": False, "label": "Your AI", "exit_code": None, "owner": None}
+            self.ai_model = {"preference": "sonnet", "available": True}
             self.setup = {
                 "project_path": "",
                 "cli_command": "",
@@ -540,6 +539,13 @@ class World:
             "steps": steps,
             "step": step,
             "terminal": dict(self.terminal),
+            "ai_model": {
+                "preference": self.ai_model["preference"],
+                "options": [{"id": "sonnet", "label": "Sonnet"}, {"id": "haiku", "label": "Haiku"}] if self.ai_model["available"] else [],
+                "applies_next_start": bool(self.terminal["running"]),
+                "available": self.ai_model["available"],
+                "text": {"toggle_label": AI_MODEL_TEXT["toggle_label"], "applies_next": AI_MODEL_TEXT["applies_next"]},
+            },
             "preflight": preflight,
             "course": extra["course"],
             "optional_steps": self.optional_steps(),
@@ -821,6 +827,10 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/preflight/stop":
             world.terminal.update(running=False, exit_code=0)
             world.preflight["session"] = {"kind": None, "sent": False}
+        elif path == "/api/model":
+            if body.get("preference") not in ("sonnet", "haiku"):
+                raise MockError("bad_model", AI_MODEL_TEXT["bad_model"])
+            world.ai_model["preference"] = body["preference"]
         elif path == "/api/step/start":
             if body["step"] == "live" and world.details["live"]["cli"]["start_blocked"]:
                 raise MockError("warning_not_acknowledged", world.details["live"]["cli"]["start_blocked"])
@@ -931,14 +941,9 @@ class Handler(BaseHTTPRequestHandler):
             for key in ("acknowledged", "cli"):
                 if key in data:
                     d["data"][key] = data[key]
-            if "model_name" in data:
-                d["data"]["model_name"] = data["model_name"]
             live_cli_view(d)
             return
-        if step_id == "generate":
-            if "model_name" in data:
-                d["data"]["model_name"] = data["model_name"]
-        elif step_id == "build":
+        if step_id == "build":
             for item in d["checklist"]:
                 if item["id"] in data.get("checklist", {}):
                     item["checked"] = data["checklist"][item["id"]]
@@ -962,12 +967,6 @@ class Handler(BaseHTTPRequestHandler):
                 d["data"]["locked"] = True
         elif step_id == "run":
             d["data"]["classifications"].update(data.get("classifications", {}))
-        elif step_id == "baseline":
-            if "model_name" in data:
-                name = " ".join(data["model_name"].split())
-                d["data"]["model_name"] = data["model_name"]
-                d["cli"]["line"] = LINES["baseline"].format(model=name or "<model>")
-                d["cli"]["blocked"] = None if name else MODEL_MISSING
         elif step_id == "fix":
             if "test_cases_text" in data:
                 d["data"]["test_cases_text"] = data["test_cases_text"]
@@ -1091,6 +1090,8 @@ class Handler(BaseHTTPRequestHandler):
                 world.details["fixtures"]["data"]["example"]["offered"] = body["starter"] == "northwind"
             elif parts.path == "/__mock/set_terminal":
                 world.terminal.update(body)
+            elif parts.path == "/__mock/ai_model":
+                world.ai_model.update(body)
             elif parts.path == "/__mock/check_passes":
                 world.check_passes = bool(body.get("value"))
             elif parts.path == "/__mock/fail":
