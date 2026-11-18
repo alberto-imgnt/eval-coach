@@ -181,8 +181,8 @@ test('the cold step: Save keeps only the participant\'s words, Start and Send ru
   await expect(preview).toContainText('Mon: standup and two Northwind client meetings');
   await expect(page.locator('#cli-start')).not.toHaveAttribute('aria-disabled', 'true');
 
-  await page.locator('#model-name').fill('everyday-model');
-  await page.locator('#model-name').blur();
+  await expect(page.locator('#model-name')).toHaveCount(0);
+  await expect(page.getByRole('radio', { name: 'Sonnet' })).toBeChecked();
   await page.locator('#cli-start').click();
   await expect(page.locator('#cli-send')).not.toHaveAttribute('aria-disabled', 'true');
   expect((await files(request)).cold_work).toEqual(['prompt.md']);
@@ -338,18 +338,22 @@ test('the rewrite step runs once in a new chat, fails an unchanged prompt, and n
   // The same words as the first prompt fail the gate and say why.
   await savePrompt(page, 'Please turn my notes into a Friday update for my lead.');
   await page.locator('#label-sets .radio-card').nth(0).locator('input').check();
-  await page.locator('#model-name').fill('everyday-model');
-  await page.locator('#model-name').blur();
   await page.locator('#cli-start').click();
   await control(request, '/control/output', { step: 'rewrite', text: 'A second answer.' });
   await expect(page.locator('#run-output')).toHaveText('A second answer.');
   await page.locator('#check-work').click();
   await expect(page.locator('.check-items li').nth(2)).toContainText('same as your first one');
   await expect(page.locator('.check-head')).toContainText('Not done yet');
+  await expect(page.locator('#model-note')).toHaveCount(0);
 
+  // The toggle changes the model of the next run, and the app records it: a different model passes with a note.
   await savePrompt(page, 'Role: a consultant\nTask: write the update\nContext: two clients\nConstraints: short');
-  await page.locator('#model-name').fill('another-model');
-  await page.locator('#model-name').blur();
+  await page.getByRole('radio', { name: 'Haiku' }).check();
+  await expect.poll(async () => (await files(request)).model_preference).toBe('haiku');
+  await page.locator('#cli-start').click();
+  await expect.poll(async () => (await files(request)).launched.at(-1)).toEqual(['fake-cli', '--model', 'haiku']);
+  await control(request, '/control/output', { step: 'rewrite', text: 'A third answer.' });
+  await expect(page.locator('#run-output')).toHaveText('A third answer.');
   await expect(page.locator('#model-note')).toContainText('different model');
   await page.locator('#check-work').click();
   await expect(page.locator('.check-head')).toContainText('Passed');

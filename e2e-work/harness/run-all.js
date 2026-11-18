@@ -17,9 +17,9 @@ const PYTHON = path.join(SPIKE, 'runtime', 'python-embed-3.13.17-nopth', 'python
 const PYZ = process.env.E2E_PYZ || path.join(WORK, 'eval-coach-e2e.pyz');
 
 const SCRIPT_SEQUENCE = ['mission', 'setup', 'hook', 'several-runs', 'generate', 'rules', 'restart', 'build', 'trust',
-  'fixtures', 'readback', 'predict', 'key', 'surprise', 'run', 'fix', 'baseline-why', 'baseline', 'part1', 'part2', 'migrate', 'quit'];
+  'fixtures', 'readback', 'predict', 'key', 'surprise', 'run', 'fix', 'baseline-why', 'baseline', 'part1', 'part2', 'migrate', 'model', 'quit'];
 const PF_SEQUENCE = ['mission', 'setup', 'hook', 'several-runs', 'generate', 'rules', 'restart', 'build', 'trust',
-  'fixtures', 'fixtures-config', 'readback', 'predict', 'key', 'surprise', 'run', 'fix', 'baseline-why', 'baseline', 'live', 'part1', 'part2', 'migrate', 'quit'];
+  'fixtures', 'fixtures-config', 'readback', 'predict', 'key', 'surprise', 'run', 'fix', 'baseline-why', 'baseline', 'live', 'part1', 'part2', 'migrate', 'model', 'quit'];
 
 const args = process.argv.slice(2);
 const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : null; };
@@ -54,7 +54,7 @@ function runPass(trackName, fresh) {
 
   if (fresh) {
     unlinkRuntime(home);
-    for (const p of [homeName, projectName, `logs${suffix}`, `screenshots${suffix}`, 'migrate-tmp']) fs.rmSync(path.join(WORK, p), { recursive: true, force: true });
+    for (const p of [homeName, projectName, `logs${suffix}`, `screenshots${suffix}`, 'migrate-tmp', 'model-tmp']) fs.rmSync(path.join(WORK, p), { recursive: true, force: true });
     for (const f of [`harness-state${suffix}.json`, 'fake-cli-events.jsonl', 'fake-cli-mode.txt']) fs.rmSync(path.join(WORK, f), { force: true });
   }
   if (pf) linkRuntime(home);

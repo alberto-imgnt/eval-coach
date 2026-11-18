@@ -265,7 +265,7 @@ class Routes(ServerCase):
         state = json.loads(raw)
         self.assertEqual(set(state), {"configured", "setup", "current_step", "steps", "step", "terminal", "preflight",
                                       "course", "optional_steps", "current_item", "review", "course_text",
-                                      "series", "settings"})
+                                      "series", "settings", "ai_model"})
         self.assertEqual([(i["kind"], i["id"], i["status"]) for i in state["course"]],
                          [("step", s, "locked") for s in
                           ("generate", "build", "fixtures", "readback", "predict", "key", "run", "fix", "baseline")])
@@ -320,7 +320,16 @@ class Routes(ServerCase):
         status, body = self.post("/api/step/submit", {"step": "generate", "data": {"model_name": "m"}})
         self.assertEqual(status, 200)
         self.assertEqual(body["state"]["step"]["id"], "generate")
-        self.assertEqual(body["state"]["step"]["data"]["model_name"], "m")
+        self.assertNotIn("model_name", body["state"]["step"]["data"])
+
+    def test_the_model_route_stores_the_choice_and_refuses_an_unknown_one(self):
+        status, body = self.post("/api/model", {"preference": "haiku"})
+        self.assertEqual(status, 200)
+        self.assertEqual(body["state"]["ai_model"]["preference"], "haiku")
+        status, body = self.post("/api/model", {"preference": "opus"})
+        self.assertEqual((status, body["error"]["code"]), (400, "bad_model"))
+        self.assertEqual(body["state"]["ai_model"]["preference"], "haiku")
+        self.assertFalse(body["state"]["ai_model"]["available"])  # the stand-in command has no model data
 
     def test_response_without_a_step_returns_the_current_step(self):
         self.setup_project()

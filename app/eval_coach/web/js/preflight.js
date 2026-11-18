@@ -3,7 +3,7 @@
 
 import { h } from './dom.js';
 import { aiWindowLink, renderAiWindowLesson } from './ai-window.js';
-import { actionButton, textField } from './ui.js';
+import { actionButton, modelToggle, textField } from './ui.js';
 
 function statusWord(pf, status) {
   return pf.text[`status_${status}`] || status;
@@ -593,6 +593,7 @@ export function renderPreflightTermHead(ctx) {
       h('span', { class: `term-status${running ? ' is-on' : ''}`, role: 'status' }, statusLine),
     ),
     h('div', { class: 'row term-ai-link', key: 'ai-window-link' }, aiWindowLink(ctx)),
+    testReady ? modelToggle(ctx) : null,
     testReady
       ? h(
           'div',

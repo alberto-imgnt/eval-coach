@@ -882,6 +882,18 @@ const actions = {
     return act('pf-stop', () => mutate('/api/preflight/stop', {}));
   },
 
+  setModel(preference) {
+    return act('set-model', async () => {
+      // Shown at once, so the choice does not flicker back while the request is on its way.
+      app.local.set('model-choice', preference);
+      try {
+        await mutate('/api/model', { preference });
+      } finally {
+        app.local.delete('model-choice');
+      }
+    });
+  },
+
   pfImportCheck() {
     return act('pf-import-check', async () => {
       const setup = app.state.setup || {};

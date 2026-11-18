@@ -13,7 +13,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import baseline, criteria_steps, gates, import_checks, parsers, part_steps, project, promptfoo, resources, runner, scan
+from . import baseline, criteria_steps, gates, import_checks, models, parsers, part_steps, project, promptfoo, resources, runner, scan
 from . import lessons as lesson_lib
 from . import reset as reset_lib
 from . import review as review_lib
@@ -91,10 +91,13 @@ class Engine:
         self._checker_running = False
         pf_kwargs = {"runner": preflight_runner, "python_path": self.python_path,
                      "publish": self.terminal.publish_state if hasattr(self.terminal, "publish_state") else None,
-                     "paths_provider": lambda: self.paths, "custom_ai": custom_ai}
+                     "paths_provider": lambda: self.paths, "custom_ai": custom_ai,
+                     "on_ai_test_passed": lambda command: self._prefetch_models(command)}
         if registry_paths is not None:
             pf_kwargs["registry_paths"] = registry_paths
         self.preflight = Preflight(self.home, self.terminal, **pf_kwargs)
+        self.models = models.Models(self.home, lambda: self.preflight.recipes,
+                                    self.lesson_text["ai_model"]["default_label"])
         self._load_last_project()
         if self.progress is not None:
             self.preflight.adopt_cli_command(self.progress.get("cli_command", ""))
@@ -270,21 +273,36 @@ class Engine:
         return self.paths.checker(self._track())
 
     def _model_name(self):
-        """The model saved in the generate step as one plain line: whitespace and control characters become single spaces."""
-        return re.sub(r"[\s\x00-\x1f\x7f-\x9f]+", " ", self._step("generate")["model_name"]).strip()
+        """The models the Part 3 runs used as one plain line: whitespace and control characters become single spaces."""
+        record = self._step("generate")
+        used = record.get("models_used") or ([record["model_name"]] if record["model_name"] else [])
+        names = (re.sub(r"[\s\x00-\x1f\x7f-\x9f]+", " ", name).strip() for name in used)
+        return " and ".join(name for name in names if name)
+
+    def _set_model(self, value):
+        """Set the Part 3 model by hand (the test-only route): the one value is also the only model used."""
+        record = self._step("generate")
+        record["model_name"] = value
+        record["models_used"] = [value] if value.strip() else []
+
+    def _record_model(self, label):
+        """A Part 3 AI start records the model it passed, each model once, in the order first used."""
+        record = self._step("generate")
+        record["model_name"] = label
+        used = record.setdefault("models_used", [])
+        if label not in used:
+            used.append(label)
 
     def _step_line(self, step):
-        """(line to type, reason it cannot be sent or None). Only lines with a template hold the model name."""
+        """The line to type for a step. Only lines with a template hold the models the runs used."""
         text = self._text(step)
         if text.get("line_template"):
-            model = self._model_name()
+            model = self._model_name() or "<model>"
             cli = self._live_cli_id(text) if step == LIVE else ""
             if step == LIVE and not cli:
                 cli = "<" + " | ".join(c["id"] for c in text["clis"]) + ">"
-            if not model:
-                return text["line_template"].format(model="<model>", cli=cli), text["model_missing"]
-            return text["line_template"].format(model=model, cli=cli), None
-        return text.get("line"), None
+            return text["line_template"].format(model=model, cli=cli)
+        return text.get("line")
 
     def _live_cli_id(self, text):
         """The CLI the participant chose for live mode, when it is one of the options in the content."""
@@ -366,6 +384,7 @@ class Engine:
                 "steps": steps,
                 "step": self._step_view(p, passed, selected, step),
                 "terminal": self.terminal.status(),
+                "ai_model": self._ai_model_view(),
                 "preflight": self._preflight_view(),
                 "course": course,
                 "optional_steps": optional_steps,
@@ -449,11 +468,11 @@ class Engine:
         text = self._text(step)
         cli = None
         if text.get("line") or text.get("line_template"):
-            line, blocked = self._step_line(step)
+            line = self._step_line(step)
             cli = {"line": line, "folder_label": text["folder_label"],
                    "started": self._cli_active(step),
                    "sent": self._cli_active(step) and self._sent,
-                   "blocked": blocked}
+                   "blocked": None}
             if step == LIVE:
                 not_ready = self._live_not_ready()
                 cli["start_blocked"] = not_ready[1] if not_ready else None
@@ -489,8 +508,7 @@ class Engine:
             text = gates.read_text(self.paths.run_file(n))
             done = bool(text.strip())
             runs.append({"n": n, "done": done, "words": len(text.split()) if done else 0})
-        return {"runs": runs, "current_run": self._next_run() or gates.RUNS,
-                "model_name": self._step("generate")["model_name"]}
+        return {"runs": runs, "current_run": self._next_run() or gates.RUNS}
 
     def _next_run(self):
         for n in range(1, gates.RUNS + 1):
@@ -613,7 +631,6 @@ class Engine:
             "runs": runs,
             "runs_ready": all(r["done"] for r in runs),
             "checker_exists": self._checker().is_file(),
-            "model_name": self._step("generate")["model_name"],
             "result": facts["result"],
             "summary": facts["summary"],
             "fresh": facts["fresh"],
@@ -627,7 +644,6 @@ class Engine:
             "clis": clis,
             "cli": self._live_cli_id(text),
             "acknowledged": s["acknowledged"] is True,
-            "model_name": self._step("generate")["model_name"],
             "config_exists": p.live_config.is_file(),
             "provider_exists": p.agent_provider.is_file(),
             "provider_ok": gates.provider_is_bundled(p),
@@ -807,12 +823,13 @@ class Engine:
                 self._save()
             self.preflight.start_ai_test()
 
-    def _start_preflight_session(self, command, cwd, label, session):
+    def _start_preflight_session(self, command, cwd, label, session, ai=False):
+        """Start a setup window. `ai` is true for the AI working test, which starts on the model the toggle chose."""
         try:
-            self.terminal.start(command, str(cwd), label, env=self._cli_env(), owner=session)
-        except (ValueError, OSError) as exc:
-            self._cli_step = None
-            return exc
+            if ai:
+                self._ai_start(command, cwd, label, session)
+            else:
+                self.terminal.start(command, str(cwd), label, env=self._cli_env(), owner=session)
         except (ValueError, OSError) as exc:
             self._cli_step = None
             return exc
@@ -845,7 +862,7 @@ class Engine:
             self._stop_cli()
             folder = self.preflight.prepare_test_folder()
             label = self.preflight.content["working_test"]["terminal_label"]
-            error = self._start_preflight_session(command, folder, label, PF_TEST)
+            error = self._start_preflight_session(command, folder, label, PF_TEST, ai=True)
             if error is not None:
                 self.preflight.cli_start_failed(error)
 
@@ -869,6 +886,8 @@ class Engine:
             passed = self.preflight.check_test_result()
             if passed and self._cli_step == PF_TEST:
                 self._stop_cli()  # that chat was only for the test
+            if passed:
+                self._prefetch_models()
             self._after_preflight_change()
 
     @_preflight_errors
@@ -879,6 +898,7 @@ class Engine:
                 return
             if self.preflight.poll_test_result():
                 self._stop_cli()  # that chat was only for the test
+                self._prefetch_models()
                 self._after_preflight_change()
 
     @_preflight_errors
@@ -979,6 +999,47 @@ class Engine:
 
     # --- CLI control -------------------------------------------------------
 
+    def _ai_command(self):
+        """The command the AI windows start with: the project's, or the saved one before a project exists."""
+        return (self.progress["cli_command"] if self.progress is not None else "") or self.preflight.cli_command
+
+    def _ai_model_view(self):
+        """The model choice for the state: the stored preference and the options the chosen AI has."""
+        options = self.models.options(self._ai_command())
+        text = self.lesson_text["ai_model"]
+        return {"preference": self.preflight.model_preference, "options": options,
+                "applies_next_start": bool(self.terminal.running), "available": bool(options),
+                "text": {"toggle_label": text["toggle_label"], "applies_next": text["applies_next"]}}
+
+    def set_model_preference(self, preference):
+        """POST /api/model: store the choice. It applies at the next AI start; a running window is not touched."""
+        with self._lock:
+            offered = [o["id"] for o in self.models.options(self._ai_command())] or list(models.CHOICES)
+            if not isinstance(preference, str) or preference not in offered:
+                raise EngineError("bad_model", self.lesson_text["ai_model"]["bad_model"])
+            self.preflight.set_model_preference(preference)
+        if hasattr(self.terminal, "publish_state"):
+            self.terminal.publish_state()
+
+    def _prefetch_models(self, command=None):
+        """The test just proved the tool works, so it can show its model list: look it up before the first AI window."""
+        command = command or self.preflight.cli_command
+        if command:
+            self.models.prefetch(command, self._cli_env(), lambda: not self.terminal.running)
+
+    def _ai_start(self, command, cwd, label, owner):
+        """Start the participant's AI on the model the toggle chose. Returns the model name the app passed.
+
+        Every AI window the app starts goes through here, so no start can forget the model option. A command with no
+        model data starts exactly as typed.
+        """
+        env = self._cli_env()
+        extra, model_label = self.models.resolve(command, self.preflight.model_preference, env=env,
+                                                 can_discover=lambda: not self.terminal.running)
+        target = list(self.terminal.argv_for(command, env)) + extra if extra else command
+        self.terminal.start(target, str(cwd), label, env=env, owner=owner)
+        return model_label
+
     def _cancel_watcher(self):
         if self._watcher_cancel is not None:
             self._watcher_cancel.set()
@@ -1027,11 +1088,13 @@ class Engine:
                 raise EngineError("folder_busy", f"The working folder could not be prepared: {exc}") from exc
             label = text["title"] if run_n is None else f"{text['title']}: run {run_n} of {gates.RUNS}"
             try:
-                self.terminal.start(self.progress["cli_command"], str(cwd), label, env=self._cli_env(), owner=step)
+                label_model = self._ai_start(self.progress["cli_command"], cwd, label, step)
             except (ValueError, OSError) as exc:
                 raise EngineError("cli_start_failed", f"Your AI could not be started: {exc}") from exc
             self._cli_step = step
             self._sent = False
+            self._record_model(label_model)
+            self._save()
             if step == LIVE and self._step(LIVE)["start_hashes"] is None:
                 # Noted once, before the CLI can touch anything, so the gate can tell whether these files changed.
                 self._step(LIVE)["start_hashes"] = gates.live_start_hashes(self.paths)
@@ -1050,13 +1113,11 @@ class Engine:
             return handled
         with self._lock:
             self._require_active(step)
-            line, blocked = self._step_line(step)
+            line = self._step_line(step)
             if not line:
                 raise EngineError("no_cli", "This step does not use your AI.")
             if step == LIVE:
                 self._require_live_ready()
-            if blocked:
-                raise EngineError("no_model", blocked)
             if not self._cli_active(step):
                 raise EngineError("cli_not_running", "Start your AI first.")
         try:
@@ -1204,12 +1265,12 @@ class Engine:
 
     def _submit_generate(self, data):
         if "model_name" in data:
-            self._step("generate")["model_name"] = self._text_value(data["model_name"], "model_name")
+            self._set_model(self._text_value(data["model_name"], "model_name"))
 
     def _submit_baseline(self, data):
         # The model name has one home, the generate step's record, so the typed line and the log agree.
         if "model_name" in data:
-            self._step("generate")["model_name"] = self._text_value(data["model_name"], "model_name")
+            self._set_model(self._text_value(data["model_name"], "model_name"))
 
     def _submit_live(self, data):
         s = self._step(LIVE)
@@ -1223,7 +1284,7 @@ class Engine:
                 raise EngineError("bad_input", "Choose one of the CLIs in the list.")
             s["cli"] = data["cli"]
         if "model_name" in data:
-            self._step("generate")["model_name"] = self._text_value(data["model_name"], "model_name")
+            self._set_model(self._text_value(data["model_name"], "model_name"))
 
     def _submit_readback(self, data):
         s = self._step("readback")
@@ -2061,8 +2122,7 @@ class Engine:
             except (OSError, resources.ResourceNotFound) as exc:
                 raise EngineError("folder_busy", self._err("folder_busy", error=exc)) from exc
             try:
-                self.terminal.start(self.progress["cli_command"], str(cwd), label, env=self._cli_env(),
-                                    owner=self._cli_key(lesson_id, activity_id))
+                self._ai_start(self.progress["cli_command"], cwd, label, self._cli_key(lesson_id, activity_id))
             except (ValueError, OSError) as exc:
                 raise EngineError("cli_start_failed", self._err("cli_start_failed", error=exc)) from exc
             self._cli_step = self._cli_key(lesson_id, activity_id)

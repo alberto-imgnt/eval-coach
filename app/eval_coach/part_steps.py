@@ -127,7 +127,6 @@ class WriteAndRun:
             "prompt": prompt, "prompt_saved": saved,
             "notes": rough_notes(), "divider": text["divider"],
             "preview": run_copy(prompt, text["divider"]) if saved else "",
-            "model_name": record["model_name"],
             "output": output if output.strip() else None,
             "prompt_changed": bool(record["prompt_hash"]) and saved and _sha(prompt) != record["prompt_hash"],
         }
@@ -189,13 +188,13 @@ class WriteAndRun:
             except OSError as exc:
                 raise _error("folder_busy", f"The working folder could not be prepared: {exc}") from exc
             try:
-                engine.terminal.start(engine.progress["cli_command"], str(work), text["title"],
-                                      env=engine._cli_env(), owner=step)
+                label_model = engine._ai_start(engine.progress["cli_command"], work, text["title"], step)
             except (ValueError, OSError) as exc:
                 raise _error("cli_start_failed", f"Your AI could not be started: {exc}") from exc
             engine._cli_step = step
             engine._sent = False
             record["prompt_hash"] = _sha(prompt)
+            record["model_name"] = label_model
             engine._save()
             engine._start_watcher(work / "output.txt", paths.part1_output(step))
 

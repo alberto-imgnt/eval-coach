@@ -6,7 +6,7 @@ import { h } from './dom.js';
 import { hasLessons, renderCourseNav, renderStepQuestion, tx } from './lessons.js';
 import { PANELS } from './panels.js';
 import { renderSeriesNav } from './series.js';
-import { actionButton, optionalLive, section } from './ui.js';
+import { actionButton, modelToggle, optionalLive, section } from './ui.js';
 
 const STATUS_WORD = { locked: 'Not started', active: 'Now', done: 'Done', optional: 'Optional' };
 
@@ -427,6 +427,7 @@ export function renderTermHead(ctx) {
       h('span', { class: `term-status${running ? ' is-on' : ''}`, role: 'status' }, terminalStatusText(terminal)),
     ),
     h('div', { class: 'row term-ai-link', key: 'ai-window-link' }, aiWindowLink(ctx)),
+    modelToggle(ctx),
     h(
       'div',
       { class: 'term-line-block', key: 'line' },

@@ -95,7 +95,7 @@ class TerminalManager:
         self._check(command, env)
 
     def argv_for(self, command, env=None):
-        """The argv a command string means, for programs the app runs itself without a terminal."""
+        """The argv a command string means, for programs the app runs itself and to add launch options to it."""
         return list(self._parse(command, env))
 
     def start(self, command, cwd, label, env=None, owner=None):

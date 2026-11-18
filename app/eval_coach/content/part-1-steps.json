@@ -8,13 +8,13 @@
         "Your first answer shows what happens when you ask the way you usually ask. You can only see what a better prompt adds by comparing it with where you started.",
         "You run it once and keep whatever comes back. A second try would replace the very thing you want to look at.",
         "This course runs your AI in a folder that holds only your prompt, so the answer depends only on what the prompt says. This is this course's way of working. Other approaches work too.",
-        "Use your everyday model and write its name down. You use the same model for the next run, because a fair comparison changes one thing at a time."
+        "Your AI runs on an everyday model, and the app records which one. You use the same model for the next run, because a fair comparison changes one thing at a time."
       ],
       "instructions": [
         "Read the scenario and the rough notes below. The five things in the list are in your head, not in the notes.",
         "Write a prompt in your own words that asks for the end-of-week update. There is no right way to do it, and there are no hints here. You do not need to paste the notes, because the app adds them under your words.",
         "Press Save my prompt. The preview shows exactly what your AI will read.",
-        "Press Start my AI. In the terminal, ask which model it is using (type /model and press Enter, or ask \"Which model are you using?\"), then write the model name in the box.",
+        "Press Start my AI. The app starts your AI on the model chosen with the Sonnet / Haiku switch above the AI window (Sonnet unless you changed it) and records that model for you. Sonnet is the everyday default and Haiku is the lighter, faster one. The most capable flagship models, such as Opus, are not offered, because this course compares prompts, not models. A change to the switch applies the next time your AI starts.",
         "When your AI is ready, press Send to AI. The app types the line for you. Do not add anything.",
         "The app waits for output.txt, saves it as your answer and closes your AI. Then press Check my work."
       ],
@@ -42,7 +42,7 @@
       "gate": {
         "prompt": {"label": "Prompt saved", "ok": "", "fail": "Write your prompt and press Save my prompt."},
         "output": {"label": "Answer saved", "ok": "", "fail": "Run your AI so the app can save its answer."},
-        "model": {"label": "Model name recorded", "ok": "", "fail": "Write the model name in the box."},
+        "model": {"label": "Model name recorded", "ok": "", "fail": "Start your AI first, so the app can record the model."},
         "nudge_prompt_changed": {"text": "You changed your saved prompt after the run, so the answer may not match it. That is fine, but keep it in mind when you score."}
       },
       "messages": {
@@ -66,8 +66,6 @@
         "preview_empty": "Save your prompt to see the preview.",
         "notes_heading": "The rough notes",
         "notes_hint": "This is what your AI tool will turn into the update. The app adds these notes under your prompt, so you do not need to paste them.",
-        "model_label": "Model name",
-        "model_hint": "The name of the model your AI is using. You use the same model for the next run.",
         "output_heading": "What your AI saved",
         "output_empty": "Nothing saved yet. Start your AI, then press Send to AI.",
         "output_note": "Shown as plain text, exactly as your AI saved it.",
@@ -136,7 +134,7 @@
         "Choose a set of labels: RTCC, RISE or your own.",
         "Press Insert labels to put that set in the editor, then fill in each label in your own words. You can change the labels if they do not fit.",
         "Press Save my prompt. The preview shows what your AI will read, with the same rough notes as before.",
-        "Press Start my AI. This is a new chat, so nothing from your first run carries over. Use the same model as before and write its name in the box.",
+        "Press Start my AI. This is a new chat, so nothing from your first run carries over. Leave the Sonnet / Haiku switch as it was for your first run, so both runs use the same model. The app records it for you.",
         "When your AI is ready, press Send to AI. The app types the line for you.",
         "The app waits for output.txt, saves it as your answer and closes your AI. Then press Check my work."
       ],
@@ -175,7 +173,7 @@
         "prompt": {"label": "Prompt saved", "ok": "", "fail": "Write your prompt and press Save my prompt."},
         "differs": {"label": "Prompt changed from your first one", "ok": "", "fail": "Your prompt is the same as your first one. Change it before you run it."},
         "output": {"label": "Answer saved", "ok": "", "fail": "Run your AI so the app can save its answer."},
-        "model": {"label": "Model name recorded", "ok": "", "fail": "Write the model name in the box."},
+        "model": {"label": "Model name recorded", "ok": "", "fail": "Start your AI first, so the app can record the model."},
         "nudge_model": {"text": "You used a different model from your first run. That makes the comparison less fair, so keep it in mind when you compare."},
         "nudge_prompt_changed": {"text": "You changed your saved prompt after the run, so the answer may not match it. That is fine, but keep it in mind when you score."}
       },
@@ -206,8 +204,6 @@
         "preview_heading": "What your AI will read",
         "preview_note": "Your saved prompt, a divider line and the same rough notes as before. This is the whole of prompt.md.",
         "preview_empty": "Save your prompt to see the preview.",
-        "model_label": "Model name",
-        "model_hint": "Use the same model as your first run.",
         "model_note_heading": "A note on fairness",
         "output_heading": "What your AI saved",
         "output_empty": "Nothing saved yet. Start your AI, then press Send to AI.",

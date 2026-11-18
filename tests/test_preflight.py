@@ -720,6 +720,13 @@ class BackgroundTest(Base):
         self.assertEqual(self.fake.max_active, 1)
         self.assertEqual(self.item("working_test")["status"], "passed")
 
+    def test_a_quiet_pass_looks_up_the_models_in_the_background(self):
+        looked_up = []
+        self.engine.models.prefetch = lambda command, env=None, can_discover=None: looked_up.append(command)
+        self.choose()
+        self.assertEqual(self.item("working_test")["status"], "passed")
+        self.assertEqual(looked_up, ["copilot"])
+
     def test_choosing_the_same_ai_again_keeps_its_pass(self):
         self.choose()
         self.choose()

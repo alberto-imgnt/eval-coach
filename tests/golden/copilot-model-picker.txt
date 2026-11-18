@@ -1,0 +1,13 @@
+Optimize for
+  Standard - Prioritizes versatile models for efficient everyday coding.
+  High - Prioritizes capable models for challenging tasks and deeper reasoning.
+Tier: Copilot Fusion  < Standard >
+Recommended models                    Context  Reasoning
+Claude Sonnet 5.5 (default) *          200K    Medium
+GPT-6 Luna                             272K    Medium
+New models
+Gemini 4 Carbon                        200K    Medium
+GPT-6.1 Terra                          272K    Medium
+Gemini 4 Hydrogen                      983K    Medium
+Search models...
+Up/down to navigate - enter to select - esc to cancel

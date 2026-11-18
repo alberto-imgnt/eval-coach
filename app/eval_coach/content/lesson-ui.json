@@ -45,6 +45,12 @@
   },
   "folders": {"hook": "A clean folder that holds only the update and its requirements", "demo": "A demo folder, separate from your project"},
   "terminal_labels": {"hook": "Grading the update: run {n} of {total}", "demo": "Building the demo checker", "practice": "Practice run"},
+  "ai_model": {
+    "toggle_label": "Model for your AI",
+    "applies_next": "A change applies the next time your AI starts.",
+    "default_label": "the AI's own default model",
+    "bad_model": "Choose Sonnet or Haiku."
+  },
   "ui": {
     "brand_sub": "Part 3 · Running evals and baseline",
     "map_title": "Part {n}: ",

@@ -85,7 +85,7 @@ class EngineCase(unittest.TestCase):
 
     # --- walking the steps ---
 
-    def do_generate(self, model="mid-tier-model"):
+    def do_generate(self, model=None):
         for n in range(1, 6):
             self.engine.step_start("generate")
             self.assertEqual(self.terminal.starts[-1]["cwd"], str(self.paths.blind))
@@ -93,7 +93,8 @@ class EngineCase(unittest.TestCase):
             self.engine.step_send("generate")
             shutil.copy(str(NORTHWIND / f"sample-run-{n}.txt"), str(self.paths.blind_output))
             self.assertTrue(wait_until(lambda: self.paths.run_file(n).is_file()), f"run {n} never saved")
-        self.engine.step_submit("generate", {"model_name": model})
+        if model is not None:  # the test-only typed route; the app records the model itself when it starts the AI
+            self.engine.step_submit("generate", {"model_name": model})
 
     def write_checker(self, source=STDLIB_CHECKER):
         self.paths.check_py.write_text(source, encoding="utf-8")
@@ -1162,7 +1163,7 @@ class Setup(EngineCase):
         self.engine = self.new_engine()
         state = self.state()
         self.assertTrue(state["configured"])  # reopened from app.json at startup
-        self.assertEqual(state["step"]["data"]["model_name"], "mid-tier-model")
+        self.assertEqual(self.engine.progress["steps"]["generate"]["models_used"], ["sonnet"])
         self.engine.setup({"project_path": str(self.project), "cli_command": ""})
         self.assertEqual(self.state()["setup"]["cli_command"], "mycli --model sonnet")
         self.assertEqual(self.state()["step"]["data"]["current_run"], 5)

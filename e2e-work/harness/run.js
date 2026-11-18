@@ -270,9 +270,9 @@ async function stageGenerate() {
       L.note('run', `run ${n} saved`);
     }
 
-    await page.locator('#model-name').fill('sonnet');
-    await page.locator('#model-name').blur();
-    await L.waitFor(async () => (await L.apiState()).step.data.model_name === 'sonnet', 5000, 'model name saved');
+    L.assertion('generate has no model box', (await page.locator('#model-name').count()) === 0);
+    const recorded = JSON.parse(fs.readFileSync(path.join(PROJECT, '.learning', 'progress.json'), 'utf8')).steps.generate;
+    L.assertion('the app recorded the model at the start, with nothing typed', JSON.stringify(recorded.models_used) === JSON.stringify([L.MODEL]), JSON.stringify(recorded));
     await expectPassed(page, 'generate');
     await page.locator('#continue').click();
     await L.waitFor(async () => (await L.apiState()).steps.find((x) => x.id === 'generate').status === 'done', 5000, 'generate step done');
@@ -300,7 +300,8 @@ async function stageRestart() {
     L.assertion('after restart: configured and at build', s.configured === true && s.current_step === 'build', JSON.stringify({ c: s.configured, cur: s.current_step }));
     L.assertion('after restart: setup retained', s.setup.cli_command === L.CLI_COMMAND && /(eval|standin)-project/.test(s.setup.project_path), `${s.setup.cli_command} ${s.setup.project_path}`);
     const gen = await L.apiState('generate');
-    L.assertion('after restart: generate shows 5 runs and model', gen.step.data.runs.every((r) => r.done) && gen.step.data.model_name === 'sonnet');
+    const recordedAfter = JSON.parse(fs.readFileSync(path.join(PROJECT, '.learning', 'progress.json'), 'utf8')).steps.generate;
+    L.assertion('after restart: generate shows 5 runs and the recorded model', gen.step.data.runs.every((r) => r.done) && recordedAfter.models_used.length === 1 && recordedAfter.models_used[0] === L.MODEL);
     L.assertion('after restart: UI shows build step', /build/i.test(await heading(b2.page)) || (await heading(b2.page)).length > 0, await heading(b2.page));
   } finally { await b2.browser.close(); }
 }

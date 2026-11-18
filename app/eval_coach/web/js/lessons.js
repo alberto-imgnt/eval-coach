@@ -5,7 +5,7 @@ import { aiWindowLink } from './ai-window.js';
 import { isWide } from './chrome.js';
 import { h } from './dom.js';
 import { renderMarkdown } from './markdown.js';
-import { actionButton, resultTables, section } from './ui.js';
+import { actionButton, modelToggle, resultTables, section } from './ui.js';
 
 const COURSE_LABEL = 'Course';
 const SAMPLE_LABEL = 'Start from a sample';
@@ -1125,6 +1125,7 @@ export function renderLessonTermHead(ctx, lesson, activity) {
       h('span', { class: `term-status${mine ? ' is-on' : ''}`, role: 'status' }, terminalStatus(ctx, mine)),
     ),
     h('div', { class: 'row term-ai-link', key: 'ai-window-link' }, aiWindowLink(ctx)),
+    modelToggle(ctx),
     h(
       'div',
       { class: 'term-line-block', key: 'line' },

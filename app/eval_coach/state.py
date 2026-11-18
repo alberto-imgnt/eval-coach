@@ -267,7 +267,7 @@ def new_progress(project_path, cli_command, starter):
         "lessons": new_lessons_block(),
         "parts": {},  # step progress of every Part but Part 3, each created on first use
         "steps": {
-            "generate": {"model_name": "", "last_check": None},
+            "generate": {"model_name": "", "models_used": [], "last_check": None},
             "build": {"checklist": {}, "last_check": None},
             "fixtures": {"last_check": None},
             "readback": {"answers": {}, "note": "", "last_check": None},

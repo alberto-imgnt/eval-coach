@@ -438,11 +438,14 @@ function readEvents() {
   return readText(EVENTS).split(/\r?\n/).filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
 }
 
+// The operating system reuses process ids within a run, so a CLI process is told apart by its id and launch time.
+const runId = (run) => `${run.pid}@${run.launch.ts}`;
+const eventsOf = (run) => readEvents().filter((e) => e.pid === run.pid && e.ts >= run.launch.ts);
 const enterCount = new Map();
-async function sendEnter(pid) {
+async function sendEnter(run) {
   const r = await post('/api/terminal/input', { data: Buffer.from('\r').toString('base64') });
   must('participant keystroke accepted', r.ok, r.text.slice(0, 100));
-  enterCount.set(pid, (enterCount.get(pid) || 0) + 1);
+  enterCount.set(runId(run), (enterCount.get(runId(run)) || 0) + 1);
 }
 
 function approvalAllowed(name) {
@@ -468,13 +471,13 @@ async function driveApprovals(run, done, timeoutMs = 90000) {
   const started = Date.now();
   for (;;) {
     if (Date.now() - started > timeoutMs) throw new Error('stand-in CLI did not finish in time');
-    const ev = readEvents().filter((e) => e.pid === run.pid);
+    const ev = eventsOf(run);
     const asked = ev.filter((e) => e.event === 'approve');
     const answered = ev.filter((e) => e.event === 'approved');
-    if (asked.length > answered.length && (enterCount.get(run.pid) || 0) === answered.length) {
+    if (asked.length > answered.length && (enterCount.get(runId(run)) || 0) === answered.length) {
       const next = asked[answered.length];
       if (!approvalAllowed(next.name)) throw new Error(`prompt for a file outside e2e-work: ${next.name}`);
-      await sendEnter(run.pid);
+      await sendEnter(run);
     }
     if (await done(ev)) return;
     await sleep(300);
@@ -483,12 +486,12 @@ async function driveApprovals(run, done, timeoutMs = 90000) {
 
 // What the app did to the CLI process: no flags, no extra typing, no answered prompts.
 function auditProcess(label, run, expectedLine) {
-  const ev = readEvents().filter((e) => e.pid === run.pid);
+  const ev = eventsOf(run);
   const launch = ev.find((e) => e.event === 'launch');
   const approved = ev.filter((e) => e.event === 'approved');
   const asked = ev.filter((e) => e.event === 'approve');
   const lines = ev.filter((e) => e.event === 'line');
-  const enters = enterCount.get(run.pid) || 0;
+  const enters = enterCount.get(runId(run)) || 0;
   if (launch.argv.length) L.violation(`${label}: the app added arguments or flags to the CLI command: ${JSON.stringify(launch.argv)}`);
   if (approved.length !== enters || approved.some((a) => a.typed !== '')) L.violation(`${label}: a CLI prompt was answered by something other than the participant (${approved.length} answered, ${enters} Enter presses by the participant)`);
   if (lines.some((l) => l.text !== expectedLine)) L.violation(`${label}: the app typed something other than the activity's line: ${JSON.stringify(lines.map((l) => l.text))}`);
@@ -1024,19 +1027,17 @@ function countsOf(independent) {
 async function stageBaseline() {
   await enterStage('baseline');
   const detail = await stepDetail();
-  check('baseline: the typed line is exact and names the model saved in the generate step', detail.cli.line === BASELINE_LINE('sonnet') && detail.cli.blocked === null && detail.cli.folder_label === 'Your project folder', detail.cli.line);
+  check('baseline: the typed line is exact and names the model the app recorded in the generate step', detail.cli.line === BASELINE_LINE(L.MODEL) && detail.cli.blocked === null && detail.cli.folder_label === 'Your project folder', detail.cli.line);
   check('baseline: no run, no count, no log yet', detail.data.summary === null && detail.data.result === null && detail.data.fresh === false && detail.data.log_exists === false && detail.data.runs_ready === true && detail.data.checker_exists === true);
+  check('baseline: there is no model box and no model name in the data', !('model_name' in detail.data));
   check('baseline: no answer key in the project', !exists(L.projectKeyPath()));
 
-  // The model name is typed as one line, and an empty one cannot be sent.
-  await post('/api/step/submit', { step: 'baseline', data: { model_name: '  son\n\tnet \u0007 ' } });
-  check('baseline: a model name with line breaks and control characters is typed as one line', (await stepDetail()).cli.line === BASELINE_LINE('son net'), (await stepDetail()).cli.line);
-  await post('/api/step/submit', { step: 'baseline', data: { model_name: ' \n ' } });
-  const blocked = await stepDetail();
-  const refused = await post('/api/step/send', { step: 'baseline' });
-  check('baseline: an empty model name blocks Send and says why', blocked.cli.blocked && blocked.cli.blocked.includes('model name is empty') && refused.status === 400 && refused.code === 'no_model', `${refused.status} ${refused.code}`);
-  await post('/api/step/submit', { step: 'baseline', data: { model_name: 'sonnet' } });
-  check('baseline: the saved name is back', (await stepDetail()).cli.line === BASELINE_LINE('sonnet'));
+  // The model is never typed: an AI start records it, so Send is never held back for a missing model.
+  const typed = await post('/api/step/submit', { step: 'baseline', data: { model_name: '  son\n\tnet \u0007 ' } });
+  must('baseline: the test-only typed route still saves', typed.ok, typed.text.slice(0, 160));
+  check('baseline: a typed name is still forced to one line', (await stepDetail()).cli.line === BASELINE_LINE('son net'), (await stepDetail()).cli.line);
+  await post('/api/step/submit', { step: 'baseline', data: { model_name: L.MODEL } });
+  check('baseline: the recorded model is back', (await stepDetail()).cli.line === BASELINE_LINE(L.MODEL));
 
   // Refusals before any work.
   const early = await post('/api/step/check', { step: 'baseline' });
@@ -1048,9 +1049,9 @@ async function stageBaseline() {
   // A session whose log has one count too low.
   const checkerBefore = sha256(CHECKER_FILE);
   const runsBefore = RUN_FILES.map((f) => sha256(path.join(PROJECT, f)));
-  await logSession('baseline log (one count too low)', 'sonnet', true);
+  await logSession('baseline log (one count too low)', L.MODEL, true);
   const wrongLog = readText(LOG_FILE);
-  check('baseline: the stand-in wrote an Iteration 0 entry in the skill format', /^## Iteration 0: baseline\r?\n- Date: \d{4}-\d{2}-\d{2}\r?\n- Prompt: prompt-v0\.md\r?\n- Model: sonnet\r?\n- Runs: 5\r?\n- Overall: \d+ \/ \d+\r?\n- Not checked: /.test(wrongLog) && wrongLog.includes('| Criterion | Passed | Rate | Notes |'));
+  check('baseline: the stand-in wrote an Iteration 0 entry in the skill format', new RegExp(`^## Iteration 0: baseline\\r?\\n- Date: \\d{4}-\\d{2}-\\d{2}\\r?\\n- Prompt: prompt-v0\\.md\\r?\\n- Model: ${L.MODEL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\r?\\n- Runs: 5\\r?\\n- Overall: \\d+ \\/ \\d+\\r?\\n- Not checked: `).test(wrongLog) && wrongLog.includes('| Criterion | Passed | Rate | Notes |'));
 
   // The app's own run on all five runs.
   const early2 = await post('/api/step/check', { step: 'baseline' });
@@ -1095,7 +1096,7 @@ async function stageBaseline() {
   check('baseline: the app never edited the log, the checks or a run', sha256(LOG_FILE) === require('crypto').createHash('sha256').update(wrongLog).digest('hex') && sha256(CHECKER_FILE) === checkerBefore && RUN_FILES.every((f, i) => sha256(path.join(PROJECT, f)) === runsBefore[i]));
 
   // The participant asks the CLI to log again, and the numbers now agree.
-  await logSession('baseline log (correct)', 'sonnet', false);
+  await logSession('baseline log (correct)', L.MODEL, false);
   const fixedLog = readText(LOG_FILE);
   check('baseline: the second entry replaced the first and is Iteration 0 only', fixedLog !== wrongLog && (fixedLog.match(/^## Iteration 0/gm) || []).length === 1);
   const fixedHash = sha256(LOG_FILE);
@@ -1130,7 +1131,7 @@ async function stageLive() {
   check('live: the step is optional, active and on the promptfoo track', detail.optional === true && detail.status === 'active' && detail.track === 'promptfoo' && detail.cli.folder_label === 'Your project folder');
   const points = detail.ui.warning_points.join(' ');
   check('live: the warning says which CLI the helper puts into auto mode, and that the app does not run live mode', points.includes('For Devin CLI the helper adds --permission-mode auto') && points.includes('For GitHub Copilot CLI and Claude Code the helper adds no permission flag') && points.includes('The app does not run live mode') && points.includes('never changes your baseline') && detail.ui.warning_intro.includes('you can skip this step'));
-  check('live: before anything is chosen the line shows every option and Start is blocked by the warning', detail.cli.line === LIVE_LINE('<copilot | claude | devin>', 'sonnet') && detail.cli.start_blocked && detail.cli.start_blocked.includes('tick the box'), JSON.stringify(detail.cli));
+  check('live: before anything is chosen the line shows every option and Start is blocked by the warning', detail.cli.line === LIVE_LINE('<copilot | claude | devin>', L.MODEL) && detail.cli.start_blocked && detail.cli.start_blocked.includes('tick the box'), JSON.stringify(detail.cli));
   check('live: the options come from the content, not the code', detail.data.clis.map((c) => c.id).join(',') === 'copilot,claude,devin');
 
   // The browser: the course is finished without it, it is offered, and the warning comes before anything can start.
@@ -1166,7 +1167,7 @@ async function stageLive() {
   // The CLI that gets its auto mode from the helper is chosen on purpose: the app still adds nothing.
   await post('/api/step/submit', { step: 'live', data: { cli: 'devin' } });
   const ready = await stepDetailOf('live');
-  check('live: the typed line is exact, with the chosen CLI and the saved model', ready.cli.line === LIVE_LINE('devin', 'sonnet') && ready.cli.start_blocked === null && ready.cli.blocked === null, ready.cli.line);
+  check('live: the typed line is exact, with the chosen CLI and the recorded model', ready.cli.line === LIVE_LINE('devin', L.MODEL) && ready.cli.start_blocked === null && ready.cli.blocked === null, ready.cli.line);
   const early = await post('/api/step/check', { step: 'live' });
   const failing = (await stepDetailOf('live')).last_check.items.filter((i) => !i.ok).map((i) => i.label);
   check('live: the gate fails before anything exists and names what is missing', early.ok && failing.includes('promptfooconfig.live.yaml exists') && failing.includes('Live mode was started here'), failing.join(' / '));
@@ -1180,7 +1181,7 @@ async function stageLive() {
   must('live: Send accepted', send.ok, send.text.slice(0, 160));
   await driveApprovals(run, async (ev) => ev.filter((e) => e.event === 'approved').length >= 2 && exists(LIVE_CONFIG) && exists(PROVIDER_FILE), 120000);
   await sleep(1500);
-  auditProcess('live', run, LIVE_LINE('devin', 'sonnet'));
+  auditProcess('live', run, LIVE_LINE('devin', L.MODEL));
   const afterSend = await stepDetailOf('live');
   check('live: the page sees both files, the helper unchanged and a clean scan', afterSend.data.config_exists === true && afterSend.data.provider_ok === true && afterSend.data.scan.length === 0 && afterSend.data.started === true, JSON.stringify(afterSend.data));
   check('live: the helper in the project is byte for byte the bundled one', sha256(PROVIDER_FILE) === sha256(KIT_PROVIDER));
@@ -1374,7 +1375,7 @@ async function part1Flow() {
   let r = await post('/api/step/start', { step: 'cold' });
   check('cold: Start is refused until a prompt is saved', r.status === 400 && r.code === 'prompt_missing', `${r.status} ${r.code}`);
   const coldPrompt = 'Please write my Friday update from the notes below.';
-  await part1Step('cold', { prompt: coldPrompt, model_name: 'stand-in-model' });
+  await part1Step('cold', { prompt: coldPrompt });
   check('cold: Save wrote only the participant\'s words', JSON.stringify(fs.readdirSync(P1_DIR)) === JSON.stringify(['prompt-cold.md']) && readText(path.join(P1_DIR, 'prompt-cold.md')) === coldPrompt);
   const coldOut = await runPart1Cli('cold', 'part 1 cold run', 'output-cold.txt');
   const divider = P1_STEPS.cold.divider;
@@ -1407,7 +1408,7 @@ async function part1Flow() {
   let rewriteOut = '';
   for (const fw of ['rtcc', 'rise', 'own']) {
     const skeleton = P1_STEPS.rewrite.labels.find((l) => l.id === fw).skeleton;
-    await part1Step('rewrite', { prompt: skeleton, framework: fw, model_name: 'stand-in-model' });
+    await part1Step('rewrite', { prompt: skeleton, framework: fw });
     rewriteOut = await runPart1Cli('rewrite', `part 1 rewrite run (${fw})`, 'output-framework.txt');
     check(`rewrite (${fw}): the stand-in gave the better answer to a prompt with labels`, /Blocker:/.test(rewriteOut) && !/Dear lead/.test(rewriteOut));
     check(`rewrite (${fw}): the CLI read the same rough notes as the cold run`, readText(path.join(p1Scratch('rewrite'), 'prompt.md')).endsWith(`${divider}\n\n${roughNotes()}\n`));
@@ -1612,7 +1613,74 @@ async function part2Flow() {
   check('part 2: no CLI was started', readEvents().filter((e) => e.event === 'launch').length === launchesBefore);
 }
 
+// ---- Model choice -------------------------------------------------------------------------
+// A second app over a throwaway home whose recipe override gives the stand-in model options (the main stand-in has
+// none, so it passes no option). Each AI start passes the chosen model, the app records it, a change while the AI
+// runs touches nothing, and the app still types nothing and answers no prompt.
+async function stageModel() {
+  requireStandIn();
+  const base = path.join(L.WORK, 'model-tmp');
+  const home = path.join(base, 'home');
+  const dir = path.join(base, 'project');
+  fs.rmSync(base, { recursive: true, force: true });
+  fs.mkdirSync(home, { recursive: true });
+  fs.copyFileSync(path.join(HOME, 'preflight.json'), path.join(home, 'preflight.json'));
+  const recipe = {
+    id: 'stand-in', name: 'Stand-in', cli_command: path.parse(L.PYTHON).name.toLowerCase(), shell: 'none', command: '',
+    models: { sonnet: { label: 'Sonnet', launch: ['--model', 'sonnet'] }, haiku: { label: 'Haiku', launch: ['--model', 'haiku'] } },
+  };
+  fs.writeFileSync(path.join(home, 'cli-recipes.json'), JSON.stringify({ recipes: [recipe] }));
+  const progressFile = path.join(dir, '.learning', 'progress.json');
+  const recordedModel = () => readJson(progressFile).parts['part-1'].steps.cold.model_name;
+  const app = await spawnApp(home);
+  target = { port: app.port, token: app.token };
+  activePart = 'part-1';
+  try {
+    const setup = await post('/api/setup', { project_path: dir, cli_command: L.CLI_COMMAND, starter: 'northwind' });
+    must('model: the second app set up its project', setup.ok, setup.text.slice(0, 200));
+    let block = (await getState()).ai_model;
+    check('model: the choice is Sonnet, with both options offered', block.preference === 'sonnet' && block.available === true && block.options.map((o) => o.id).join(',') === 'sonnet,haiku', JSON.stringify(block));
+    const bad = await post('/api/model', { preference: 'opus' });
+    check('model: a model that is not offered is refused', bad.status === 400 && bad.code === 'bad_model', `${bad.status} ${bad.code}`);
+
+    const mission = await post('/api/lesson/complete', { lesson: 'p1-mission' });
+    must('model: the Part 1 mission was completed', mission.ok, mission.text.slice(0, 160));
+    const saved = await post('/api/step/submit', { step: 'cold', data: { prompt: 'Please write my Friday update from the notes below.' } });
+    must('model: the prompt was saved', saved.ok, saved.text.slice(0, 160));
+
+    const sonnet = await startStepCli('cold', 'model: AI start on Sonnet');
+    check('model: Sonnet starts the AI with its launch option and nothing else', JSON.stringify(sonnet.launch.argv) === JSON.stringify(['--model', 'sonnet']), JSON.stringify(sonnet.launch.argv));
+    check('model: the app recorded Sonnet, with nothing typed by the participant', recordedModel() === 'sonnet', recordedModel());
+
+    const whileRunning = await post('/api/model', { preference: 'haiku' });
+    must('model: the choice was changed while the AI runs', whileRunning.ok, whileRunning.text.slice(0, 160));
+    block = (await getState()).ai_model;
+    check('model: the change applies at the next start and the running AI is untouched', block.preference === 'haiku' && block.applies_next_start === true && L.pidAlive(sonnet.pid) && (await getState()).terminal.running === true);
+    const stop = await post('/api/step/stop', { step: 'cold' });
+    check('model: Stop works', stop.ok && (await L.waitFor(cliStopped, 15000, 'CLI stopped').then(() => true)));
+
+    const haiku = await startStepCli('cold', 'model: AI start on Haiku');
+    check('model: Haiku starts the AI with its launch option', JSON.stringify(haiku.launch.argv) === JSON.stringify(['--model', 'haiku']), JSON.stringify(haiku.launch.argv));
+    check('model: the app recorded Haiku', recordedModel() === 'haiku', recordedModel());
+    const events = readEvents().filter((e) => e.pid === sonnet.pid || e.pid === haiku.pid);
+    check('model: the app typed nothing and answered no prompt in either start', !events.some((e) => e.event === 'line' || e.event === 'approved'), JSON.stringify(events.map((e) => e.event)));
+    const stop2 = await post('/api/step/stop', { step: 'cold' });
+    check('model: Stop works again', stop2.ok && (await L.waitFor(cliStopped, 15000, 'CLI stopped').then(() => true)));
+    check('model: the choice is kept in the app folder', readJson(path.join(home, 'preflight.json')).model_preference === 'haiku');
+    check('model: the answer key and every answer stay out of the record', !JSON.stringify(readJson(progressFile)).includes('answer-key'));
+  } finally {
+    activePart = null;
+    target = null;
+    try { execFileSync('taskkill', ['/PID', String(app.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* gone */ }
+    await sleep(500);
+    fs.rmSync(base, { recursive: true, force: true });
+    try { fs.unlinkSync(path.join(L.WORK, 'server-migrate.out')); } catch { /* absent */ }
+  }
+  check('model temp folder removed', !exists(base));
+  endStage('model');
+}
+
 module.exports = {
   mission: stageMission, hook: stageHook, 'several-runs': stageSeveralRuns, rules: stageRules, trust: stageTrust, surprise: stageSurprise,
-  'baseline-why': stageBaselineWhy, baseline: stageBaseline, 'fixtures-config': stageFixturesConfig, live: stageLive, part1: stagePart1, part2: stagePart2, migrate: stageMigrate,
+  'baseline-why': stageBaselineWhy, baseline: stageBaseline, 'fixtures-config': stageFixturesConfig, live: stageLive, part1: stagePart1, part2: stagePart2, migrate: stageMigrate, model: stageModel,
 };

@@ -135,12 +135,14 @@ class Content(unittest.TestCase):
                 self.assertNotIn("Room A", text)
                 self.assertNotIn("Room B", text)
 
-    def test_generate_step_says_how_to_pick_and_record_a_model(self):
+    def test_generate_step_says_which_model_the_app_uses_and_records_it(self):
         text = " ".join(self.steps["generate"]["instructions"])
-        for phrase in ("type /model", "Which model are you using", "Sonnet", "Opus", "exact model name"):
+        for phrase in ("Sonnet / Haiku switch", "Sonnet", "Haiku", "Opus", "records that model for you"):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, text)
-        self.assertEqual(self.steps["generate"]["gate"]["model"]["fail"], "Write the model name in the box.")
+        self.assertNotIn("/model", text)
+        self.assertEqual(self.steps["generate"]["gate"]["model"]["fail"],
+                         "Start your AI first, so the app can record the model.")
 
     def test_required_teaching_lines(self):
         text = " ".join(strings_in(self.data))
