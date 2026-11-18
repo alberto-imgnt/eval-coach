@@ -6,7 +6,7 @@ Keeps every piece of course content ranked by the project's learning priorities,
 ## Requirements
 
 ### Requirement: Content is ranked by learning tier
-Content decisions SHALL follow the order in `docs/IMPLEMENTATION-PLAN.md` "Learning priorities": tier 1 core knowledge (understand evaluation concepts, run an evaluation, explain both to a technical and a non-technical reader), tier 2 context (the end-to-end workflow and where an evaluation fits), tier 3 certification (how the work lines up with Stage 3). When two items compete for time or screen space the higher tier SHALL win.
+Content decisions SHALL follow the order in `docs/CONTENT-RULES.md` "Learning priorities": tier 1 core knowledge (understand evaluation concepts, run an evaluation, explain both to a technical and a non-technical reader), tier 2 context (the end-to-end workflow and where an evaluation fits), tier 3 certification (how the work lines up with Stage 3). When two items compete for time or screen space the higher tier SHALL win.
 
 #### Scenario: Competing items
 - **GIVEN** a lesson has room for one more passage and both a tier 1 and a tier 3 passage are candidates
@@ -34,7 +34,7 @@ Stage 3 content SHALL be orientation only. It SHALL NOT block Continue, SHALL NO
 - **THEN** it contains no link, address, upload instruction or form instruction
 
 ### Requirement: The Stage 3 note follows the Prompt, Evaluations and Log structure
-The Stage 3 note SHALL describe Stage 3 as three submitted artifacts: the Prompt, the Evaluations and the Log. For each it SHALL say what the participant already holds after Part 3 and what a later Part adds. Source: `docs/SERIES-INTENT.md` "How this connects to Stage 3 certification" and `docs/STAGE3-TASK-SPEC.md` sections 4 and 5.
+The Stage 3 note SHALL describe Stage 3 as three submitted artifacts: the Prompt, the Evaluations and the Log. For each it SHALL say what the participant already holds after Part 3 and what a later Part adds. Source: the series intent notes (local reference) "How this connects to Stage 3 certification" and the Stage 3 task notes (local reference) sections 4 and 5.
 
 #### Scenario: Three artifacts named
 - **WHEN** the participant reads the Stage 3 note
@@ -62,7 +62,7 @@ The Stage 3 note SHALL say that scripts, promptfoo files and written test cases 
 - **AND** it says nothing there is needed to finish the course
 
 ### Requirement: Alignment is guarded by a test
-A test SHALL fail when the Part 3 Stage 3 note stops naming the Prompt, the Evaluations and the Log, when the Part 1 note stops naming the Prompt, when the Part 2 note stops naming the Evaluations, when Stage 3 wording appears outside a Part's last lesson, or when the plan's Stage 3 alignment map and the notes name different artifacts. Source: plan task 3.40.
+A test SHALL fail when the Part 3 Stage 3 note stops naming the Prompt, the Evaluations and the Log, when the Part 1 note stops naming the Prompt, when the Part 2 note stops naming the Evaluations, when Stage 3 wording appears outside a Part's last lesson, or when the local plan's Stage 3 alignment map (checked only where the plan is present) and the notes name different artifacts. Source: the Stage 3 tier in `docs/CONTENT-RULES.md` "Learning priorities".
 
 #### Scenario: A criterion removed
 - **GIVEN** the Part 3 note no longer names the Log

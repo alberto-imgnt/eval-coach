@@ -6,7 +6,7 @@ Defines the four hands-on steps of Part 2 (draft, thresholds, test-file, referen
 ## Requirements
 
 ### Requirement: The steps run nothing
-No Part 2 step SHALL start the participant's CLI, run a checker or call a model, and none SHALL need a network. Every gate SHALL decide from the participant's own saved words and files, never from terminal output. Source: AGENTS.md rules 3 and 5; `docs/COURSE-CONTEXT.md` ("Nothing is run in Part 2").
+No Part 2 step SHALL start the participant's CLI, run a checker or call a model, and none SHALL need a network. Every gate SHALL decide from the participant's own saved words and files, never from terminal output. Source: AGENTS.md rules 3 and 5; the course context notes (local reference) ("Nothing is run in Part 2").
 
 #### Scenario: No CLI
 - **WHEN** the participant opens any Part 2 step

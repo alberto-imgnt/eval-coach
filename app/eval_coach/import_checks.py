@@ -77,7 +77,7 @@ def decode(data):
         return data.decode("cp1252", errors="replace"), False
 
 
-# --- the content heuristic (task 4.22) --------------------------------------
+# --- the content heuristic (the content heuristic) --------------------------------------
 #
 # A criterion is about the CONTENT of the answer when its threshold requires particular information to be
 # present: named terms, labels, topics, facts, or things copied from the input. It is NOT about content when it
@@ -125,7 +125,7 @@ def is_content_threshold(threshold):
     return bool(_QUOTED.search(cleaned) and _QUOTED_PRESENCE.search(cleaned) and not _NEGATION.search(cleaned))
 
 
-# --- vague words (task 4.24) ------------------------------------------------
+# --- vague words (vague words) ------------------------------------------------
 # The words the build skill says need judgment (its NOT CHECKED rule), plus close relatives. Words inside
 # quotation marks or backticks are terms the participant chose, so they are never flagged.
 
@@ -145,7 +145,7 @@ def vague_words(threshold):
     return found
 
 
-# --- tracing to the prompt (task 4.23) ----------------------------------------
+# --- tracing to the prompt (tracing to the prompt) ----------------------------------------
 # A criterion is traced when it has Requirement text of its own, or when its name shares a key word with the
 # prompt, or its threshold shares a number or at least two key words with the prompt. A key word is a word of
 # four letters or more that is not a generic checking word. Words are compared by their first five letters, so

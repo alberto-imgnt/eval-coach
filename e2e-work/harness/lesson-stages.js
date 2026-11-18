@@ -1,4 +1,4 @@
-// Stand-in end-to-end stages for the lessons (task 3.31). The harness acts as an API client of the
+// Stand-in end-to-end stages for the lessons. The harness acts as an API client of the
 // real running app. It never reads answers from a page; it reads content/lessons.json for expected
 // answers and asserts that no response carries them before they are answered.
 // CLI activities run ONLY against the stand-in e2e-work/harness/fake_cli.py.

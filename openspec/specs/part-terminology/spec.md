@@ -6,7 +6,7 @@ Makes the words a participant reads match the series' own naming, so a part of t
 ## Requirements
 
 ### Requirement: A series part is called a Part
-Everything a participant can read SHALL call a part of the series a "Part" (for example "Part 4") and SHALL NOT use the word "session" for it. This covers lesson text, step text, the glossary, the Northwind catch-up files and the interface strings that show the Part number. Source: AGENTS.md rule 10 and `docs/COURSE-CONTEXT.md` "Open items".
+Everything a participant can read SHALL call a part of the series a "Part" (for example "Part 4") and SHALL NOT use the word "session" for it. This covers lesson text, step text, the glossary, the Northwind catch-up files and the interface strings that show the Part number. Source: AGENTS.md rule 10 and the course context notes (local reference) "Open items".
 
 #### Scenario: Lesson and step text
 - **WHEN** the content tests scan the lessons, steps, glossary and Northwind catch-up files

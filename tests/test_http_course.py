@@ -1,4 +1,4 @@
-"""Every Phase 3 route over a real server: token, Host and Origin checks, error contract, and no early answers."""
+"""Every lesson, review and kit route over a real server: token, Host and Origin checks, error contract, and no early answers."""
 from __future__ import annotations
 
 import http.client

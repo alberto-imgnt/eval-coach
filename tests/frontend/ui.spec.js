@@ -1634,7 +1634,7 @@ test('live mode: the page fits at normal and narrow widths and the controls stay
   }
 });
 
-// ---- Phase 3: lessons, review, glossary, reference ------------------------------
+// ---- lessons, review, glossary, reference ------------------------------
 
 async function openCourse(page, request, scenario, done, stepIndex) {
   await mock(request, 'reset', { scenario });

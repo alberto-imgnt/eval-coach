@@ -1,4 +1,4 @@
-"""Task 4.18: optional live mode on the promptfoo track (decision D2: built, with an explicit warning)."""
+"""Optional live mode on the promptfoo track (built on purpose, with an explicit warning)."""
 from __future__ import annotations
 
 import hashlib

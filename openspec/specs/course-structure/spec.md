@@ -6,7 +6,7 @@ Organizes the course around the method of judging AI work, one transferable conc
 ## Requirements
 
 ### Requirement: Lessons follow the method, one concept each
-The Part 3 course SHALL have seven lessons, each teaching one concept, in the order of the series method (ask clearly, know what you need, turn it into rules, score the result, improve, keep a record). Other Parts list their own lessons in their own specs (Part 1: `part-1-course`). Source: `docs/SERIES-INTENT.md` "What you will learn".
+The Part 3 course SHALL have seven lessons, each teaching one concept, in the order of the series method (ask clearly, know what you need, turn it into rules, score the result, improve, keep a record). Other Parts list their own lessons in their own specs (Part 1: `part-1-course`). Source: the series intent notes (local reference) "What you will learn".
 
 #### Scenario: Seven lessons
 - **WHEN** the Part 3 course content is loaded

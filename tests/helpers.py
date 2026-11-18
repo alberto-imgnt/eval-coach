@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import threading
 import time
@@ -13,8 +14,9 @@ sys.path.insert(0, str(ROOT / "app"))
 GOLDEN = ROOT / "tests" / "golden"
 KIT = ROOT / "app" / "eval_coach" / "kit"
 NORTHWIND = KIT / "northwind"
-SOURCE = Path(r"[source materials kept outside the repository]"
-              r"")
+# The read-only source materials live outside the repository. Set EVAL_COACH_SOURCE_MATERIALS to that folder to run
+# the tests that compare the bundled files with their source; without it those tests skip.
+SOURCE = Path(os.environ.get("EVAL_COACH_SOURCE_MATERIALS") or ROOT / "tests" / ".source-materials-not-set")
 
 
 def write_passed_preflight(home, track="script"):
