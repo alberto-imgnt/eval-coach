@@ -1,4 +1,4 @@
-"""Runs the real, pinned promptfoo 0.125.1 from the Phase 0 spike's private Node and npm cache, with no network.
+"""Runs the real, pinned promptfoo 0.125.1 from the early spike's private Node and npm cache, with no network.
 
 Skipped when that runtime is not on this machine. It is the check that the app's exact command, environment and
 summary parsing work on promptfoo's real output, not only on the stand-in.

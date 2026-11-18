@@ -49,7 +49,7 @@ COVERAGE = [
     {"room": "A", "problem": "Your fixtures look nothing like your task",
      "place": at("fixtures", BOTH, "look nothing like your task")},
     {"room": "A", "problem": "Using the Northwind example and the fixtures step gave nothing useful",
-     "place": at(*NORTHWIND_ENTRY), "note": "Also an in-app button: POST /api/step/use-example-fixtures (task 4.28)."},
+     "place": at(*NORTHWIND_ENTRY), "note": "Also an in-app button: POST /api/step/use-example-fixtures."},
 
     {"room": "B", "problem": "The agent cannot read the skill file",
      "place": many(*(at(s, "promptfoo", SKILL) for s in ("build", "fixtures", "fixtures-config", "readback", "key",
@@ -65,13 +65,13 @@ COVERAGE = [
      "place": many(*(at(s, "promptfoo", "llm-rubric") for s in ("build", "fixtures-config", "fix", "baseline", "live")))},
     {"room": "B", "problem": "Live mode says \"Not logged in\" or \"No agent CLI found\"",
      "place": at("live", "promptfoo", "Not logged in"),
-     "note": "Live mode is built (task 4.18, decision D2): an optional step after the baseline."},
+     "note": "Live mode is built on purpose: an optional step after the baseline."},
     {"room": "B", "problem": "Every test shows as failed",
      "place": many(*(at(s, "promptfoo", "Every test shows as failed") for s in ("build", "run", "fix", "baseline", "live")))},
     {"room": "B", "problem": "A label check fails on a file that looks right",
      "place": many(*(at(s, BOTH, "label check fails") for s in ("build", "readback", "run", "fix")))},
     {"room": "B", "problem": "Using the Northwind example and the fixtures step gave nothing useful",
-     "place": at(*NORTHWIND_ENTRY), "note": "Also an in-app button: POST /api/step/use-example-fixtures (task 4.28)."},
+     "place": at(*NORTHWIND_ENTRY), "note": "Also an in-app button: POST /api/step/use-example-fixtures."},
 ]
 
 

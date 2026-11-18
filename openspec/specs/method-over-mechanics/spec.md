@@ -6,7 +6,7 @@ Keeps the course teaching the transferable method of judging AI work (tier 1) ah
 ## Requirements
 
 ### Requirement: Each lesson leads with the transferable idea
-Every lesson SHALL open its teaching with the idea a participant can take to any task, in tool-neutral plain words, before it describes how this course does the work. Source: `docs/SERIES-INTENT.md` "What to keep in mind" and the plan's tier 1.
+Every lesson SHALL open its teaching with the idea a participant can take to any task, in tool-neutral plain words, before it describes how this course does the work. Source: the series intent notes (local reference) "What to keep in mind" and the learning priorities tier 1 (`docs/CONTENT-RULES.md`).
 
 #### Scenario: Idea first
 - **WHEN** the participant reads a lesson that also describes this course's mechanics
@@ -14,7 +14,7 @@ Every lesson SHALL open its teaching with the idea a participant can take to any
 - **AND** the idea is stated without naming a file, command, folder or tool
 
 ### Requirement: This course's mechanics are labelled as this course's choices
-Where a lesson describes a series-specific practice or artifact (five runs, a blind folder, the generator and builder roles, verdict lines, the checker file layout, exit codes, the four fixture steps, the answer-key timing, the skill file, file names), it SHALL introduce it under the label "How this course does it". Each such lesson SHALL say once that other approaches exist and that Stage 3 accepts scripts, promptfoo files and written test cases. Source: `docs/STAGE3-TASK-SPEC.md` section 2.
+Where a lesson describes a series-specific practice or artifact (five runs, a blind folder, the generator and builder roles, verdict lines, the checker file layout, exit codes, the four fixture steps, the answer-key timing, the skill file, file names), it SHALL introduce it under the label "How this course does it". Each such lesson SHALL say once that other approaches exist and that Stage 3 accepts scripts, promptfoo files and written test cases. Source: the Stage 3 task notes (local reference) section 2.
 
 #### Scenario: Labelled mechanics
 - **WHEN** the participant opens a lesson that still mentions a course-specific practice
@@ -40,7 +40,7 @@ Participant-facing text SHALL NOT describe a course-specific practice as the rig
 - **THEN** it gives the reason in plain words and says five is what this course uses and what Stage 3 asks for a baseline
 
 ### Requirement: True principles stay firm, with their reason
-Three principles SHALL stay unconditional and SHALL each carry a one-clause reason: never edit the checker to make a failing answer pass, never hide a rule that could not be checked (it stays NOT CHECKED and visible), and write predictions before running the checker. Source: `docs/STAGE3-TASK-SPEC.md` sections 2 and 3, `docs/SERIES-INTENT.md` "What to keep in mind".
+Three principles SHALL stay unconditional and SHALL each carry a one-clause reason: never edit the checker to make a failing answer pass, never hide a rule that could not be checked (it stays NOT CHECKED and visible), and write predictions before running the checker. Source: the Stage 3 task notes (local reference) sections 2 and 3, the series intent notes (local reference) "What to keep in mind".
 
 #### Scenario: Principle with reason
 - **WHEN** the participant reads the lesson on surprises
@@ -65,7 +65,7 @@ Glossary entries for course-specific terms (blind folder, generator, builder, ve
 - **THEN** each course-specific term's meaning begins with "In this course,"
 
 ### Requirement: The Stage 3 note does not present course files as the required format
-The Stage 3 note SHALL say that file names and layout used in this course are this course's and that Stage 3 asks for three artifacts: the Prompt, the Evaluations and the Log. Source: `docs/STAGE3-TASK-SPEC.md` section 4 ("The layout is a suggestion").
+The Stage 3 note SHALL say that file names and layout used in this course are this course's and that Stage 3 asks for three artifacts: the Prompt, the Evaluations and the Log. Source: the Stage 3 task notes (local reference) section 4 ("The layout is a suggestion").
 
 #### Scenario: Layout is not a requirement
 - **WHEN** the participant reads the Stage 3 note

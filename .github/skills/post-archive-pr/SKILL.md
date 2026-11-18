@@ -35,9 +35,9 @@ The working tree can hold unrelated edits. Never use `git add -A`, `git add .` o
    - it is listed in the proposal's Impact section or in a task, directly or through a listed folder or glob;
    - it is the archived change folder, or the matching deletion of `openspec/changes/<name>/` when that folder was tracked;
    - it is a main spec under `openspec/specs/<capability>/` for a capability in the archived `specs/` folder;
-   - it is a test for a belonging source file, or `docs/SPEC.md` or `docs/IMPLEMENTATION-PLAN.md` when the tasks required updating them.
+   - it is a test for a belonging source file, or `docs/SPEC.md` when the tasks required updating it.
 3. Everything else is **unrelated**. Show the user the two lists (belongs, unrelated), then ask which unrelated files, if any, to add. The default is none. Do not stage a path that is unclear without asking.
-4. Never stage ignored or generated output: `dist/`, `e2e-work/` scratch (everything but `e2e-work/harness/`), `spikes/*/transcripts/`, `__pycache__/`, `node_modules/`. Never stage anything that looks like a secret, token or personal data (AGENTS.md "Sensitive items"). Warn and leave it out.
+4. Never stage ignored or generated output: `docs/local/` (working papers), `dist/`, `e2e-work/` scratch (everything but `e2e-work/harness/`), `spikes/*/transcripts/`, `__pycache__/`, `node_modules/`. Never stage anything that looks like a secret, token or personal data (AGENTS.md "Sensitive items"). Warn and leave it out.
 
 ## Step 3 - Preflight tests (receipt first, then ask)
 
@@ -85,7 +85,7 @@ Ask the user, with the ask-user tool, whether to run the required suites before 
   - stale receipt: "Tests: not run now (skipped at the user's request). Earlier round: `<checks>` passed at `<finished>`, but the files being committed differ from what was tested: `<changed list>`."
   - missing or incomplete receipt: "Tests: not run (skipped at the user's request). No valid verification receipt for these changes."
 
-  Then continue to Step 4. As a secondary hint only, the archived `tasks.md`, `docs/IMPLEMENTATION-PLAN.md` or the conversation may mention an earlier run; cite it as "reported earlier, not machine-checked", never as verified.
+  Then continue to Step 4. As a secondary hint only, the archived `tasks.md`, the local plan (`docs/local/`, git-ignored, so it may not exist) or the conversation may mention an earlier run; cite it as "reported earlier, not machine-checked", never as verified.
 
 When the suites run:
 

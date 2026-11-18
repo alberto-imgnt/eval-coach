@@ -1,5 +1,9 @@
 docs/temp/
 
+# Local-only documents: implementation plan and history, the series intent and Stage 3 task notes, and other
+# working papers. Not part of the repository. Keep a copy outside the repo.
+docs/local/
+
 # Build output
 dist/
 

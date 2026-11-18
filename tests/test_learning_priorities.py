@@ -1,4 +1,4 @@
-"""Learning-priority alignment (plan section "Learning priorities", tasks 3.36 to 3.40 and 3.46).
+"""Learning-priority alignment (`docs/CONTENT-RULES.md` "Learning priorities").
 
 Tier 1: the participant explains evaluation to a non-technical reader and to a technical one.
 Tier 2: the whole series workflow is taught.
@@ -20,11 +20,11 @@ from eval_coach import resources
 STAGE_THREE = re.compile(r"stage\s*3|certif", re.I)
 NOTE_LESSON = "baseline-why"
 NOTE_HEADING = "**How this fits the Stage 3 certification.**"
-# The three artifacts Stage 3 asks for (docs/SERIES-INTENT.md, docs/STAGE3-TASK-SPEC.md).
+# The three artifacts Stage 3 asks for (the Prompt, the Evaluations and the Log; see the local Stage 3 notes).
 ARTIFACTS = ("Prompt", "Evaluations", "Log")
 NOTE_MAX_WORDS = 150
 SUBMISSION_STEPS = re.compile(r"https?://|@|\bupload\b|\bsubmission form\b|\bsend (it|them) to\b|\bhow to submit\b", re.I)
-PLAN = ROOT / "docs" / "IMPLEMENTATION-PLAN.md"
+PLAN = ROOT / "docs" / "local" / "IMPLEMENTATION-PLAN.md"
 CONTENT = ROOT / "app" / "eval_coach" / "content"
 PART_NAMES = ("Structured prompting", "Defining evaluation criteria", "Running evals and baseline",
               "Iterating with evaluation-driven development", "Load-bearing audit and packaging", "Your own task")
@@ -312,7 +312,7 @@ class TierThreeStageThree(unittest.TestCase):
         self.assertEqual(activity["type"], "reflection")
         self.assertTrue(activity["prompt"].startswith("Optional."))
 
-    @unittest.skipUnless(PLAN.exists(), "the plan is not part of the packaged app")
+    @unittest.skipUnless(PLAN.exists(), "the plan is local and not in the repository or the packaged app")
     def test_the_plan_map_and_the_lesson_name_the_same_artifacts(self):
         plan = PLAN.read_text(encoding="utf-8")
         self.assertIn("Stage 3 alignment map", plan)

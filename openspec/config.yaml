@@ -3,7 +3,7 @@ githubCopilot:
   cloudAgent: false
 
 context: |
-  eval-coach is a standalone Windows learning app: a stdlib-only Python local web server with a no-build static UI that wraps the participant's own AI CLI in an embedded terminal. Read AGENTS.md first; docs/SPEC.md, docs/DESIGN.md and docs/IMPLEMENTATION-PLAN.md are the existing (pre-OpenSpec) specs and still apply where no OpenSpec spec covers an area.
+  eval-coach is a standalone Windows learning app: a stdlib-only Python local web server with a no-build static UI that wraps the participant's own AI CLI in an embedded terminal. Read AGENTS.md first; docs/SPEC.md, docs/DESIGN.md, docs/SETUP.md and docs/CONTENT-RULES.md are the existing (pre-OpenSpec) specs and still apply where no OpenSpec spec covers an area. Working papers (the implementation plan and history, series intent and Stage 3 task notes) are kept in docs/local/, which is git-ignored; a fresh clone does not have them.
   Constraints that artifacts and code must respect:
   - Python standard library only at runtime, Python 3.9-compatible syntax. The browser UI has no build step.
   - Never parse terminal output to decide anything; decide from files and by running the checker. The app never answers a CLI prompt and never calls a model.
@@ -32,7 +32,7 @@ operations:
     guidance:
       - Use the stand-in CLI (e2e-work/harness/fake_cli.py); never run a real CLI without the user's approval.
       - Run the two backend suites one after the other, never at the same time.
-      - Update docs/SPEC.md and the master task table in docs/IMPLEMENTATION-PLAN.md in the same change.
+      - Update docs/SPEC.md in the same change. If docs/local/IMPLEMENTATION-PLAN.md exists on this machine (it is git-ignored), keep its master task table in step too, but never stage it.
       - Run each task's own verification command as the task says, but do not run the full verification suites again when all tasks are done; the archive gate runs them once and records the result.
   archive:
     guidance:

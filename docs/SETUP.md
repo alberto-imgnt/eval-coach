@@ -1,8 +1,8 @@
-# Phase 2: preflight
+# Setup and preflight
 
-Read `docs/SPEC.md` first; its non-negotiable rules apply. Preflight must install every necessary dependency. Real steps stay locked until it passes. There is no human support path, so every failure must explain itself and give the participant a next action.
+Read `docs/SPEC.md` first; its non-negotiable rules apply. Setup and preflight are global: they apply to every Part, and Part 2 is the only part that needs no AI window. Preflight must install every necessary dependency. Real steps stay locked until it passes. There is no human support path, so every failure must explain itself and give the participant a next action.
 
-Evidence from Phase 0 is in `spikes/phase0-preflight/` (`runtime-manifest.json`, `detect-python.cmd`) and `spikes/phase0-wrapper/`.
+Evidence from the early experiments is in `spikes/phase0-preflight/` (`runtime-manifest.json`, `detect-python.cmd`) and `spikes/phase0-wrapper/`.
 
 ## Distribution
 `eval-coach.zip` contains `setup.cmd` and `eval-coach.pyz`. Participants unzip it and run `setup.cmd`.
@@ -17,7 +17,7 @@ Must handle a user profile path containing spaces and `&`, `(`, `)`.
 Pinned values come from `runtime-manifest.json`.
 
 ## Stage 2: preflight screen
-Replaces the Phase 1 setup screen. Results persist in `<home>\preflight.json`. Each item shows status (not checked, passed, failed, needs you), detail, and an action. "Check everything again" reruns it. Items are verified by running them.
+Replaces the earlier single-page setup screen. Results persist in `<home>\preflight.json`. Each item shows status (not checked, passed, failed, needs you), detail, and an action. "Check everything again" reruns it. Items are verified by running them.
 
 **Where it appears.** Setup ("Before you begin") is a global, full-page wizard, not a course item: Track, Checking your computer, Python, Choose your AI, AI working test, Project folder, Your AI window (the promptfoo track adds Node.js and promptfoo after Python), with Back, Next and a progress count, and no sidebar or course list beside it. Next is disabled until the page's check passes and moves to the next page that still needs the participant (passed pages are skipped going forward; Back reaches them). Checking your computer and Your AI window are pages, not checks (OpenSpec change `guided-setup`, whose specs win over this section): the first runs the checks by itself when it is shown, the second is a mini lesson with an annotated screenshot of the chosen AI that is never recorded as progress. "Check everything" is offered only on the Python, Node.js, promptfoo, Choose your AI and Project folder pages, where something can be fixed outside the app. The AI window shows only on the AI working test page and while an install runs. It is shown first on first run, and again after "Reset app configuration". It has a "Skip for now" action: a skipped setup is remembered (`setup_skipped` in `preflight.json`) and the app then opens on the course with a reminder banner. Until every applicable item passes, steps and lesson exercises that start the CLI stay off (refused with `preflight_incomplete`, buttons disabled with a plain explanation), while every lesson, the glossary and the reference stay readable (locked lessons and steps open as read-only previews). The same wizard, with the same words, opens from the Settings panel ("Open setup") and from the reminder banner, so every check, install, AI choice, the track choice and the project folder can be used there at any time, whether or not setup has passed; closing it returns to where it was opened. See `docs/SPEC.md` "Setup is a skippable global gate".
 
@@ -42,7 +42,7 @@ In a cleared `<home>\cli-test\` containing `input.txt` with `hello from eval coa
 Pass when `output.txt` is `HELLO FROM EVAL COACH` (ignoring trailing whitespace) and `version.txt` contains `Python 3`. A chat-only tool can't pass, and no tool is named or blocked. After Send the page re-reads the folder every 3 seconds (`POST /api/preflight/test/poll`) and records a pass only, never a failure; the Check button (`POST /api/preflight/test/check`) is the only place a failure is reported.
 
 ### CLI install recipes (`content/cli-recipes.json`)
-Data, not code, so they can change without a rebuild. Show the exact command behind a "Show the command" link, and describe each recipe in plain words and size in its `plain` field. Sources are the vendors' official docs, recorded in Phase 0:
+Data, not code, so they can change without a rebuild. Show the exact command behind a "Show the command" link, and describe each recipe in plain words and size in its `plain` field. Sources are the vendors' official docs, recorded in the early experiments:
 - GitHub Copilot CLI: `winget install GitHub.Copilot`. Docs list PowerShell 6+ as a prerequisite and Windows 11 ships 5.1, so if the participant picks Copilot and `pwsh` is missing, say so and offer `winget install Microsoft.PowerShell`.
 - Claude Code: `curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del install.cmd`, or `winget install Anthropic.ClaudeCode` (shown behind "Another way to install").
 - Devin CLI: PowerShell `irm https://static.devin.ai/cli/setup.ps1 | iex`.

@@ -25,7 +25,7 @@ VERDICT_WORDS = {"pass": "pass", "fail": "fail", "p": "pass", "f": "fail"}
 
 
 class LessonError(Exception):
-    """lessons.json or glossary.json breaks the schema in docs/PHASE3.md."""
+    """lessons.json or glossary.json breaks the schema in docs/CONTENT-RULES.md."""
 
     def __init__(self, problems):
         self.problems = list(problems) if isinstance(problems, (list, tuple)) else [problems]
@@ -261,7 +261,7 @@ class _Checker:
 
     def cli_line(self, activity, where, expected):
         if activity.get("line") != expected:
-            self.bad(where, "line must be the exact line from docs/PHASE3.md")
+            self.bad(where, "line must be the exact line from docs/RUNNING-EVALS-COURSE.md")
 
     def cli_compare(self, activity, where):
         runs = activity.get("runs")

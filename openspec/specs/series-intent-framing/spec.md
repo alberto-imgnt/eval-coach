@@ -6,14 +6,14 @@ Makes the course say what the whole series is for, why checking AI work matters,
 ## Requirements
 
 ### Requirement: The mission says why checking AI work matters
-Part 1's mission lesson SHALL give a short "why it matters" covering three reasons: AI sounds sure of itself even when it is wrong, "better" is an opinion until it is measured, and answers change from one try to the next. Source: `docs/SERIES-INTENT.md` "Why it matters", series review item 13.
+Part 1's mission lesson SHALL give a short "why it matters" covering three reasons: AI sounds sure of itself even when it is wrong, "better" is an opinion until it is measured, and answers change from one try to the next. Source: the series intent notes (local reference) "Why it matters", series review item 13.
 
 #### Scenario: The three reasons
 - **WHEN** the participant reads `p1-mission`
 - **THEN** each of the three reasons is stated in plain words with no code
 
 ### Requirement: The baseline lesson says what a score does and does not tell you
-The baseline lesson SHALL say that a score describes how one prompt did against one set of rules and does not guarantee every future answer, and that a rule that cannot judge something is marked NOT CHECKED instead of pretending. Source: `docs/SERIES-INTENT.md` "What to keep in mind".
+The baseline lesson SHALL say that a score describes how one prompt did against one set of rules and does not guarantee every future answer, and that a rule that cannot judge something is marked NOT CHECKED instead of pretending. Source: the series intent notes (local reference) "What to keep in mind".
 
 #### Scenario: Limits stated
 - **WHEN** the participant reads the baseline lesson
@@ -63,7 +63,7 @@ The "Your own work" passage SHALL say that Part 6 is live and that task ideas ca
 - **THEN** the number of activities that hold back Continue is unchanged
 
 ### Requirement: Part 1's mission states the series purpose
-`p1-mission` SHALL state, in plain words, that the series teaches participants to judge the work AI gives them and to trust it because it was checked, not because it looked right, and that it is not asking for blind trust or blind distrust. The other mission lessons SHALL NOT repeat it (`mission-lesson-shape`). Source: `docs/SERIES-INTENT.md` "Intent", series review item 13.
+`p1-mission` SHALL state, in plain words, that the series teaches participants to judge the work AI gives them and to trust it because it was checked, not because it looked right, and that it is not asking for blind trust or blind distrust. The other mission lessons SHALL NOT repeat it (`mission-lesson-shape`). Source: the series intent notes (local reference) "Intent", series review item 13.
 
 #### Scenario: Purpose on the Part 1 mission page
 - **WHEN** the participant opens `p1-mission`

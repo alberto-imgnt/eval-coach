@@ -7,7 +7,7 @@ Defines what the Part 1 course (structured prompting) teaches and in what order,
 ## Requirements
 
 ### Requirement: Part 1 has four lessons and five steps in a fixed order
-The Part 1 course SHALL be, in this order: lesson `p1-mission`, step `cold`, step `score`, lesson `p1-gaps`, lesson `p1-frameworks`, step `rewrite`, step `rescore`, lesson `p1-benefits`, step `own`. Locking follows `part-registry`: a step opens when the previous step is done and the lesson immediately before it, if any, is done or skipped. Source: `docs/COURSE-CONTEXT.md` "Part 1: structured prompting".
+The Part 1 course SHALL be, in this order: lesson `p1-mission`, step `cold`, step `score`, lesson `p1-gaps`, lesson `p1-frameworks`, step `rewrite`, step `rescore`, lesson `p1-benefits`, step `own`. Locking follows `part-registry`: a step opens when the previous step is done and the lesson immediately before it, if any, is done or skipped. Source: the course context notes (local reference) "Part 1: structured prompting".
 
 #### Scenario: Order
 - **WHEN** the Part 1 course list is read
@@ -79,14 +79,14 @@ Everything the participant reads or does before the reveal (`p1-mission`, `cold`
 - **THEN** it is stated in those words
 
 ### Requirement: Explain-it activities for two audiences
-`p1-benefits` SHALL include a written explanation of why a framework helps, addressed to a colleague who is not technical (a reflection of at least 20 words), and a question for a technical reader (for example why the same structure works whichever labels are used). Neither SHALL block Continue. Source: `docs/IMPLEMENTATION-PLAN.md` "Learning priorities", tier 1.
+`p1-benefits` SHALL include a written explanation of why a framework helps, addressed to a colleague who is not technical (a reflection of at least 20 words), and a question for a technical reader (for example why the same structure works whichever labels are used). Neither SHALL block Continue. Source: `docs/CONTENT-RULES.md` "Learning priorities", tier 1.
 
 #### Scenario: Plain-words explanation
 - **WHEN** the participant writes the explanation
 - **THEN** it is saved, and Continue is never held back by it
 
 ### Requirement: The lesson leads into Part 2
-The closing passage of `p1-benefits`, before the optional note, SHALL say real work does not come with a card of requirements and ask how the participant knows the second answer is better, without answering it. Source: `docs/COURSE-CONTEXT.md` "The question that leads into Part 2".
+The closing passage of `p1-benefits`, before the optional note, SHALL say real work does not come with a card of requirements and ask how the participant knows the second answer is better, without answering it. Source: the course context notes (local reference) "The question that leads into Part 2".
 
 #### Scenario: Open question
 - **WHEN** the participant reaches the end of `p1-benefits`
@@ -114,7 +114,7 @@ Each Part 1 lesson after the mission SHALL open with "In the method." then "The 
 - **THEN** the participant can continue without answering them
 
 ### Requirement: Part 1 gives one optional Stage 3 note
-`p1-benefits` SHALL end with one optional note of at most 60 words that says the Prompt Stage 3 asks for is a structured prompt like the one built here, that the program's own instructions decide what to submit, and that nothing in the note is needed to finish the Part. It SHALL NOT block Continue, score a submission, give submission steps, or carry a link, address or date. Source: `docs/SERIES-INTENT.md` "How this connects to Stage 3 certification".
+`p1-benefits` SHALL end with one optional note of at most 60 words that says the Prompt Stage 3 asks for is a structured prompt like the one built here, that the program's own instructions decide what to submit, and that nothing in the note is needed to finish the Part. It SHALL NOT block Continue, score a submission, give submission steps, or carry a link, address or date. Source: the series intent notes (local reference) "How this connects to Stage 3 certification".
 
 #### Scenario: The note
 - **WHEN** the participant reads the note
@@ -125,7 +125,7 @@ Each Part 1 lesson after the mission SHALL open with "In the method." then "The 
 - **THEN** none names Stage 3 or certification
 
 ### Requirement: Part 1 uses the app's plain-language rules
-Part 1 text SHALL follow AGENTS.md rule 10 and the content rules in `docs/PHASE3.md`: "Part", never session; no mention of a presenter, facilitator, room, breakout, handout, neighbor or clock; "Script track" and "promptfoo track" where tracks are named; no suggestion of Copilot Chat in Teams; the ready-made example called the Practice task and never a submission option; "your AI" or "AI window", never a bare "CLI"; every glossary entry for a course-specific term begins "In this course,".
+Part 1 text SHALL follow AGENTS.md rule 10 and the content rules in `docs/CONTENT-RULES.md`: "Part", never session; no mention of a presenter, facilitator, room, breakout, handout, neighbor or clock; "Script track" and "promptfoo track" where tracks are named; no suggestion of Copilot Chat in Teams; the ready-made example called the Practice task and never a submission option; "your AI" or "AI window", never a bare "CLI"; every glossary entry for a course-specific term begins "In this course,".
 
 #### Scenario: Banned words
 - **WHEN** the content tests scan the Part 1 content, kit files and glossary entries
@@ -147,7 +147,7 @@ Everything a live group did together SHALL be carried by the app: what other peo
 - **THEN** the two compare questions are asked in the form and answered in writing
 
 ### Requirement: The Part 1 mission page follows the mission shape
-`p1-mission` SHALL follow `mission-lesson-shape`, with the series passage "About this series" first. That passage SHALL state the series purpose, the three reasons checking matters and the method. "The goal" SHALL say why a structured prompt gets better results and that you can use or build a framework. "What you will do" SHALL say you write a prompt in your own words first and that the Practice task is for practice only. Source: `docs/SERIES-INTENT.md`, series review items 12 and 13.
+`p1-mission` SHALL follow `mission-lesson-shape`, with the series passage "About this series" first. That passage SHALL state the series purpose, the three reasons checking matters and the method. "The goal" SHALL say why a structured prompt gets better results and that you can use or build a framework. "What you will do" SHALL say you write a prompt in your own words first and that the Practice task is for practice only. Source: the series intent notes (local reference), series review items 12 and 13.
 
 #### Scenario: No map
 - **WHEN** the participant reads `p1-mission`
@@ -190,7 +190,7 @@ Everything a live group did together SHALL be carried by the app: what other peo
 - **THEN** it is saved as a reflection that does not block Continue
 
 ### Requirement: The reveal names the five categories and keeps frameworks as samples
-`p1-frameworks` SHALL say people have named categories of what a prompt needs and that the names are prompting frameworks. It SHALL open with a numbered list "the five categories of what a prompt needs", saying these are the five used in this course and that more exist. It SHALL then show one table per sample framework, RTCC and RISE, one row per letter in spelling order. Source: `docs/COURSE-CONTEXT.md` "Part 1", series review items 14a and 14b.
+`p1-frameworks` SHALL say people have named categories of what a prompt needs and that the names are prompting frameworks. It SHALL open with a numbered list "the five categories of what a prompt needs", saying these are the five used in this course and that more exist. It SHALL then show one table per sample framework, RTCC and RISE, one row per letter in spelling order. Source: the course context notes (local reference) "Part 1", series review items 14a and 14b.
 
 #### Scenario: The five categories
 - **WHEN** the participant reads the framework section

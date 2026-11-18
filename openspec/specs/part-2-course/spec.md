@@ -6,7 +6,7 @@ Defines what the Part 2 course (defining evaluation criteria) teaches and in wha
 ## Requirements
 
 ### Requirement: Part 2 has four lessons and four steps in a fixed order
-The Part 2 course SHALL be, in this order: lesson `p2-mission`, lesson `p2-criteria`, step `draft`, lesson `p2-thresholds`, step `thresholds`, lesson `p2-testfile`, step `test-file`, step `reference`. Locking follows `part-registry`. Source: `docs/COURSE-CONTEXT.md` "Part 2: defining evaluation criteria".
+The Part 2 course SHALL be, in this order: lesson `p2-mission`, lesson `p2-criteria`, step `draft`, lesson `p2-thresholds`, step `thresholds`, lesson `p2-testfile`, step `test-file`, step `reference`. Locking follows `part-registry`. Source: the course context notes (local reference) "Part 2: defining evaluation criteria".
 
 #### Scenario: Order
 - **WHEN** the Part 2 course list is read
@@ -28,7 +28,7 @@ The Part 2 course SHALL be, in this order: lesson `p2-mission`, lesson `p2-crite
 - **THEN** it opens, and no other Part's items change
 
 ### Requirement: A criterion traces to a requirement, and the set covers format and content
-`p2-criteria` SHALL teach that a criterion is one thing a good answer must do, that each one traces to a stated requirement, that the set covers both format (how it looks) and content (what it says), and that no two criteria check the same thing. It SHALL ask for at least three criteria with at least one on content. Source: `docs/COURSE-CONTEXT.md` "Part 2" rules.
+`p2-criteria` SHALL teach that a criterion is one thing a good answer must do, that each one traces to a stated requirement, that the set covers both format (how it looks) and content (what it says), and that no two criteria check the same thing. It SHALL ask for at least three criteria with at least one on content. Source: the course context notes (local reference) "Part 2" rules.
 
 #### Scenario: Format and content named
 - **WHEN** the participant reads the lesson
@@ -48,7 +48,7 @@ The Part 2 course SHALL be, in this order: lesson `p2-mission`, lesson `p2-crite
 - **THEN** it shows two criteria that check the same thing worded differently and says to keep one
 
 ### Requirement: A threshold is a rule a script could decide
-`p2-thresholds` SHALL teach the script test (could a script decide this with no human judgment; if not, tighten it), that vague words such as "clear", "good" and "concise" become a number, a keyword or a label, and the two patterns that carry to any task: the structure pattern (the prompt asks for fixed labels and the threshold checks they exist) and the required-term pattern (a key fact from the input appears). Source: `docs/COURSE-CONTEXT.md` "Thresholds".
+`p2-thresholds` SHALL teach the script test (could a script decide this with no human judgment; if not, tighten it), that vague words such as "clear", "good" and "concise" become a number, a keyword or a label, and the two patterns that carry to any task: the structure pattern (the prompt asks for fixed labels and the threshold checks they exist) and the required-term pattern (a key fact from the input appears). Source: the course context notes (local reference) "Thresholds".
 
 #### Scenario: Vague to checkable
 - **WHEN** the participant reads the lesson
@@ -64,7 +64,7 @@ The Part 2 course SHALL be, in this order: lesson `p2-mission`, lesson `p2-crite
 - **THEN** the structure pattern is named as the one that works for any task and links an instruction in the prompt to a criterion, and the required-term pattern is named second
 
 ### Requirement: Rules cannot check everything, and the lesson says so
-`p2-thresholds` SHALL say that some qualities, such as tone, can only be roughly checked with a proxy (a list of words to avoid), that a proxy can pass an answer that misses the point, and that a rule which cannot judge a quality is marked "Not checked" and not pretended. Source: `docs/SERIES-INTENT.md` "What to keep in mind".
+`p2-thresholds` SHALL say that some qualities, such as tone, can only be roughly checked with a proxy (a list of words to avoid), that a proxy can pass an answer that misses the point, and that a rule which cannot judge a quality is marked "Not checked" and not pretended. Source: the series intent notes (local reference) "What to keep in mind".
 
 #### Scenario: Tone as a proxy
 - **WHEN** the participant reads the passage
@@ -92,7 +92,7 @@ Everything the participant reads or does before the `reference` step SHALL NOT s
 - **THEN** the preview shows the step's words and no reference criterion
 
 ### Requirement: Explain-it activities for two audiences
-`p2-thresholds` SHALL include a written explanation, addressed to a colleague who is not technical, of why a word like "clear" cannot be checked and what to write instead (a reflection of at least 20 words), and a question for a technical reader (for example why a keyword check is only a proxy, or why a label threshold links the prompt to the rules). Neither SHALL block Continue. Source: `docs/IMPLEMENTATION-PLAN.md` "Learning priorities", tier 1.
+`p2-thresholds` SHALL include a written explanation, addressed to a colleague who is not technical, of why a word like "clear" cannot be checked and what to write instead (a reflection of at least 20 words), and a question for a technical reader (for example why a keyword check is only a proxy, or why a label threshold links the prompt to the rules). Neither SHALL block Continue. Source: `docs/CONTENT-RULES.md` "Learning priorities", tier 1.
 
 #### Scenario: Plain-words explanation
 - **WHEN** the participant writes the explanation
@@ -134,7 +134,7 @@ Each Part 2 lesson after the mission SHALL open with "In the method." then "The 
 - **THEN** the participant can continue without answering them
 
 ### Requirement: Part 2 gives one optional Stage 3 note
-`p2-testfile` SHALL end with one optional note of at most 60 words that says the Evaluations Stage 3 asks for need at least three distinct rules with clear pass or fail limits, and that scripts, promptfoo files and written test cases are all accepted. Source: `docs/STAGE3-TASK-SPEC.md` section 5.
+`p2-testfile` SHALL end with one optional note of at most 60 words that says the Evaluations Stage 3 asks for need at least three distinct rules with clear pass or fail limits, and that scripts, promptfoo files and written test cases are all accepted. Source: the Stage 3 task notes (local reference) section 5.
 
 #### Scenario: The note
 - **WHEN** the participant reads the note
@@ -160,7 +160,7 @@ The `p2-testfile` note SHALL say that the program's own instructions decide what
 - **THEN** none names Stage 3 or certification
 
 ### Requirement: Part 2 uses the app's plain-language rules
-Part 2 text SHALL follow AGENTS.md rule 10 and the content rules in `docs/PHASE3.md`: "Part", never session; no mention of a presenter, facilitator, room, breakout, handout, neighbor or clock; no suggestion of Copilot Chat in Teams; the ready-made example called the Practice task and never a submission option; "your AI" or "AI window", never a bare "CLI"; every glossary entry for a course-specific term begins "In this course,".
+Part 2 text SHALL follow AGENTS.md rule 10 and the content rules in `docs/CONTENT-RULES.md`: "Part", never session; no mention of a presenter, facilitator, room, breakout, handout, neighbor or clock; no suggestion of Copilot Chat in Teams; the ready-made example called the Practice task and never a submission option; "your AI" or "AI window", never a bare "CLI"; every glossary entry for a course-specific term begins "In this course,".
 
 #### Scenario: Banned words
 - **WHEN** the content tests scan the Part 2 content, kit files and glossary entries
@@ -190,7 +190,7 @@ When Part 2 is finished the screen SHALL say what the participant can now do (tu
 - **THEN** the screen names the file, says what they can now do and what Part 3 does with it
 
 ### Requirement: The Part 2 mission page follows the mission shape
-`p2-mission` SHALL follow `mission-lesson-shape`. "The goal" SHALL open on Part 1's question (how do you know the second answer is better?), answer it, and state the goal. "What you will do" SHALL say nothing is run in this Part and that the Practice task is for practice only. It SHALL NOT repeat the series framing. Source: `docs/SERIES-INTENT.md`, series review items 12 and 13.
+`p2-mission` SHALL follow `mission-lesson-shape`. "The goal" SHALL open on Part 1's question (how do you know the second answer is better?), answer it, and state the goal. "What you will do" SHALL say nothing is run in this Part and that the Practice task is for practice only. It SHALL NOT repeat the series framing. Source: the series intent notes (local reference), series review items 12 and 13.
 
 #### Scenario: No map
 - **WHEN** the participant reads `p2-mission`
