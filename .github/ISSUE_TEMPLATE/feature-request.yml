@@ -1,0 +1,67 @@
+name: Backlog item
+description: Capture a wanted feature or change for later
+title: "[Backlog] "
+labels: ["backlog", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository is public. Do not include passwords, account data, personal data or meeting transcripts.
+  - type: textarea
+    id: what
+    attributes:
+      label: What is wanted
+      description: One or two plain sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters
+      description: The participant problem or goal this addresses.
+    validations:
+      required: true
+  - type: dropdown
+    id: part
+    attributes:
+      label: Part of the series
+      options:
+        - Whole app or series
+        - Part 1
+        - Part 2
+        - Part 3
+        - Part 4
+        - Part 5
+        - Part 6
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Content (words in content/*.json)
+        - Interface (needs explicit authorization)
+        - Server behavior
+        - Setup and packaging
+        - Docs and tests
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: size
+    attributes:
+      label: Rough size
+      description: About three or more files, or unclear behavior, means an OpenSpec change.
+      options:
+        - Small fix (skips OpenSpec)
+        - Needs an OpenSpec change
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes and open questions
+    validations:
+      required: false
