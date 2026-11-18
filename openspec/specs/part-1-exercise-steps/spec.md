@@ -47,7 +47,7 @@ The `cold` step SHALL show the scenario card (a Friday end-of-week update, the f
 - **THEN** the troubleshooting text tells the participant to reply "go ahead with your best guess"
 
 ### Requirement: The cold step's gate
-The `cold` step SHALL pass when the saved prompt is non-empty, the run's output is saved and non-empty, and a model name is entered. The participant SHALL be told to use their everyday model and the same model for both runs, and the model name SHALL be saved for the `rewrite` step. A step that is done SHALL NOT offer a second run.
+The `cold` step SHALL pass when the saved prompt is non-empty, the run's output is saved and non-empty, and a model was recorded for the run. The model SHALL be recorded by the app when the AI starts (see `model-preference`), not typed. The participant SHALL be told that both runs use the model chosen with the toggle and that keeping it the same keeps the comparison fair, and the recorded model SHALL be saved for the `rewrite` step. A step that is done SHALL NOT offer a second run.
 
 #### Scenario: Missing pieces
 - **WHEN** the participant checks the step with no saved output
@@ -57,6 +57,11 @@ The `cold` step SHALL pass when the saved prompt is non-empty, the run's output 
 - **GIVEN** the step is done
 - **WHEN** the participant opens it again
 - **THEN** it shows their prompt and output and no Start control
+
+#### Scenario: Model recorded without typing
+- **GIVEN** the participant started the AI window and the run's output is saved
+- **WHEN** the participant checks the step
+- **THEN** the "Model name recorded" check passes and the participant typed no model name
 
 ### Requirement: Scoring is the participant's own judgment
 The `score` step SHALL show the saved output as plain text beside the scenario card's five requirements and ask for a yes or no on each, one thing the output missed, and whether that was in the prompt (yes, no or not sure). It SHALL show "n of 5" computed from the participant's answers. The app SHALL NOT read the output text to decide, score it, or say whether the participant is right. Source: facilitator guide, segment 3; AGENTS.md rule 3.
@@ -98,15 +103,20 @@ The `rewrite` step SHALL offer three label sets with equal text, none pre-select
 - **THEN** the run copy ends with the same rough notes as the cold run
 
 ### Requirement: The rewrite step's gate and fairness nudge
-The `rewrite` step SHALL pass when a label set is chosen, the saved prompt is non-empty and differs from the cold prompt, the run's output is saved and non-empty, and a model name is entered. If the model name differs from the cold run's, the step SHALL pass and show a plain, non-blocking note that a different model makes the comparison less fair.
+The `rewrite` step SHALL pass when a label set is chosen, the saved prompt is non-empty and differs from the cold prompt, the run's output is saved and non-empty, and a model was recorded for the run. If the recorded model differs from the cold run's, the step SHALL pass and show a plain, non-blocking note that a different model makes the comparison less fair.
 
 #### Scenario: Unchanged prompt
 - **WHEN** the saved prompt equals the cold prompt
 - **THEN** the gate fails and says to change the prompt first
 
 #### Scenario: Different model
-- **WHEN** the model names differ
+- **WHEN** the recorded models differ because the toggle was changed between the runs
 - **THEN** the gate can pass and the step shows the non-blocking note
+
+#### Scenario: Same model by default
+- **GIVEN** the toggle was not changed between the two runs
+- **WHEN** the participant checks the `rewrite` step
+- **THEN** the models match and no note is shown
 
 ### Requirement: Compare puts both runs side by side
 The `rescore` step SHALL score the second output on the same five requirements, then show both prompts, outputs and scores side by side as plain text with the change between the scores. It SHALL ask in writing what the labels made the participant add, and what made the second answer better or, if it was not, which part of the prompt is still missing. Source: facilitator guide, segment 6.

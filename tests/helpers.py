@@ -31,6 +31,21 @@ def write_passed_preflight(home, track="script"):
          "ran_once": True, "items": items}), encoding="utf-8")
 
 
+def write_recipes(home, command, models, recipe_id="mycli"):
+    """A `<home>\\cli-recipes.json` override that gives `command` model data, so a stand-in can have a model option.
+
+    Call it before the Engine is created: the recipes are read when the Engine starts.
+    """
+    home = Path(home)
+    home.mkdir(parents=True, exist_ok=True)
+    recipe = {"id": recipe_id, "name": "Test AI", "cli_command": command, "shell": "none", "command": "", "models": models}
+    (home / "cli-recipes.json").write_text(json.dumps({"recipes": [recipe]}), encoding="utf-8")
+
+
+ALIAS_MODELS = {"sonnet": {"label": "Sonnet", "launch": ["--model", "sonnet"]},
+                "haiku": {"label": "Haiku", "launch": ["--model", "haiku"]}}
+
+
 def wait_until(predicate, timeout=10.0, interval=0.01):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:

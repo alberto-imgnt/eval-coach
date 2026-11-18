@@ -141,6 +141,11 @@ PROVIDER = ROOT / "app" / "eval_coach" / "kit" / "skills" / "build-promptfoo-con
 
 def handle(line):
     log("line", text=line.rstrip("\r\n"), cwd=os.getcwd())
+    if line.strip() == "/model" and "--picker" in sys.argv:
+        # Test-only model list, shaped like a picker: fixed IDs, no account name or email.
+        print("\nSelect a model\n  1. gpt-5.4-mini\n  2. claude-haiku-5.5\n  3. claude-sonnet-4.5\n"
+              "  4. claude-sonnet-5.5 (default)\n  5. claude-opus-5\n", flush=True)
+        return
     if "follow it in live mode" in line:
         work(2)
         cli = line.split("I use ", 1)[1].split(" with the model ", 1)[0]

@@ -19,12 +19,12 @@
         "Prompt, then answer, then file, then checker, then verdict. Every arrow is a deliberate action. Nothing moves on by itself.",
         "This course uses a blind folder that holds only your prompt, so the model cannot read your tests. A model that can read them quietly writes to them, and your baseline would look better than it is.",
         "Each run is a new chat, so no run can remember an earlier one. Five runs is what this course uses, because it gives a steady rate without taking long.",
-        "Pick a mid-tier model and record its name. A score belongs to one prompt on one model, and a good prompt should not need the most powerful model.",
+        "The app starts your AI on an everyday model and records its name for you. A score belongs to one prompt on one model, and a good prompt should not need the most powerful model.",
         "This is this course's way of working. Other approaches work too, and scripts, testing-tool configuration files and written test cases are all fine ways to evaluate."
       ],
       "instructions": [
         "Press Start. Your AI opens in the blind folder, which holds only your prompt.",
-        "In the terminal, pick a mid-tier model, not the most powerful one offered. Click in the terminal, type /model and press Enter. Most AI tools then show a list of models you can choose from with the arrow keys and Enter. If /model does nothing, type \"Which model are you using, and how do I switch to a different one?\" and follow the answer. Mid-tier means the everyday model, such as one called Sonnet or Mini or Standard, not the one described as the most capable, the largest or the newest flagship (for example Opus). Then write the exact model name shown in the box. You will need it later.",
+        "The app starts your AI on the model chosen with the Sonnet / Haiku switch above the AI window (Sonnet unless you changed it) and records that model for you. Sonnet is the everyday default and Haiku is the lighter, faster one. The most capable flagship models, such as Opus, are not offered, because this course compares prompts, not models. A change to the switch applies the next time your AI starts.",
         "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, use Start again.",
         "Depending on its settings, your AI may ask for approvals or may act on its own. Any approval requests appear in the terminal, and you answer them there. The app never answers for you.",
         "When your AI is ready, press Send. The app types the line for you.",
@@ -41,7 +41,7 @@
       ],
       "gate": {
         "runs": {"label": "Five runs saved", "ok": "All five runs are saved.", "fail": "{count} of 5 runs are saved. Keep going until all five are saved."},
-        "model": {"label": "Model name recorded", "ok": "", "fail": "Write the model name in the box."}
+        "model": {"label": "Model name recorded", "ok": "", "fail": "Start your AI first, so the app can record the model."}
       }
     },
     "build": {
@@ -516,8 +516,8 @@
             "Never edit the config to make a failing output pass. A failing result is the information. If a result looks wrong, change the threshold in test-cases.md and let your AI update promptfooconfig.yaml to match.",
             "The app runs your config on the five runs itself, with promptfoo and no AI, and compares its numbers with your log. Your AI writes the log. The app only reads it and never changes it."
           ],
-          "instructions": [
-            "Check the model name in the box. It is the name you wrote in the first step, and the app types it into the line.",
+          "instructions": [
+            "The line the app types names the model your AI used for your five runs. The app recorded it when it started your AI.",
             "Press Start my AI. Your AI opens in your project folder. If it asks whether to trust the folder, choose the yes option. The highlighted default may be No.",
             "When your AI is ready, press Send to AI. It runs your config on your five runs and adds an Iteration 0 entry to iteration-log.md. Any approval requests appear in the terminal, and you answer them there.",
             "Press Run my checker on the five runs. The app runs your promptfoo config itself and shows the pass rate for each criterion. A non-zero exit code is normal. It only means at least one check failed or is NOT CHECKED.",
@@ -563,8 +563,8 @@
                 "Never edit the checker to make a failing output pass. A failing result is the information. If a result looks wrong, change the threshold in test-cases.md and let your AI update check.py to match.",
                 "The app runs your checker on the five runs itself, with no AI, and compares its numbers with your log. Your AI writes the log. The app only reads it and never changes it."
               ],
-              "instructions": [
-                "Check the model name in the box. It is the name you wrote in the first step, and the app types it into the line.",
+              "instructions": [
+                "The line the app types names the model your AI used for your five runs. The app recorded it when it started your AI.",
                 "Press Start my AI. Your AI opens in your project folder. If it asks whether to trust the folder, choose the yes option. The highlighted default may be No.",
                 "When your AI is ready, press Send to AI. It runs check.py on your five runs and adds an Iteration 0 entry to iteration-log.md. Any approval requests appear in the terminal, and you answer them there.",
                 "Press Run my checker on the five runs. The app runs check.py itself and shows the pass rate for each criterion. Exit code 1 is normal. It only means at least one check failed or is NOT CHECKED.",
@@ -574,7 +574,6 @@
                 "Optional: name the criterion that failed most often in your baseline and write one guess why. It becomes your hypothesis in Part 4."
               ],
               "line_template": "Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are runs/run-1.txt to runs/run-5.txt. The prompt file is prompt-v0.md. The model was {model}.",
-              "model_missing": "The model name is empty, so the line cannot be sent. Write the name of the model you used for your five runs in the box, then press Send to AI.",
               "folder_label": "Your project folder",
               "messages": {
                 "missing_runs": "These run files are missing or empty: {files}. Your five runs must all be saved in the runs folder before the app can count them."
@@ -636,15 +635,14 @@
                               ],
                               "instructions": [
                                 "Read the warning below. It says what live mode does to your AI, including which AI tool the helper script puts into auto mode.",
-                                "Tick the box to say you have read it, then choose the AI tool you use. Live mode supports only the AI tools in the list.",
-                                "Check the model name in the box. It is the name you wrote in the first step, and the app types it into the line.",
+                                "Tick the box to say you have read it, then choose the AI tool you use. Live mode supports only the AI tools in the list.",
+                                "The line the app types names the model your AI used for your five runs. The app recorded it when it started your AI.",
                                 "Press Start my AI, and when it is ready press Send to AI. Your AI copies agent-provider.js next to your config, writes promptfooconfig.live.yaml with the same checks, and runs it. Any approval requests appear in the terminal, and you answer them there. The app never answers for you.",
                                 "Do not ask your AI to log these runs. Your baseline stays the one from your saved runs.",
                                 "Press Check my work. The app only reads your files. It does not run the live config.",
                                 "Read the live scores as your AI shows them. They can differ from run to run, and that is expected."
                               ],
                               "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in live mode. I use {cli} with the model {model}.",
-                              "model_missing": "The model name is empty, so the line cannot be sent. Write the name of the model you used for your five runs in the box, then press Send to AI.",
                               "folder_label": "Your project folder",
                               "clis": [
                                 {"id": "copilot", "label": "GitHub Copilot CLI", "note": "The helper runs GitHub Copilot CLI with -p and -s, which prints one answer and exits. It adds no permission flag."},
@@ -669,8 +667,6 @@
                                 "ack_label": "I have read this warning. I understand that live mode starts my AI by itself, and that for Devin CLI the helper turns on auto mode so it may act without asking me.",
                                 "cli_heading": "Which AI do you use?",
                                 "cli_hint": "Live mode supports these three. Choose the one you use, so the line names it.",
-                                "model_label": "The model you used for your five runs",
-                                "model_hint": "This is the same name as in your first step.",
                                 "files_heading": "Your live files",
                                 "files_blurb": "The app only reads these files. It never runs the live config.",
                                 "config_missing": "There is no promptfooconfig.live.yaml in your project folder yet.",

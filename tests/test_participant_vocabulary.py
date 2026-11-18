@@ -207,5 +207,32 @@ class Categories(unittest.TestCase):
                 self.assertNotRegex(text, r"\bCRISP\b")
 
 
+class ModelChoiceWords(unittest.TestCase):
+    """The app picks and records the model, so no step text sends the participant to /model or asks for a name."""
+
+    ASKS_FOR_A_NAME = re.compile(r"(?i)\b(write|type|enter|record|note)\b[^.]{0,50}\bmodel('s)? name\b|model name[^.]{0,30}\bin the box")
+
+    def participant_text(self):
+        return [(name, path, text) for name, path, text in content_strings()
+                if name != "cli-recipes.json"]  # its /model is the app's own discovery data, not shown to anyone
+
+    def test_no_participant_text_mentions_the_model_command(self):
+        offenders = [f"{name} {path}" for name, path, text in self.participant_text() if "/model" in text]
+        self.assertEqual(offenders, [])
+
+    def test_no_participant_text_asks_for_a_model_name_to_be_written(self):
+        offenders = [f"{name} {path}: {text[:80]}" for name, path, text in self.participant_text()
+                     if self.ASKS_FOR_A_NAME.search(text)]
+        self.assertEqual(offenders, [])
+
+    def test_the_toggle_words_are_plain_and_recommend_nothing(self):
+        words = json.loads((CONTENT / "lesson-ui.json").read_text(encoding="utf-8"))["ai_model"]
+        for key, text in words.items():
+            with self.subTest(key=key):
+                self.assertFalse(BARE_CLI.search(without_allowed(text)), text)
+                self.assertNotRegex(text, r"(?i)\b(recommend|best|presenter|facilitator|room|handout)\b")
+        self.assertIn("next time your AI starts", words["applies_next"])
+
+
 if __name__ == "__main__":
     unittest.main()

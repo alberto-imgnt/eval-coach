@@ -481,6 +481,8 @@ ul.prose-list li::before { content: ""; position: absolute; left: 0.25rem; top: 
 }
 .term-line::before { content: "›"; position: absolute; left: 0.85rem; top: 0.62rem; color: #d6ff3e; font-weight: 700; }
 .term-actions { margin: 0.85rem 0 0.4rem; }
+.term-model { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: 0.6rem; }
+.term-model .hint { margin: 0; }
 #term-head .hint { margin: 0 0 0.3rem; }
 #term-host {
   flex: 1; min-height: 0; margin: 0.65rem 1.5rem 0;

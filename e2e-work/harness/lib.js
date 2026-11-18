@@ -21,9 +21,11 @@ const SHOTS = path.join(WORK, `screenshots${SUFFIX}`);
 const PYTHON = path.join(ROOT, 'spikes', 'phase0-preflight', 'runtime', 'python-embed-3.13.17-nopth', 'python.exe');
 const PYZ = process.env.E2E_PYZ || path.join(ROOT, 'dist', 'eval-coach.pyz'); // E2E_PYZ: a private build, see build-private-pyz.py
 const CLI_COMMAND = STANDIN ? `${PYTHON} ${path.join(WORK, 'harness', 'fake_cli.py')}` : 'claude --model sonnet --permission-mode default';
+// The model the app records at each AI start: the stand-in has no model data, so no option is passed; a real command names its own.
+const MODEL = STANDIN ? "the AI's own default model" : 'sonnet';
 const CLI_TIMEOUT_MS = 240000;
 // stand-in: 13 before the lessons + 4 hook runs (one silent) + 2 practice runs (build-try, fix-try) + 2 baseline sessions (+1 for the promptfoo track's extra step, +1 for its optional live step) + 4 for Part 1 (the cold run and one rewrite run for each of the three label sets). real: 13 used + fixtures, readback, fix + 1 retry (user-approved option A); Part 1 needs two more real sessions only after the user approves them
-const MAX_SESSIONS = STANDIN ? 27 : 17;
+const MAX_SESSIONS = STANDIN ? 29 : 17;
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9.-]+/g;
 
 for (const d of [WORK, HOME, LOG_DIR, SHOTS]) fs.mkdirSync(d, { recursive: true });
@@ -861,7 +863,7 @@ function independentRunIn(cwd, args) {
 }
 
 module.exports = {
-  ROOT, WORK, HOME, PROJECT, STATE_FILE, PYTHON, PYZ, CLI_COMMAND, STANDIN, TRACK, PF, independentChecker, CLI_TIMEOUT_MS, SHOTS, LOG_DIR, SERVER_LOG,
+  ROOT, WORK, HOME, PROJECT, STATE_FILE, PYTHON, PYZ, CLI_COMMAND, MODEL, STANDIN, TRACK, PF, independentChecker, CLI_TIMEOUT_MS, SHOTS, LOG_DIR, SERVER_LOG,
   state, saveState, loadState, note, assertion, violation, redact, sleep, StopRun,
   startServer, killServer, pidAlive, filteredEnv,
   openBrowser, enterPart, readScreen, classify, driveCli, waitReady, answerYes, countSession, clickAndWait,

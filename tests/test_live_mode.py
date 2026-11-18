@@ -201,7 +201,7 @@ class WarningText(LiveCase):
         self.started()
         self.engine.step_submit("live", {"acknowledged": False})
         self.refused("warning_not_acknowledged", self.engine.step_send, "live")
-        self.assertNotIn(LIVE_LINE.format(cli="copilot", model="mid-tier-model"), self.terminal.typed)
+        self.assertNotIn(LIVE_LINE.format(cli="copilot", model="sonnet"), self.terminal.typed)
 
     def test_the_acknowledgement_and_cli_are_validated(self):
         self.to_live()
@@ -235,9 +235,9 @@ class WarningText(LiveCase):
 class TypedLine(LiveCase):
     def test_the_exact_line_with_the_chosen_cli_and_the_saved_model(self):
         self.to_live()
-        self.engine.step_submit("live", {"model_name": "  my\nmodel\t\x07 v2 "})
         for cli in CLIS:
             self.started(cli)
+            self.engine.step_submit("live", {"model_name": "  my\nmodel\t\x07 v2 "})
             self.assertEqual(self.live()["cli"]["line"], LIVE_LINE.format(cli=cli, model="my model v2"))
             self.engine.step_send("live")
             self.assertEqual(self.terminal.typed[-1], LIVE_LINE.format(cli=cli, model="my model v2"))
@@ -251,7 +251,7 @@ class TypedLine(LiveCase):
         self.assertEqual(start["cwd"], str(self.project))
         typed_before = len(self.terminal.typed)
         self.engine.step_send("live")
-        self.assertEqual(self.terminal.typed[typed_before:], [LIVE_LINE.format(cli="devin", model="mid-tier-model")])
+        self.assertEqual(self.terminal.typed[typed_before:], [LIVE_LINE.format(cli="devin", model="sonnet")])
         self.assertEqual(self.terminal.keystrokes, [])  # the app never answers a prompt
         self.assertNotIn("--permission-mode", json.dumps(start))
         self.assertNotIn("auto", self.engine.progress["cli_command"])
@@ -259,21 +259,22 @@ class TypedLine(LiveCase):
     def test_the_line_shows_every_option_until_one_is_chosen(self):
         self.to_live()
         self.assertEqual(self.live()["cli"]["line"],
-                         LIVE_LINE.format(cli="<copilot | claude | devin>", model="mid-tier-model"))
+                         LIVE_LINE.format(cli="<copilot | claude | devin>", model="sonnet"))
 
-    def test_an_empty_model_blocks_send_only(self):
+    def test_a_start_records_a_model_so_send_is_never_blocked_for_a_missing_one(self):
         self.to_live()
         self.ready()
         self.engine.step_submit("live", {"model_name": "   "})
         self.engine.step_start("live")
-        self.assertIn("model name is empty", self.live()["cli"]["blocked"])
-        self.refused("no_model", self.engine.step_send, "live")
+        self.assertIsNone(self.live()["cli"]["blocked"])
+        self.assertEqual(self.engine.progress["steps"]["generate"]["models_used"], ["sonnet"])
+        self.engine.step_send("live")
+        self.assertEqual(self.terminal.typed[-1], LIVE_LINE.format(cli="copilot", model="sonnet"))
 
     def test_the_model_has_one_home_shared_with_the_baseline(self):
         self.to_live()
         self.engine.step_submit("live", {"model_name": "shared-name"})
         self.assertEqual(self.engine.progress["steps"]["generate"]["model_name"], "shared-name")
-        self.assertEqual(self.live()["data"]["model_name"], "shared-name")
 
 
 class Hashes(LiveCase):
@@ -537,7 +538,7 @@ class Http(ServerCase):
         self.assertEqual(status, 200, body)
         status, body = self.post("/api/step/start", {"step": "live"})
         self.assertEqual((status, body["error"]["code"]), (400, "cli_not_chosen"))
-        status, body = self.post("/api/step/submit", {"step": "live", "data": {"cli": "claude", "model_name": "m1"}})
+        status, body = self.post("/api/step/submit", {"step": "live", "data": {"cli": "claude"}})
         self.assertEqual(status, 200, body)
         status, body = self.post("/api/step/start", {"step": "live"})
         self.assertEqual(status, 200, body)
@@ -545,7 +546,7 @@ class Http(ServerCase):
         self.assertEqual(pty.argv, ["cli"])
         status, body = self.post("/api/step/send", {"step": "live"})
         self.assertEqual(status, 200, body)
-        self.assertEqual(pty.lines, [LIVE_LINE.format(cli="claude", model="m1")])
+        self.assertEqual(pty.lines, [LIVE_LINE.format(cli="claude", model="the AI's own default model")])
         self.assertEqual(pty.written, [])
         status, body = self.post("/api/step/check", {"step": "live"})
         self.assertEqual(status, 200)

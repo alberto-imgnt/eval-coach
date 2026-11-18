@@ -47,7 +47,7 @@ function choice(ctx, step, { draftKey, current, value, label, name, disabled, cl
 // ---- generate -----------------------------------------------------------
 
 function renderGenerate(ctx, step) {
-  const { runs = [], current_run: currentRun, model_name: modelName } = step.data;
+  const { runs = [], current_run: currentRun } = step.data;
   const allDone = runs.length > 0 && runs.every((r) => r.done);
   return [
     section(
@@ -77,30 +77,7 @@ function renderGenerate(ctx, step) {
       ),
       allDone ? h('p', { class: 'hint' }, 'All five runs are saved.') : null,
     ),
-    section(
-      'model',
-      null,
-      textField(ctx, {
-        id: 'model-name',
-        label: 'The name of the model you chose in your AI',
-        hint: 'Pick a mid-tier model, not the most powerful one offered.',
-        draftKey: 'generate.model_name',
-        value: modelName,
-        saveStep: step.id,
-        disabled: ctx.readOnly,
-      }),
-    ),
   ];
-}
-
-function collectGenerate(step, drafts) {
-  const keys = [];
-  const data = {};
-  if (drafts.has('generate.model_name')) {
-    data.model_name = drafts.get('generate.model_name');
-    keys.push('generate.model_name');
-  }
-  return { data, keys };
 }
 
 // ---- build --------------------------------------------------------------
@@ -853,19 +830,6 @@ function renderBaseline(ctx, step) {
   const overallRate = overall && overall.total ? Math.round((overall.passes * 100) / overall.total) : null;
   return [
     section(
-      'model',
-      null,
-      textField(ctx, {
-        id: 'baseline-model',
-        label: 'The model you used for your five runs',
-        hint: 'The app types this name into the line for your AI. It is the name you wrote in the first step.',
-        draftKey: 'baseline.model_name',
-        value: data.model_name,
-        saveStep: step.id,
-        disabled: ctx.readOnly,
-      }),
-    ),
-    section(
       'count',
       'The app’s own count',
       h('p', { class: 'hint' }, ui.count_blurb),
@@ -939,20 +903,10 @@ function optionalLiveSection(ctx) {
   );
 }
 
-function collectBaseline(step, drafts) {
-  const keys = [];
-  const data = {};
-  if (drafts.has('baseline.model_name')) {
-    data.model_name = drafts.get('baseline.model_name');
-    keys.push('baseline.model_name');
-  }
-  return { data, keys };
-}
-
 // ---- live mode (optional, promptfoo track) ----------------------------------------
 
 function renderLive(ctx, step) {
-  const { clis = [], cli, acknowledged, model_name: modelName, config_exists: configExists, provider_exists: providerExists, provider_ok: providerOk, scan = [], started } = step.data;
+  const { clis = [], cli, acknowledged, config_exists: configExists, provider_exists: providerExists, provider_ok: providerOk, scan = [], started } = step.data;
   const ui = step.ui || {};
   const ack = ctx.draft('live.acknowledged', acknowledged);
   const chosen = ctx.draft('live.cli', cli);
@@ -1020,15 +974,6 @@ function renderLive(ctx, step) {
         ),
       ),
       chosenCli ? h('p', { class: 'callout', id: 'live-cli-note' }, chosenCli.note) : null,
-      textField(ctx, {
-        id: 'live-model',
-        label: ui.model_label,
-        hint: ui.model_hint,
-        draftKey: 'live.model_name',
-        value: modelName,
-        saveStep: step.id,
-        disabled,
-      }),
     ),
     section(
       'live-files',
@@ -1065,7 +1010,7 @@ function renderLive(ctx, step) {
 function collectLive(step, drafts) {
   const keys = [];
   const data = {};
-  for (const [field, key] of [['acknowledged', 'live.acknowledged'], ['cli', 'live.cli'], ['model_name', 'live.model_name']]) {
+  for (const [field, key] of [['acknowledged', 'live.acknowledged'], ['cli', 'live.cli']]) {
     if (drafts.has(key)) {
       data[field] = drafts.get(key);
       keys.push(key);
@@ -1077,7 +1022,7 @@ function collectLive(step, drafts) {
 export const PANELS = {
   ...PART_STEP_PANELS,
   ...CRITERIA_STEP_PANELS,
-  generate: { render: renderGenerate, collect: collectGenerate },
+  generate: { render: renderGenerate },
   build: { render: renderBuild },
   fixtures: { render: renderFixtures },
   'fixtures-config': { render: renderFixturesConfig },
@@ -1086,6 +1031,6 @@ export const PANELS = {
   key: { render: renderKey },
   run: { render: renderRun, collect: collectRun },
   fix: { render: renderFix, collect: collectFix },
-  baseline: { render: renderBaseline, collect: collectBaseline },
+  baseline: { render: renderBaseline },
   live: { render: renderLive, collect: collectLive },
 };

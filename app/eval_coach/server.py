@@ -53,6 +53,7 @@ _ROUTES = {
     "/api/preflight/test/poll": lambda e, b: e.preflight_test_poll(),
     "/api/preflight/test/check": lambda e, b: e.preflight_test_check(),
     "/api/preflight/stop": lambda e, b: e.preflight_stop(),
+    "/api/model": lambda e, b: e.set_model_preference(b.get("preference")),
     "/api/terminal/input": lambda e, b: e.terminal_input(b.get("data")),
     "/api/terminal/resize": lambda e, b: e.terminal_resize(b.get("cols"), b.get("rows")),
     "/api/terminal/release": lambda e, b: e.terminal_release(),

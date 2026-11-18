@@ -148,6 +148,87 @@ test('Start again works after the CLI was stopped', async ({ page, request }) =>
   await expect(page.getByText('Your AI is running.')).toBeVisible();
 });
 
+test('model toggle: shown in the step AI window head with the stored value, a plain note and an accessible name', async ({ page, request }) => {
+  await openApp(page, request, 'generate');
+  const group = page.getByRole('radiogroup', { name: 'Model for your AI' });
+  await expect(group).toBeVisible();
+  await expect(group.getByRole('radio', { name: 'Sonnet' })).toBeChecked();
+  await expect(group.getByRole('radio', { name: 'Haiku' })).not.toBeChecked();
+  await expect(page.locator('#term-head')).toContainText('A change applies the next time your AI starts.');
+  await expect(page.locator('#term-head')).not.toContainText('CLI');
+  await page.screenshot({ path: path.join(SHOTS, 'model-toggle-step.png') });
+
+  await group.getByRole('radio', { name: 'Haiku' }).check();
+  await expect.poll(async () => (await postsTo(request, '/api/model')).map((e) => e.body)).toEqual([{ preference: 'haiku' }]);
+  await expect(group.getByRole('radio', { name: 'Haiku' })).toBeChecked();
+});
+
+test('model toggle: reachable and changeable by keyboard alone', async ({ page, request }) => {
+  await openApp(page, request, 'generate');
+  const sonnet = page.getByRole('radio', { name: 'Sonnet' });
+  await sonnet.focus();
+  await expect(sonnet).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(async () => (await postsTo(request, '/api/model')).map((e) => e.body)).toEqual([{ preference: 'haiku' }]);
+  await expect(page.getByRole('radio', { name: 'Haiku' })).toBeChecked();
+});
+
+test('model toggle: a change while the AI runs does not touch the running window, and the other views show the same value', async ({ page, request }) => {
+  await openApp(page, request, 'generate');
+  await page.locator('#cli-start').click();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  const before = (await mockLog(request)).log.filter((e) => e.path === '/api/step/start' || e.path === '/api/step/stop').length;
+  await page.getByRole('radio', { name: 'Haiku' }).check();
+  await expect.poll(async () => (await postsTo(request, '/api/model')).length).toBe(1);
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  expect((await mockLog(request)).log.filter((e) => e.path === '/api/step/start' || e.path === '/api/step/stop').length).toBe(before);
+  await expect(page.locator('#ai-model-note')).toContainText('applies the next time your AI starts');
+
+  await openCourse(page, request, 'course-main');
+  await mock(request, 'ai_model', { preference: 'haiku' });
+  await page.reload();
+  await enterPart(page);
+  await lessonReady(page);
+  await expect(page.getByRole('radio', { name: 'Haiku' })).toBeChecked();
+});
+
+test('model toggle: shown beside the AI window on a lesson activity and on the setup working test page', async ({ page, request }) => {
+  await openCourse(page, request, 'course-main');
+  await lessonReady(page);
+  await expect(page.locator('#term-head').getByRole('radiogroup', { name: 'Model for your AI' })).toBeVisible();
+  await expect(page.locator('#term-head').getByRole('radio', { name: 'Sonnet' })).toBeChecked();
+
+  await openPreflight(page, request, {
+    cli: { status: 'passed', detail: 'Your AI started.', next: '' },
+    signin: { status: 'passed', detail: 'Signed in.', next: '' },
+    working_test: { status: 'needs_you', detail: 'Ready.', next: 'Press Start the test.' },
+  });
+  await wizardTo(page, 'working_test');
+  await expect(page.locator('#term-head').getByRole('radiogroup', { name: 'Model for your AI' })).toBeVisible();
+  await page.locator('#term-head').getByRole('radio', { name: 'Haiku' }).check();
+  await expect.poll(async () => (await postsTo(request, '/api/model')).map((e) => e.body)).toEqual([{ preference: 'haiku' }]);
+});
+
+test('model toggle: hidden when the chosen AI has no model choice', async ({ page, request }) => {
+  await openApp(page, request, 'generate');
+  await expect(page.getByRole('radiogroup', { name: 'Model for your AI' })).toBeVisible();
+  await mock(request, 'ai_model', { available: false });
+  await mock(request, 'emit_state');
+  await expect(page.getByRole('radiogroup', { name: 'Model for your AI' })).toHaveCount(0);
+  await expect(page.locator('#cli-start')).toBeVisible();
+});
+
+test('model toggle: fits a 390 pixel wide screen', async ({ browser, request }) => {
+  const { context, page, errors } = await phonePage(browser);
+  await openApp(page, request, 'generate');
+  await expect(page.getByRole('radiogroup', { name: 'Model for your AI' })).toBeVisible();
+  expect(await sideways(page)).toBeLessThanOrEqual(0);
+  expect(await layoutProblems(page)).toEqual([]);
+  await page.screenshot({ path: path.join(SHOTS, 'model-toggle-phone.png') });
+  expect(errors).toEqual([]);
+  await context.close();
+});
+
 test('without a token the page shows a plain message and makes no API calls', async ({ page, request }) => {
   await mock(request, 'reset', { scenario: 'generate' });
   await page.goto('/');
@@ -628,15 +709,13 @@ test('preflight: the Project folder page waits for the AI page, and Next is off 
   await expect(page.locator('#pf-item-cli')).toBeVisible();
 });
 
-test('generate: tracker, model name autosave, automatic advance statement, SSE update', async ({ page, request }) => {
+test('generate: tracker, no model box, automatic advance statement, SSE update', async ({ page, request }) => {
   await openApp(page, request, 'generate');
   await expect(page.locator('.run').nth(0)).toContainText('Saved, 58 words');
   await expect(page.locator('.run').nth(2)).toContainText('Current run');
   await expect(page.getByText('You do not need to press anything to move on.')).toBeVisible();
-
-  await page.getByLabel('The name of the model you chose in your AI').fill('mid-model-3');
-  await page.getByLabel('The name of the model you chose in your AI').blur();
-  await expect.poll(async () => (await mockLog(request)).log.some((e) => e.path === '/api/step/submit' && e.body.data.model_name === 'mid-model-3')).toBe(true);
+  await expect(page.locator('#model-name')).toHaveCount(0);
+  await expect(page.getByLabel('The name of the model you chose in your AI')).toHaveCount(0);
 
   await mock(request, 'set_data', { step: 'generate', data: { current_run: 4, runs: [
     { n: 1, done: true, words: 58 }, { n: 2, done: true, words: 61 }, { n: 3, done: true, words: 70 },
@@ -1040,7 +1119,7 @@ test('fix: textarea save, flags, rerun, skip when allowed', async ({ page, reque
   await expect(page.locator('#step-heading')).toHaveText('Log your baseline');
 });
 
-test('baseline: the line names the model, an empty model blocks Send and says why, and the count shows each criterion', async ({ page, request }) => {
+test('baseline: the line names the recorded model, there is no model box, and the count shows each criterion', async ({ page, request }) => {
   await openApp(page, request, 'baseline');
   await expect(page.locator('#step-heading')).toHaveText('Log your baseline');
   await expect(page.locator('.step-item').nth(8)).toContainText('Now');
@@ -1048,24 +1127,14 @@ test('baseline: the line names the model, an empty model blocks Send and says wh
     'Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are runs/run-1.txt to runs/run-5.txt. The prompt file is prompt-v0.md. The model was mid-tier-model.',
   );
   await expect(page.locator('#cli-blocked')).toHaveCount(0);
-  await expect(page.getByLabel('The model you used for your five runs')).toHaveValue('mid-tier-model');
+  await expect(page.locator('#baseline-model')).toHaveCount(0);
+  await expect(page.getByLabel('The model you used for your five runs')).toHaveCount(0);
 
   await page.locator('#cli-start').click();
   await expect(page.locator('#cli-send')).not.toHaveAttribute('aria-disabled', 'true');
-  await page.getByLabel('The model you used for your five runs').fill('  ');
-  await expect(page.locator('#cli-blocked')).toContainText('The model name is empty, so the line cannot be sent.');
-  await expect(page.locator('#cli-send')).toHaveAttribute('aria-disabled', 'true');
-  await page.locator('#cli-send').click({ force: true });
-  expect((await mockLog(request)).log.filter((e) => e.path === '/api/step/send').length).toBe(0);
-
-  await page.getByLabel('The model you used for your five runs').fill('Model Two');
-  await expect(page.locator('#cli-blocked')).toHaveCount(0);
-  await expect(page.locator('.term-line')).toContainText('The model was Model Two.');
-  await expect(page.locator('#cli-send')).not.toHaveAttribute('aria-disabled', 'true');
   await page.locator('#cli-send').click();
   await expect.poll(async () => (await mockLog(request)).log.filter((e) => e.path === '/api/step/send').length).toBe(1);
-  const saves = (await mockLog(request)).log.filter((e) => e.path === '/api/step/submit' && e.body.step === 'baseline');
-  expect(saves[saves.length - 1].body.data).toEqual({ model_name: 'Model Two' });
+  expect((await mockLog(request)).log.filter((e) => e.path === '/api/step/submit' && e.body.step === 'baseline').length).toBe(0);
 });
 
 test('baseline: the app’s own count shows pass rate per criterion, NOT CHECKED as not covered, and the overall', async ({ page, request }) => {
@@ -1150,7 +1219,7 @@ test('done steps are viewable and read-only, and passing a check stays on the re
   await page.locator('.step-item').nth(0).getByRole('button').click();
   await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
   await expect(page.getByText('You finished this step.')).toBeVisible();
-  await expect(page.getByLabel('The name of the model you chose in your AI')).toBeDisabled();
+  await expect(page.locator('#model-name')).toHaveCount(0);
   await expect(page.locator('#cli-start')).toHaveCount(0);
   await expect(page.locator('#continue')).toHaveText('Continue to: Build the checker');
   await page.locator('#continue').click();
@@ -1387,12 +1456,12 @@ test('promptfoo track: the fix step says config, and the baseline step counts th
   await expect(page.locator('#col-left')).not.toContainText('check.py');
 });
 
-test('promptfoo track: an empty model still blocks Send on the baseline step', async ({ page, request }) => {
+test('promptfoo track: the baseline step has no model box and Send is not blocked by a model', async ({ page, request }) => {
   await openApp(page, request, 'pf-baseline');
   await page.locator('#cli-start').click();
-  await page.getByLabel('The model you used for your five runs').fill('   ');
-  await expect(page.locator('#cli-blocked')).toContainText('The model name is empty, so the line cannot be sent.');
-  await expect(page.locator('#cli-send')).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.getByLabel('The model you used for your five runs')).toHaveCount(0);
+  await expect(page.locator('#cli-blocked')).toHaveCount(0);
+  await expect(page.locator('#cli-send')).not.toHaveAttribute('aria-disabled', 'true');
 });
 
 test('promptfoo track: the step pages fit at narrow widths', async ({ page, request }) => {
@@ -3015,6 +3084,8 @@ test('layout: at 100% the wide layout keeps its columns, and a larger size switc
 });
 
 test('terminal: the text follows the text size, the terminal refits, and the CLI session keeps running', async ({ page, request }) => {
+  // Tall enough that the AI window head (with its model switch) still leaves the terminal some height at 150%.
+  await page.setViewportSize({ width: 1280, height: 1000 });
   await openApp(page, request, 'generate');
   await page.locator('#cli-start').click();
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
