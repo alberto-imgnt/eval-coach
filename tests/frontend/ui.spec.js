@@ -137,15 +137,17 @@ test('if sessionStorage is blocked the app still works from the URL token', asyn
   expect(page.url()).toBe(ORIGIN + '/');
 });
 
-test('Start again works after the CLI was stopped', async ({ page, request }) => {
+test('Open a new AI chat works after the AI window was stopped', async ({ page, request }) => {
   await openApp(page, request, 'generate');
-  await page.locator('#cli-start').click();
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
   await page.locator('#cli-stop').click();
   await expect(page.getByText('Your AI has stopped')).toBeVisible();
-  await expect(page.locator('#cli-retry')).not.toHaveAttribute('aria-disabled', 'true');
-  await page.locator('#cli-retry').click();
+  await expect(page.locator('#cli-retry')).toHaveCount(0);
+  await expect(page.locator('#cli-start')).not.toHaveAttribute('aria-disabled', 'true');
+  await page.locator('#cli-start').click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByText('Your AI is running.')).toBeVisible();
+  expect((await postsTo(request, '/api/step/start')).map((e) => e.body)).toEqual([{ step: 'generate' }]);
 });
 
 test('model toggle: shown in the step AI window head with the stored value, a plain note and an accessible name', async ({ page, request }) => {
@@ -175,7 +177,6 @@ test('model toggle: reachable and changeable by keyboard alone', async ({ page, 
 
 test('model toggle: a change while the AI runs does not touch the running window, and the other views show the same value', async ({ page, request }) => {
   await openApp(page, request, 'generate');
-  await page.locator('#cli-start').click();
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   const before = (await mockLog(request)).log.filter((e) => e.path === '/api/step/start' || e.path === '/api/step/stop').length;
   await page.getByRole('radio', { name: 'Haiku' }).check();
@@ -725,22 +726,20 @@ test('generate: tracker, no model box, automatic advance statement, SSE update',
   await expect(page.locator('.run').nth(3)).toContainText('Current run');
 });
 
-test('terminal header shows label, exact line, buttons; send focuses the terminal', async ({ page, request }) => {
+test('terminal header shows label, the line to paste, Copy and the new chat button; there is no Send', async ({ page, request }) => {
   await openApp(page, request, 'generate');
   await expect(page.locator('#term-head h2')).toHaveText('Your AI');
   await expect(page.locator('.term-line')).toHaveText('Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.');
   await expect(page.locator('#term-foot')).toContainText('Any approval requests appear here in the terminal');
-  await expect(page.locator('#cli-send')).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#cli-send')).toHaveCount(0);
+  await expect(page.locator('#cli-retry')).toHaveCount(0);
 
-  await page.locator('#cli-start').click();
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
-  await expect(page.locator('#cli-start')).toHaveAttribute('aria-disabled', 'true');
-
-  await page.locator('#cli-send').click();
-  await expect(page.locator('#cli-send')).not.toHaveAttribute('aria-busy', 'true');
-  await expect.poll(() => page.evaluate(() => document.activeElement && document.activeElement.className)).toContain('xterm-helper-textarea');
-  await expect(page.getByText('Sent. If your AI reports a temporary error')).toBeVisible();
+  await expect(page.locator('#cli-start')).toHaveText('Open a new AI chat');
+  await expect(page.locator('#cli-start')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#term-head')).not.toContainText('Send to AI');
+  await expect(page.locator('#term-head')).not.toContainText('Start my AI');
 
   await page.locator('#cli-stop').click();
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI has stopped (exit code 0).');
@@ -769,6 +768,7 @@ test('SSE reconnects with after= and does not duplicate output', async ({ page, 
   await openApp(page, request, 'generate');
   await expect(page.locator('.xterm')).toBeVisible();
   await expect.poll(async () => (await mockLog(request)).log.some((e) => e.path.startsWith('/api/terminal/stream'))).toBe(true);
+  await expect.poll(() => termText(page)).toContain('Fake CLI ready');
   await mock(request, 'emit_output', { chunks_b64: [b64(Buffer.from('first-chunk\r\n'))] });
   await expect.poll(() => termText(page)).toContain('first-chunk');
   await mock(request, 'drop_streams');
@@ -780,15 +780,16 @@ test('SSE reconnects with after= and does not duplicate output', async ({ page, 
 
   const { log } = await mockLog(request);
   const reconnect = log.filter((e) => e.path.startsWith('/api/terminal/stream'))[1];
-  expect(reconnect.path).toMatch(/after=101/);
+  // The automatic start's greeting comes first, so the resume point counts it.
+  expect(reconnect.path).toMatch(/after=103/);
   const text = await termText(page);
   expect(text.split('first-chunk').length - 1).toBe(1);
 });
 
 test('keystrokes arrive in order', async ({ page, request }) => {
   await openApp(page, request, 'generate');
-  await page.locator('#cli-start').click();
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  await page.locator('.xterm').click();
   await expect.poll(() => page.evaluate(() => document.activeElement && document.activeElement.className)).toContain('xterm-helper-textarea');
   const message = 'The quick brown fox é ✓ jumps 0123456789';
   await page.keyboard.type(message, { delay: 2 });
@@ -867,6 +868,14 @@ test('fixtures: file status shows only the two fixtures', async ({ page, request
 
 const EXAMPLE_ROUTE = '/api/step/use-example-fixtures';
 
+// A Part 3 step opens its AI window by itself, and the example's fixtures wait for the window to be closed.
+async function stopAi(page) {
+  const status = page.locator('#term-head .term-status');
+  await expect(status).toHaveText('Your AI is running.');
+  await page.locator('#cli-stop').click();
+  await expect(status).toHaveText('Your AI has stopped (exit code 0).');
+}
+
 test('fixtures recovery: the page says whose fixtures these are, on both tracks', async ({ page, request }) => {
   for (const scenario of ['fixtures', 'pf-fixtures']) {
     await openApp(page, request, scenario);
@@ -875,8 +884,9 @@ test('fixtures recovery: the page says whose fixtures these are, on both tracks'
     await expect(note).toContainText("These two files are the Practice task's own fixtures.");
     await expect(note).toContainText("They fit its test cases only");
     await expect(note).toContainText('No answer key is written now');
-    await expect(note).toContainText('Pressing Start again clears them.');
+    await expect(note).toContainText('Opening a new AI chat clears them.');
     await expect(page.locator('#use-example-fixtures')).toHaveText("Use the example's fixtures");
+    await stopAi(page);
     await expect(page.locator('#use-example-fixtures')).not.toHaveAttribute('aria-disabled', 'true');
   }
 });
@@ -884,6 +894,7 @@ test('fixtures recovery: the page says whose fixtures these are, on both tracks'
 test('fixtures recovery: pressing the button sends only the step, shows both files present, and the normal check follows', async ({ page, request }) => {
   await openApp(page, request, 'fixtures');
   await expect(page.locator('.file-list li').nth(1)).toContainText('Not there yet');
+  await stopAi(page);
   await page.locator('#use-example-fixtures').click();
   await expect(page.locator('.file-list li').nth(1)).toContainText('Present');
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -898,6 +909,7 @@ test('fixtures recovery: pressing the button sends only the step, shows both fil
 
 test('fixtures recovery: replacing text asks first, and Cancel sends nothing', async ({ page, request }) => {
   await openApp(page, request, 'fixtures', { step: 'fixtures', data: { example: { offered: true, would_replace: true } } });
+  await stopAi(page);
   await page.locator('#use-example-fixtures').click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('Replace the fixtures?');
@@ -923,9 +935,8 @@ test('fixtures recovery: nothing is offered with your own files', async ({ page,
   await expect(page.getByRole('heading', { name: 'If your AI cannot make usable fixtures' })).toHaveCount(0);
 });
 
-test('fixtures recovery: the button waits while the CLI is running, and a server refusal shows as plain text', async ({ page, request }) => {
+test('fixtures recovery: the button waits while the AI window is open, and a server refusal shows as plain text', async ({ page, request }) => {
   await openApp(page, request, 'fixtures');
-  await page.locator('#cli-start').click();
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await expect(page.locator('#use-example-fixtures')).toHaveAttribute('aria-disabled', 'true');
   await expect(page.locator('#example-fixtures-stop')).toContainText('Press Stop first.');
@@ -1130,10 +1141,10 @@ test('baseline: the line names the recorded model, there is no model box, and th
   await expect(page.locator('#baseline-model')).toHaveCount(0);
   await expect(page.getByLabel('The model you used for your five runs')).toHaveCount(0);
 
-  await page.locator('#cli-start').click();
-  await expect(page.locator('#cli-send')).not.toHaveAttribute('aria-disabled', 'true');
-  await page.locator('#cli-send').click();
-  await expect.poll(async () => (await mockLog(request)).log.filter((e) => e.path === '/api/step/send').length).toBe(1);
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  await expect(page.locator('#copy-paste')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#cli-send')).toHaveCount(0);
+  expect((await mockLog(request)).log.filter((e) => e.path === '/api/step/send')).toHaveLength(0);
   expect((await mockLog(request)).log.filter((e) => e.path === '/api/step/submit' && e.body.step === 'baseline').length).toBe(0);
 });
 
@@ -1222,6 +1233,7 @@ test('done steps are viewable and read-only, and passing a check stays on the re
   await expect(page.locator('#model-name')).toHaveCount(0);
   await expect(page.locator('#cli-start')).toHaveCount(0);
   await expect(page.locator('#continue')).toHaveText('Continue to: Build the checker');
+  await expect(page.locator('#step-restart')).toHaveCount(0); // Part 3 steps cannot be started again
   await page.locator('#continue').click();
   await expect(page.locator('#step-heading')).toHaveText('Build the checker');
   await page.locator('.step-item').nth(2).getByRole('button').click();
@@ -1237,7 +1249,6 @@ test('done steps are viewable and read-only, and passing a check stays on the re
 test('the terminal starts clear in every section it enters', async ({ page, request }) => {
   await openApp(page, request, 'fixtures');
   const status = page.locator('#term-head .term-status');
-  await page.locator('#cli-start').click();
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
   await mock(request, 'emit_exit', { code: 1 });
   await expect(status).toHaveText('Your AI has stopped (exit code 1).');
@@ -1250,12 +1261,13 @@ test('the terminal starts clear in every section it enters', async ({ page, requ
   await expect.poll(() => termText(page)).not.toContain('Fake CLI ready');
   await expect.poll(async () => (await postsTo(request, '/api/terminal/release')).length).toBe(1);
 
-  // Coming back does not bring the old session back.
+  // Coming back does not bring the old session back, and the step's one automatic start is already used up.
   await page.locator('.step-item').nth(2).getByRole('button').click();
   await expect(page.locator('#step-heading')).toHaveText('Make the fixtures');
   await expect(status).toHaveText('Your AI is not running.');
   expect(await termText(page)).not.toContain('Fake CLI ready');
   expect((await postsTo(request, '/api/terminal/release')).length).toBe(1);
+  expect((await postsTo(request, '/api/step/auto-start')).length).toBe(1);
   await page.locator('#cli-start').click();
   await expect(status).toHaveText('Your AI is running.');
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
@@ -1270,6 +1282,179 @@ test('locked steps open as previews, with nothing that starts the CLI', async ({
   await expect(page.locator('#cli-start')).toBeHidden();
   await page.locator('#preview-back').click();
   await expect(page.locator('#preview-note')).toHaveCount(0);
+});
+
+// ---- Part 3 AI steps: the copy-and-paste flow -----------------------------------
+
+const GENERATE_LINE = 'Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.';
+const autoStarts = async (request) => (await postsTo(request, '/api/step/auto-start')).map((e) => e.body);
+const stepStarts = async (request) => (await postsTo(request, '/api/step/start')).map((e) => e.body);
+
+test('paste flow: the first visit to generate opens the AI window by itself and shows the head with Copy, a new chat and Stop', async ({ page, request }) => {
+  await openApp(page, request, 'generate');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  await expect.poll(() => termText(page)).toContain('Fake CLI ready');
+  expect(await autoStarts(request)).toEqual([{ step: 'generate' }]);
+  expect(await stepStarts(request)).toEqual([]);
+
+  await expect(page.locator('#cli-chat-note')).toContainText('Each step opens a new chat');
+  await expect(page.locator('#cli-line')).toHaveText(GENERATE_LINE);
+  await expect(page.locator('#copy-paste')).toHaveText('Copy');
+  await expect(page.locator('#copy-paste')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#cli-start')).toHaveText('Open a new AI chat');
+  await expect(page.locator('#cli-stop')).toHaveText('Stop');
+  await expect(page.locator('#cli-stop')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#cli-send')).toHaveCount(0);
+  await expect(page.locator('#cli-retry')).toHaveCount(0);
+  await expect(page.locator('#term-head')).toContainText('Wait until your AI is ready for a message');
+});
+
+test('paste flow: build opens by itself once, and neither a revisit nor Stop then a revisit asks again', async ({ page, request }) => {
+  await openApp(page, request, 'build');
+  await expect(page.locator('#step-heading')).toHaveText('Build the checker');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  expect(await autoStarts(request)).toEqual([{ step: 'build' }]);
+
+  // Leaving the step closes its window; coming back does not open one by itself.
+  const leaveAndReturn = async () => {
+    await page.locator('.step-item').nth(0).getByRole('button').click();
+    await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
+    await page.locator('.step-item').nth(1).getByRole('button').click();
+    await expect(page.locator('#step-heading')).toHaveText('Build the checker');
+  };
+  await leaveAndReturn();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is not running.');
+
+  await page.locator('#cli-start').click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  await page.locator('#cli-stop').click();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI has stopped (exit code 0).');
+  await leaveAndReturn();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is not running.');
+  await page.waitForTimeout(500);
+  expect(await autoStarts(request)).toEqual([{ step: 'build' }]);
+  expect(await stepStarts(request)).toEqual([{ step: 'build' }]);
+});
+
+test('paste flow: reading ahead at a locked step and looking at a finished step send no automatic start', async ({ page, request }) => {
+  await openApp(page, request, 'build');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  expect(await autoStarts(request)).toEqual([{ step: 'build' }]);
+  await page.locator('#cli-stop').click();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI has stopped (exit code 0).');
+
+  await page.locator('.step-item').nth(3).getByRole('button').click();
+  await expect(page.locator('#preview-note')).toBeVisible();
+  await page.locator('.step-item').nth(0).getByRole('button').click();
+  await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
+  await expect(page.getByText('You finished this step.')).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(await autoStarts(request)).toEqual([{ step: 'build' }]);
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is not running.');
+});
+
+test('paste flow: a step whose view says it cannot start by itself sends no automatic start', async ({ page, request }) => {
+  await page.route('**/api/state*', async (route) => {
+    const response = await route.fetch();
+    const json = await response.json();
+    if (json.step && json.step.cli) json.step.cli.can_auto_start = false;
+    await route.fulfill({ response, json });
+  });
+  await openApp(page, request, 'fixtures');
+  await expect(page.locator('#step-heading')).toHaveText('Make the fixtures');
+  await expect(page.locator('#cli-chat-note')).toBeVisible();
+  await expect(page.locator('#copy-paste')).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(await autoStarts(request)).toEqual([]);
+  expect(await stepStarts(request)).toEqual([]);
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is not running.');
+});
+
+test('paste flow: a finished step shows a record, with the controls off', async ({ page, request }) => {
+  await openApp(page, request, 'fixtures');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  await page.locator('.step-item').nth(0).getByRole('button').click();
+  await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
+  await expect(page.getByText('You finished this step.')).toBeVisible();
+  await expect(page.locator('#term-head')).toContainText('This step is finished, so the controls are off here.');
+  for (const id of ['#copy-paste', '#cli-start', '#cli-stop', '#cli-send', '#cli-retry']) await expect(page.locator(id)).toHaveCount(0);
+  await expect(page.locator('#cli-line')).toHaveText(GENERATE_LINE);
+  expect(await autoStarts(request)).toEqual([{ step: 'fixtures' }]);
+});
+
+test('paste flow: Copy puts the line on the clipboard and says so', async ({ page, request }) => {
+  await page.addInitScript(() => {
+    window.__copied = [];
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: (text) => { window.__copied.push(text); return Promise.resolve(); } }, configurable: true });
+  });
+  await openApp(page, request, 'generate');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  const status = page.locator('#copy-status');
+  await expect(status).toHaveAttribute('role', 'status');
+  await expect(status).toHaveText('');
+  await page.locator('#copy-paste').click();
+  await expect(status).toHaveText('Copied. Paste it into your AI window and press Enter.');
+  expect(await page.evaluate(() => window.__copied)).toEqual([GENERATE_LINE]);
+});
+
+test('paste flow: a browser that refuses the clipboard leaves the line selected and says to press Ctrl+C', async ({ page, request }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('denied')) }, configurable: true });
+  });
+  await openApp(page, request, 'generate');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  await page.locator('#copy-paste').click();
+  await expect(page.locator('#copy-status')).toHaveText('Your browser did not allow copying. Select the text above and press Ctrl+C.');
+  expect(await page.evaluate(() => String(window.getSelection()))).toBe(GENERATE_LINE);
+});
+
+test('paste flow: Open a new AI chat asks first while a window runs, Cancel keeps it, and confirming starts a new one', async ({ page, request }) => {
+  await openApp(page, request, 'generate');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  await page.locator('#cli-start').click();
+  const dialog = page.locator('dialog.confirm[open]');
+  await expect(dialog.locator('h2')).toHaveText('Open a new AI chat?');
+  await expect(dialog).toContainText('This closes your AI window and opens a new chat.');
+  await expect(dialog).not.toContainText("clears this step's AI folder");
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  expect(await stepStarts(request)).toEqual([]);
+
+  await page.locator('#cli-start').click();
+  await page.locator('dialog.confirm[open]').getByRole('button', { name: 'Open a new chat' }).click();
+  await expect.poll(() => stepStarts(request)).toEqual([{ step: 'generate' }]);
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+});
+
+test('paste flow: Open a new AI chat also asks when the step has a result, with the wording about clearing the folder', async ({ page, request }) => {
+  await openApp(page, request, 'generate');
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  await page.locator('#cli-stop').click();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI has stopped (exit code 0).');
+
+  // Nothing to lose: no window and no result, so it starts at once.
+  await page.locator('#cli-start').click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect.poll(() => stepStarts(request)).toEqual([{ step: 'generate' }]);
+  await page.locator('#cli-stop').click();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI has stopped (exit code 0).');
+
+  await mock(request, 'set_cli', { step: 'generate', changes: { has_result: true } });
+  await mock(request, 'emit_state');
+  await page.waitForTimeout(300);
+  await page.locator('#cli-start').click();
+  const dialog = page.locator('dialog.confirm[open]');
+  await expect(dialog).toContainText("clears this step's AI folder");
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(await stepStarts(request)).toHaveLength(1);
+
+  await page.locator('#cli-start').click();
+  await page.locator('dialog.confirm[open]').getByRole('button', { name: 'Open a new chat' }).click();
+  await expect.poll(async () => (await stepStarts(request)).length).toBe(2);
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
 });
 
 test('API errors appear as plain messages and server strings are not parsed as HTML', async ({ page, request }) => {
@@ -1293,7 +1478,6 @@ test('Quit asks first, then stops and shows a closing message', async ({ page, r
 
 test('exit event updates terminal status without a state refetch', async ({ page, request }) => {
   await openApp(page, request, 'generate');
-  await page.locator('#cli-start').click();
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await mock(request, 'emit_exit', { code: 3 });
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI has stopped (exit code 3).');
@@ -1328,7 +1512,8 @@ test('usable at 1024 wide with no horizontal overflow', async ({ page, request }
 
 test('keyboard focus is visible and F6 leaves the terminal', async ({ page, request }) => {
   await openApp(page, request, 'generate');
-  await page.locator('#cli-start').click();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
+  await page.locator('.xterm').click();
   await expect.poll(() => page.evaluate(() => document.activeElement && document.activeElement.className)).toContain('xterm-helper-textarea');
   await page.keyboard.press('F6');
   const tag = await page.evaluate(() => document.activeElement.tagName);
@@ -1358,7 +1543,6 @@ test('screenshots at 1280x800', async ({ page, request }) => {
   await page.screenshot({ path: path.join(SHOTS, 'run-bottom.png') });
 
   await openApp(page, request, 'generate');
-  await page.locator('#cli-start').click();
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
   await page.screenshot({ path: path.join(SHOTS, 'generate.png') });
 
@@ -1456,12 +1640,13 @@ test('promptfoo track: the fix step says config, and the baseline step counts th
   await expect(page.locator('#col-left')).not.toContainText('check.py');
 });
 
-test('promptfoo track: the baseline step has no model box and Send is not blocked by a model', async ({ page, request }) => {
+test('promptfoo track: the baseline step has no model box and Copy is not blocked by a model', async ({ page, request }) => {
   await openApp(page, request, 'pf-baseline');
-  await page.locator('#cli-start').click();
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await expect(page.getByLabel('The model you used for your five runs')).toHaveCount(0);
   await expect(page.locator('#cli-blocked')).toHaveCount(0);
-  await expect(page.locator('#cli-send')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#copy-paste')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#cli-send')).toHaveCount(0);
 });
 
 test('promptfoo track: the step pages fit at narrow widths', async ({ page, request }) => {
@@ -1540,15 +1725,22 @@ test('live mode: the warning is shown first and nothing can start until it is ac
   await expect(warning.locator('li')).toHaveCount(6);
   await expect(page.locator('#live-ack')).not.toBeChecked();
   await expect(page.locator('#live-ack-row')).toContainText('for Devin CLI the helper turns on auto mode so it may act without asking me');
-  for (const id of ['#cli-start', '#cli-send', '#cli-retry']) await expect(page.locator(id)).toHaveAttribute('aria-disabled', 'true');
+  for (const id of ['#copy-paste', '#cli-start']) await expect(page.locator(id)).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#cli-send')).toHaveCount(0);
+  await expect(page.locator('#cli-retry')).toHaveCount(0);
   await expect(page.locator('#cli-start-blocked')).toContainText('Read the warning and tick the box');
   await page.locator('#cli-start').click({ force: true });
-  expect((await mockLog(request)).log.filter((e) => e.path === '/api/step/start')).toHaveLength(0);
+  await page.locator('#copy-paste').click({ force: true });
+  await expect(page.locator('#copy-status')).toHaveText('');
+  expect((await mockLog(request)).log.filter((e) => e.path === '/api/step/start' || e.path === '/api/step/auto-start')).toHaveLength(0);
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is not running.');
 
   await page.locator('#live-ack').check();
   await expect(page.locator('#cli-start-blocked')).toContainText('Choose the AI tool you use from the list');
   await expect(page.locator('#cli-start')).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#copy-paste')).toHaveAttribute('aria-disabled', 'true');
   await expect(page.locator('.term-line')).toContainText(LIVE_LINE('<copilot | claude | devin>', 'mid-tier-model'));
+  expect((await mockLog(request)).log.filter((e) => e.path === '/api/step/auto-start')).toHaveLength(0);
 });
 
 test('live mode: choosing a CLI shows what the helper does for it and puts it in the line', async ({ page, request }) => {
@@ -1567,17 +1759,23 @@ test('live mode: choosing a CLI shows what the helper does for it and puts it in
   await expect(page.locator('#live-cli-note')).toContainText('may act without asking you');
   await expect(page.locator('.term-line')).toContainText(LIVE_LINE('devin', 'mid-tier-model'));
   await expect(page.locator('#cli-start-blocked')).toHaveCount(0);
+  await expect(page.locator('#copy-paste')).not.toHaveAttribute('aria-disabled', 'true');
   await page.getByRole('radio', { name: 'Claude Code' }).check();
   await expect(page.locator('#live-cli-note')).toContainText('adds no permission flag');
   await expect(page.locator('#live-cli-note')).not.toContainText('auto mode');
   await expect(page.locator('.term-line')).toContainText(LIVE_LINE('claude', 'mid-tier-model'));
 
+  // The live step never starts by itself: the participant presses Open a new AI chat, with nothing to confirm.
+  await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is not running.');
+  expect((await mockLog(request)).log.filter((e) => e.path === '/api/step/auto-start')).toHaveLength(0);
   await page.locator('#cli-start').click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
-  await page.locator('#cli-send').click();
+  await expect(page.locator('#copy-paste')).not.toHaveAttribute('aria-disabled', 'true');
   const log = (await mockLog(request)).log;
-  expect(log.filter((e) => e.path === '/api/step/send').map((e) => e.body)).toEqual([{ step: 'live' }]);
+  expect(log.filter((e) => e.path === '/api/step/send')).toHaveLength(0);
   expect(log.filter((e) => e.path === '/api/step/start').map((e) => e.body)).toEqual([{ step: 'live' }]);
+  expect(log.filter((e) => e.path === '/api/step/auto-start')).toHaveLength(0);
   const submitted = log.filter((e) => e.path === '/api/step/submit').map((e) => e.body.data);
   expect(submitted.some((d) => d.acknowledged === true)).toBe(true);
   expect(submitted.some((d) => d.cli === 'claude')).toBe(true);
@@ -1591,7 +1789,7 @@ test('live mode: Check my work reads files only, says what is missing, and finis
   await page.locator('#check-work').click();
   await expect(page.getByText('Not done yet.')).toBeVisible();
   await expect(page.locator('.is-missing')).toContainText('promptfooconfig.live.yaml exists');
-  await expect(page.locator('.is-missing')).toContainText('Press Start my AI, then Send to AI, so your AI writes it.');
+  await expect(page.locator('.is-missing')).toContainText('promptfooconfig.live.yaml was not found in your project folder.');
   await expect(page.locator('#live-files')).toContainText('Not there yet');
   await mock(request, 'set_data', { step: 'live', data: { config_exists: true, provider_exists: true, provider_ok: true, started: true } });
   await page.reload();
@@ -2916,7 +3114,6 @@ test('Settings: one panel with the text size, setup and both resets in that orde
 
 test('Settings: leaving returns to the screen that was open, and opening it changes no progress or CLI', async ({ page, request }) => {
   await openApp(page, request, 'generate');
-  await page.locator('#cli-start').click();
   await expect(page.getByText('Your AI is running.')).toBeVisible();
   await openSettings(page);
   await page.locator('#text-size-slider').focus();
@@ -3087,7 +3284,6 @@ test('terminal: the text follows the text size, the terminal refits, and the CLI
   // Tall enough that the AI window head (with its model switch) still leaves the terminal some height at 150%.
   await page.setViewportSize({ width: 1280, height: 1000 });
   await openApp(page, request, 'generate');
-  await page.locator('#cli-start').click();
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
   const fontPx = () => page.locator('.xterm-rows').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
   expect(await fontPx()).toBe(14);
@@ -3372,7 +3568,6 @@ test('What am I looking at? opens the lesson from Settings and closes back to Se
 
 test('What am I looking at? in the AI window opens the lesson and the AI keeps running', async ({ page, request }) => {
   await openApp(page, request, 'generate');
-  await page.locator('#cli-start').click();
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await page.locator('#ai-window-open').click();
   const dialog = page.locator('dialog.overlay-ai-window[open]');

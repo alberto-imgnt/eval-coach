@@ -485,7 +485,7 @@ async function driveApprovals(run, done, timeoutMs = 90000) {
 }
 
 // What the app did to the CLI process: no flags, no extra typing, no answered prompts.
-function auditProcess(label, run, expectedLine) {
+function auditProcess(label, run, expectedLine, lineMessage) {
   const ev = eventsOf(run);
   const launch = ev.find((e) => e.event === 'launch');
   const approved = ev.filter((e) => e.event === 'approved');
@@ -494,10 +494,10 @@ function auditProcess(label, run, expectedLine) {
   const enters = enterCount.get(runId(run)) || 0;
   if (launch.argv.length) L.violation(`${label}: the app added arguments or flags to the CLI command: ${JSON.stringify(launch.argv)}`);
   if (approved.length !== enters || approved.some((a) => a.typed !== '')) L.violation(`${label}: a CLI prompt was answered by something other than the participant (${approved.length} answered, ${enters} Enter presses by the participant)`);
-  if (lines.some((l) => l.text !== expectedLine)) L.violation(`${label}: the app typed something other than the activity's line: ${JSON.stringify(lines.map((l) => l.text))}`);
+  if (lines.some((l) => l.text !== expectedLine)) L.violation(`${label}: the CLI received something other than the expected line: ${JSON.stringify(lines.map((l) => l.text))}`);
   check(`${label}: the CLI got no flags from the app`, launch.argv.length === 0);
   check(`${label}: every prompt was answered by the participant only`, approved.length === enters && approved.length === asked.length && approved.every((a) => a.typed === ''), `${approved.length}/${asked.length} answered, ${enters} Enter presses`);
-  check(`${label}: the app typed only the activity's line, once`, lines.length === 1 && lines[0].text === expectedLine, JSON.stringify(lines.map((l) => l.text)));
+  check(`${label}: ${lineMessage || 'the app typed only the activity\'s line, once'}`, lines.length === 1 && lines[0].text === expectedLine, JSON.stringify(lines.map((l) => l.text)));
 }
 
 function cliStopped() {
@@ -955,13 +955,13 @@ async function stageFixturesConfig() {
   check('fixtures-config: the gate fails before the CLI adds the tests and names them', early.ok && earlyItems.some((i) => i.detail.includes('fixture-bad') && i.detail.includes('fixture-polished-but-wrong')), JSON.stringify(earlyItems.map((i) => i.detail)));
   const before = sha256(CONFIG_FILE);
 
-  const run = await startStepCli('fixtures-config', 'fixtures-config');
+  const run = await openPart3Ai('fixtures-config', 'fixtures-config');
   check('fixtures-config: the CLI started in the project folder', path.resolve(run.launch.cwd).toLowerCase() === path.resolve(PROJECT).toLowerCase(), run.launch.cwd);
-  const send = await post('/api/step/send', { step: 'fixtures-config' });
-  must('fixtures-config: Send accepted', send.ok, send.text.slice(0, 160));
+  await expectPart3SendRefused('fixtures-config', 'fixtures-config');
+  await pastePart3Line('fixtures-config', 'fixtures-config');
   await driveApprovals(run, async (ev) => ev.filter((e) => e.event === 'approved').length >= 1 && sha256(CONFIG_FILE) !== before, 120000);
   await sleep(1500);
-  auditProcess('fixtures-config', run, FIXTURES_CONFIG_LINE);
+  auditProcess('fixtures-config', run, FIXTURES_CONFIG_LINE, PASTE_AUDIT);
   const after = await stepDetailOf('fixtures-config');
   check('fixtures-config: the page sees both tests in the config', after.data.tests.every((t) => t.present === true) && after.data.scan.length === 0, JSON.stringify(after.data.tests));
   const text = readText(CONFIG_FILE);
@@ -990,27 +990,60 @@ const sha256 = (p) => require('crypto').createHash('sha256').update(fs.readFileS
 const LOG_FILE = path.join(PROJECT, 'iteration-log.md');
 const stepDetail = async () => (await get('/api/state?step=baseline')).json.step;
 
-async function startStepCli(stepId, label) {
-  L.countSession(label);
+const PASTE_AUDIT = 'the only line the CLI received was the participant\'s paste, once';
+
+// A Part 3 AI step in the paste flow: the app opens the window by itself the first time (POST /api/step/auto-start is the
+// call the page makes when it shows the step); "Open a new AI chat" (POST /api/step/start) opens it again. A window the
+// page already opened on Continue in an earlier stage is adopted (run.js counted it there).
+async function openPart3Ai(stepId, label) {
   const since = nowSec() - 0.5;
-  const r = await post('/api/step/start', { step: stepId });
-  must(`${label}: start accepted`, r.ok, r.text.slice(0, 200));
+  const view = (await get(`/api/state?step=${stepId}`)).json.step;
+  check(`${label}: the step is in paste mode and the app types nothing`, view.cli.mode === 'paste' && view.cli.paste_ready === true && typeof view.cli.line === 'string' && view.cli.line.length > 0, JSON.stringify(view.cli));
+  if (state.carry === stepId) {
+    state.carry = null;
+    L.saveState(state);
+    const running = await L.waitFor(async () => { const s = await getState(); return s.terminal.running && s.terminal.label; }, 10000, `${label}: the window that opened on Continue`);
+    const launch = readEvents().filter((e) => e.event === 'launch').pop();
+    check(`${label}: the AI window already opened by itself on Continue`, Boolean(running && launch));
+    return { pid: launch.pid, launch, since: launch.ts - 0.5, how: 'carried' };
+  }
+  const auto = view.cli.can_auto_start === true;
+  L.countSession(auto ? `${label} (opens by itself)` : `${label} (Open a new AI chat)`);
+  const r = await post(auto ? '/api/step/auto-start' : '/api/step/start', { step: stepId });
+  must(`${label}: ${auto ? 'the automatic start' : 'Open a new AI chat'} accepted`, r.ok, r.text.slice(0, 200));
   const launch = await L.waitFor(async () => readEvents().find((e) => e.event === 'launch' && e.ts >= since), 20000, `${label} launch`);
-  await sleep(1800);
-  return { pid: launch.pid, launch, since };
+  await sleep(1800); // the stand-in prints its input line
+  return { pid: launch.pid, launch, since, how: auto ? 'auto' : 'button' };
 }
 
-// One stand-in session: Send, press Enter on each approval, wait for the log to be (re)written, stop the CLI.
+// What the participant does with Copy: paste the step's line into the AI window and press Enter.
+async function pastePart3Line(stepId, label) {
+  const line = (await get(`/api/state?step=${stepId}`)).json.step.cli.line;
+  const pasted = await post('/api/terminal/input', { data: Buffer.from(`${line}\r`).toString('base64') });
+  must(`${label}: the participant's paste was accepted`, pasted.ok, pasted.text.slice(0, 160));
+}
+
+// The app no longer types the line: Send is refused, and a second automatic start with a window open does nothing.
+async function expectPart3SendRefused(stepId, label) {
+  const launches = () => readEvents().filter((e) => e.event === 'launch').length;
+  const before = launches();
+  const send = await post('/api/step/send', { step: stepId });
+  check(`${label}: Send is refused as not supported`, send.status === 400 && send.code === 'not_supported', `${send.status} ${send.code}`);
+  const auto = await post('/api/step/auto-start', { step: stepId });
+  check(`${label}: asking again for an automatic start starts nothing`, auto.ok && launches() === before, `${auto.status} ${launches() - before}`);
+}
+
+// One stand-in session: paste the line, press Enter on each approval, wait for the log to be (re)written, stop the CLI.
 async function logSession(label, model, wrongCount) {
   if (wrongCount) fs.writeFileSync(MODE_FILE, 'wrong-count'); else fs.rmSync(MODE_FILE, { force: true });
   const before = exists(LOG_FILE) ? sha256(LOG_FILE) : null;
-  const run = await startStepCli('baseline', label);
+  const run = await openPart3Ai('baseline', label);
   check(`${label}: the CLI started in the project folder`, path.resolve(run.launch.cwd).toLowerCase() === path.resolve(PROJECT).toLowerCase(), run.launch.cwd);
-  const send = await post('/api/step/send', { step: 'baseline' });
-  must(`${label}: Send accepted`, send.ok, send.text.slice(0, 160));
+  await expectPart3SendRefused('baseline', label);
+  await pastePart3Line('baseline', label);
   await driveApprovals(run, async (ev) => ev.filter((e) => e.event === 'approved').length >= 1 && exists(LOG_FILE) && sha256(LOG_FILE) !== before, 120000);
   await sleep(1500);
-  auditProcess(label, run, BASELINE_LINE(model));
+  auditProcess(label, run, BASELINE_LINE(model), PASTE_AUDIT);
   const stop = await post('/api/step/stop', { step: 'baseline' });
   check(`${label}: Stop works`, stop.ok && (await L.waitFor(cliStopped, 15000, 'CLI stopped').then(() => true)));
   fs.rmSync(MODE_FILE, { force: true });
@@ -1028,6 +1061,7 @@ async function stageBaseline() {
   await enterStage('baseline');
   const detail = await stepDetail();
   check('baseline: the typed line is exact and names the model the app recorded in the generate step', detail.cli.line === BASELINE_LINE(L.MODEL) && detail.cli.blocked === null && detail.cli.folder_label === 'Your project folder', detail.cli.line);
+  check('baseline: the step is in paste mode, ready to copy, and opens its AI window by itself the first time', detail.cli.mode === 'paste' && detail.cli.paste_ready === true && detail.cli.can_auto_start === true && detail.cli.has_result === false && detail.cli.started === false, JSON.stringify(detail.cli));
   check('baseline: no run, no count, no log yet', detail.data.summary === null && detail.data.result === null && detail.data.fresh === false && detail.data.log_exists === false && detail.data.runs_ready === true && detail.data.checker_exists === true);
   check('baseline: there is no model box and no model name in the data', !('model_name' in detail.data));
   check('baseline: no answer key in the project', !exists(L.projectKeyPath()));
@@ -1042,7 +1076,7 @@ async function stageBaseline() {
   // Refusals before any work.
   const early = await post('/api/step/check', { step: 'baseline' });
   const earlyItems = (await stepDetail()).last_check.items;
-  check('baseline: the gate fails with no log and says what to do', early.ok && earlyItems.some((i) => !i.ok && i.detail.includes('iteration-log.md was not found') && i.detail.includes('Send to AI')), JSON.stringify(earlyItems.filter((i) => !i.ok).map((i) => i.detail)));
+  check('baseline: the gate fails with no log and says what to do', early.ok && earlyItems.some((i) => !i.ok && i.detail.includes('iteration-log.md was not found') && i.detail.includes('Copy the line and paste it into your AI window')), JSON.stringify(earlyItems.filter((i) => !i.ok).map((i) => i.detail)));
   const wrongWhich = await post('/api/step/run-checker', { step: 'baseline', which: 'fixtures' });
   check('baseline: the app run accepts only which=baseline', wrongWhich.status === 400 && wrongWhich.code === 'bad_input', wrongWhich.code);
 
@@ -1145,16 +1179,19 @@ async function stageLive() {
     await page.locator('#open-live').click();
     await page.locator('#live-warning').waitFor({ timeout: 15000 });
     check('live view: the warning, the unticked acknowledgement and the CLI choice are on the page', (await page.locator('#live-warning').innerText()).includes('--permission-mode auto') && (await page.locator('#live-ack').isChecked()) === false && (await page.locator('#live-cli-choice input[type=radio]').count()) === 3);
-    check('live view: Start and Send are off until the box is ticked and a CLI is chosen', (await page.locator('#cli-start').getAttribute('aria-disabled')) === 'true' && (await page.locator('#cli-send').getAttribute('aria-disabled')) === 'true' && (await page.locator('#cli-start-blocked').count()) === 1);
+    check('live view: the line can be shown but Copy and Open a new AI chat are off until the box is ticked and a CLI is chosen; there is no Send', (await page.locator('#cli-start').getAttribute('aria-disabled')) === 'true' && (await page.locator('#copy-paste').getAttribute('aria-disabled')) === 'true' && (await page.locator('#cli-send').count()) === 0 && (await page.locator('#cli-retry').count()) === 0 && (await page.locator('#cli-start').innerText()).trim() === 'Open a new AI chat' && (await page.locator('#cli-start-blocked').count()) === 1);
+    check('live view: no AI window opened by itself when the step was shown', (await getState()).terminal.running === false);
     await L.shot(page, 'live.png');
   } finally { await browser.close(); }
 
-  // Nothing starts before the warning is acknowledged and a CLI is chosen.
+  // Nothing starts before the warning is acknowledged and a CLI is chosen, and live never starts by itself.
   const launches = () => readEvents().filter((e) => e.event === 'launch').length;
   const launchesBefore = launches();
   const noAck = await post('/api/step/start', { step: 'live' });
   const noAckSend = await post('/api/step/send', { step: 'live' });
-  check('live: Start and Send are refused until the warning is acknowledged', noAck.status === 400 && noAck.code === 'warning_not_acknowledged' && noAckSend.code === 'warning_not_acknowledged', `${noAck.code} ${noAckSend.code}`);
+  const autoLive = await post('/api/step/auto-start', { step: 'live' });
+  check('live: Open a new AI chat is refused until the warning is acknowledged, and Send is refused as not supported', noAck.status === 400 && noAck.code === 'warning_not_acknowledged' && noAckSend.status === 400 && noAckSend.code === 'not_supported', `${noAck.code} ${noAckSend.code}`);
+  check('live: an automatic start is a harmless no-op and starts nothing', autoLive.ok && launches() === launchesBefore && (await stepDetailOf('live')).cli.can_auto_start === false, `${autoLive.status}`);
   await post('/api/step/submit', { step: 'live', data: { acknowledged: true } });
   const noCli = await post('/api/step/start', { step: 'live' });
   check('live: and until a CLI is chosen', noCli.status === 400 && noCli.code === 'cli_not_chosen', noCli.code);
@@ -1168,6 +1205,7 @@ async function stageLive() {
   await post('/api/step/submit', { step: 'live', data: { cli: 'devin' } });
   const ready = await stepDetailOf('live');
   check('live: the typed line is exact, with the chosen CLI and the recorded model', ready.cli.line === LIVE_LINE('devin', L.MODEL) && ready.cli.start_blocked === null && ready.cli.blocked === null, ready.cli.line);
+  check('live: the line is ready to copy but the window still never opens by itself', ready.cli.mode === 'paste' && ready.cli.paste_ready === true && ready.cli.can_auto_start === false && launches() === launchesBefore);
   const early = await post('/api/step/check', { step: 'live' });
   const failing = (await stepDetailOf('live')).last_check.items.filter((i) => !i.ok).map((i) => i.label);
   check('live: the gate fails before anything exists and names what is missing', early.ok && failing.includes('promptfooconfig.live.yaml exists') && failing.includes('Live mode was started here'), failing.join(' / '));
@@ -1175,13 +1213,13 @@ async function stageLive() {
   const logBefore = sha256(LOG_FILE);
   const runsBefore = RUN_FILES.map((f) => sha256(path.join(PROJECT, f)));
 
-  const run = await startStepCli('live', 'live mode');
+  const run = await openPart3Ai('live', 'live mode');
   check('live: the CLI started in the project folder', path.resolve(run.launch.cwd).toLowerCase() === path.resolve(PROJECT).toLowerCase(), run.launch.cwd);
-  const send = await post('/api/step/send', { step: 'live' });
-  must('live: Send accepted', send.ok, send.text.slice(0, 160));
+  await expectPart3SendRefused('live', 'live');
+  await pastePart3Line('live', 'live');
   await driveApprovals(run, async (ev) => ev.filter((e) => e.event === 'approved').length >= 2 && exists(LIVE_CONFIG) && exists(PROVIDER_FILE), 120000);
   await sleep(1500);
-  auditProcess('live', run, LIVE_LINE('devin', L.MODEL));
+  auditProcess('live', run, LIVE_LINE('devin', L.MODEL), PASTE_AUDIT);
   const afterSend = await stepDetailOf('live');
   check('live: the page sees both files, the helper unchanged and a clean scan', afterSend.data.config_exists === true && afterSend.data.provider_ok === true && afterSend.data.scan.length === 0 && afterSend.data.started === true, JSON.stringify(afterSend.data));
   check('live: the helper in the project is byte for byte the bundled one', sha256(PROVIDER_FILE) === sha256(KIT_PROVIDER));
@@ -1290,7 +1328,7 @@ async function stageMigrate() {
 // The whole of Part 1 on the stand-in CLI: the cold run, the three label sets in the rewrite step (each one a run of the
 // stand-in, which answers a prompt with label lines better than one without), both scores, every lesson and the own step.
 const PART1_ORDER = ['p1-mission', 'cold', 'score', 'p1-gaps', 'p1-frameworks', 'rewrite', 'rescore', 'p1-benefits', 'own'];
-const PART1_LINE = 'Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.';
+const PART1_LINE = 'Save only your answer to output.txt. Do nothing else.';
 const P1_DIR = path.join(PROJECT, 'part-1');
 const p1Scratch = (step) => path.join(HOME, 'part1', step);
 const roughNotes = () => readText(path.join(KIT, 'part1', 'rough-notes.txt')).replace(/\r\n/g, '\n').replace(/^\n+|\n+$/g, '');
@@ -1306,19 +1344,29 @@ async function startStepCli(step, label) {
   return { pid: launch.pid, launch, since };
 }
 
-// One run of a Part 1 step: Start, Send, the participant's Enter on each approval, the file saved by the app.
-async function runPart1Cli(step, label, outName) {
+// A Part 1 step opens its AI window by itself when the participant first saves a prompt.
+async function saveAndAutoStart(step, data, label) {
+  L.countSession(label);
+  const since = nowSec() - 0.5;
+  await part1Step(step, data);
+  const launch = await L.waitFor(async () => readEvents().find((e) => e.event === 'launch' && e.ts >= since), 20000, `${label} launch`);
+  await sleep(1800); // the stand-in prints its input line
+  return { pid: launch.pid, launch, since };
+}
+
+// One run of a Part 1 step: the participant pastes the text (the harness sends its last line the way the keyboard does),
+// presses Enter on each approval, and the app saves the file the stand-in wrote.
+async function runPart1Cli(step, label, outName, run) {
   const out = path.join(P1_DIR, outName);
-  const run = await startStepCli(step, label);
   check(`${label}: the CLI ran in this step's scratch folder`, path.resolve(run.launch.cwd).toLowerCase() === p1Scratch(step).toLowerCase(), run.launch.cwd);
   check(`${label}: the folder held only prompt.md when the CLI started`, JSON.stringify(fs.readdirSync(p1Scratch(step)).sort()) === JSON.stringify(['prompt.md']), fs.readdirSync(p1Scratch(step)).join(','));
-  const sent = await post('/api/step/send', { step });
-  must(`${label}: Send accepted`, sent.ok, sent.text.slice(0, 160));
+  const pasted = await post('/api/terminal/input', { data: Buffer.from(`${PART1_LINE}\r`).toString('base64') });
+  must(`${label}: the participant's paste was accepted`, pasted.ok, pasted.text.slice(0, 160));
   await driveApprovals(run, async () => hasText(out) && (await cliStopped()));
   const saved = readText(out);
   check(`${label}: the answer was saved from the CLI's file and not from the screen`, saved.trim().length > 0 && !saved.includes('DECOY-TERMINAL-ONLY'));
   check(`${label}: the CLI process ended`, await L.waitFor(async () => !L.pidAlive(run.pid), 15000, `process ${run.pid} gone`).then(() => true).catch(() => false));
-  auditProcess(label, run, PART1_LINE);
+  auditProcess(label, run, PART1_LINE, 'the only line the CLI received was the participant\'s paste, once');
   return saved;
 }
 
@@ -1340,6 +1388,13 @@ async function part1Check(step) {
   const s = await getState();
   const detail = (await get(`/api/state?step=${step}`)).json.step;
   check(`part 1 ${step}: the gate passed and the step is done`, detail.last_check && detail.last_check.ok === true && courseMap(s)[step] === 'done', JSON.stringify(detail.last_check));
+}
+
+// A step that finishes by itself (an answer captured, or a save that meets its gate): no check is pressed.
+async function part1Finished(step) {
+  const done = await L.waitFor(async () => courseMap(await getState())[step] === 'done', 20000, `part 1 ${step} done`).then(() => true).catch(() => false);
+  const detail = (await get(`/api/state?step=${step}`)).json.step;
+  check(`part 1 ${step}: the step finished by itself with its gate met`, done && detail.last_check && detail.last_check.ok === true, JSON.stringify(detail.last_check));
 }
 
 async function stagePart1() {
@@ -1375,16 +1430,19 @@ async function part1Flow() {
   let r = await post('/api/step/start', { step: 'cold' });
   check('cold: Start is refused until a prompt is saved', r.status === 400 && r.code === 'prompt_missing', `${r.status} ${r.code}`);
   const coldPrompt = 'Please write my Friday update from the notes below.';
-  await part1Step('cold', { prompt: coldPrompt });
+  const coldRun = await saveAndAutoStart('cold', { prompt: coldPrompt }, 'part 1 cold run');
   check('cold: Save wrote only the participant\'s words', JSON.stringify(fs.readdirSync(P1_DIR)) === JSON.stringify(['prompt-cold.md']) && readText(path.join(P1_DIR, 'prompt-cold.md')) === coldPrompt);
-  const coldOut = await runPart1Cli('cold', 'part 1 cold run', 'output-cold.txt');
+  const coldOut = await runPart1Cli('cold', 'part 1 cold run', 'output-cold.txt', coldRun);
   const divider = P1_STEPS.cold.divider;
-  check('cold: the CLI read the words, a divider and the rough notes', readText(path.join(p1Scratch('cold'), 'prompt.md')) === `${coldPrompt}\n\n${divider}\n\n${roughNotes()}\n`);
+  const closing = P1_STEPS.cold.instruction;
+  check('cold: the CLI read the words, a divider, the rough notes and the closing line', readText(path.join(p1Scratch('cold'), 'prompt.md')) === `${coldPrompt}\n\n${divider}\n\n${roughNotes()}\n\n${closing}\n`);
   check('cold: the stand-in gave the weaker answer to a prompt with no labels', /Dear lead/.test(coldOut) && !/Blocker:/.test(coldOut));
-  await part1Check('cold');
+  await part1Finished('cold');
   await answerStepQuestion('cold');
   r = await post('/api/step/start', { step: 'cold' });
   check('cold: a finished step offers no second run', r.status === 400 && r.code === 'step_done', `${r.status} ${r.code}`);
+  r = await post('/api/step/send', { step: 'cold' });
+  check('cold: the send route is gone for a step where the participant pastes', r.status === 400 && r.code === 'not_supported', `${r.status} ${r.code}`);
 
   // Scoring by hand.
   await expectStepActive('score');
@@ -1403,17 +1461,29 @@ async function part1Flow() {
   await solveAll('p1-frameworks');
   await completeLesson('p1-frameworks');
 
-  // The rewrite, once with each label set: every Start is a new CLI process and the last run is the one checked.
+  // The rewrite, once with each label set: the first save opens the window, each later run is a new chat the participant
+  // opens, and choosing the label set last finishes the step (its answer was captured before the choice).
   await expectStepActive('rewrite');
   let rewriteOut = '';
-  for (const fw of ['rtcc', 'rise', 'own']) {
+  const sets = ['rtcc', 'rise', 'own'];
+  for (const [i, fw] of sets.entries()) {
     const skeleton = P1_STEPS.rewrite.labels.find((l) => l.id === fw).skeleton;
-    await part1Step('rewrite', { prompt: skeleton, framework: fw });
-    rewriteOut = await runPart1Cli('rewrite', `part 1 rewrite run (${fw})`, 'output-framework.txt');
+    const label = `part 1 rewrite run (${fw})`;
+    let run;
+    if (i === 0) {
+      run = await saveAndAutoStart('rewrite', { prompt: skeleton }, label);
+    } else {
+      await part1Step('rewrite', { prompt: skeleton });
+      check(`rewrite (${fw}): saving again opens no second window by itself`, !(await getState()).terminal.running);
+      run = await startStepCli('rewrite', label);
+    }
+    rewriteOut = await runPart1Cli('rewrite', label, 'output-framework.txt', run);
     check(`rewrite (${fw}): the stand-in gave the better answer to a prompt with labels`, /Blocker:/.test(rewriteOut) && !/Dear lead/.test(rewriteOut));
-    check(`rewrite (${fw}): the CLI read the same rough notes as the cold run`, readText(path.join(p1Scratch('rewrite'), 'prompt.md')).endsWith(`${divider}\n\n${roughNotes()}\n`));
+    check(`rewrite (${fw}): the CLI read the same rough notes as the cold run`, readText(path.join(p1Scratch('rewrite'), 'prompt.md')).endsWith(`${divider}\n\n${roughNotes()}\n\n${closing}\n`));
+    if (i < sets.length - 1) check(`rewrite (${fw}): no label set is chosen yet, so the step stays open`, courseMap(await getState()).rewrite === 'active');
   }
-  await part1Check('rewrite');
+  await part1Step('rewrite', { framework: sets[sets.length - 1] });
+  await part1Finished('rewrite');
   await answerStepQuestion('rewrite');
 
   // Scoring again and the compare.
@@ -1436,7 +1506,7 @@ async function part1Flow() {
   const noCli = await post('/api/step/start', { step: 'own' });
   check('own: the step has no CLI to start', noCli.status === 400 && noCli.code === 'not_supported', `${noCli.status} ${noCli.code}`);
   await part1Step('own', { before: 'Write my weekly report.', after: 'Role: analyst\nTask: write my weekly report', labels: 'RTCC' });
-  await part1Check('own');
+  await part1Finished('own');
   await answerStepQuestion('own');
 
   // The whole Part, and what it left behind.
@@ -1645,10 +1715,15 @@ async function stageModel() {
 
     const mission = await post('/api/lesson/complete', { lesson: 'p1-mission' });
     must('model: the Part 1 mission was completed', mission.ok, mission.text.slice(0, 160));
+    const sonnetSince = nowSec() - 0.5;
+    L.countSession('model: AI start on Sonnet');
     const saved = await post('/api/step/submit', { step: 'cold', data: { prompt: 'Please write my Friday update from the notes below.' } });
     must('model: the prompt was saved', saved.ok, saved.text.slice(0, 160));
 
-    const sonnet = await startStepCli('cold', 'model: AI start on Sonnet');
+    // Saving the prompt opens the AI window by itself, on the chosen model.
+    const sonnetLaunch = await L.waitFor(async () => readEvents().find((e) => e.event === 'launch' && e.ts >= sonnetSince), 20000, 'model: AI start on Sonnet launch');
+    await sleep(1800); // the stand-in prints its input line
+    const sonnet = { pid: sonnetLaunch.pid, launch: sonnetLaunch, since: sonnetSince };
     check('model: Sonnet starts the AI with its launch option and nothing else', JSON.stringify(sonnet.launch.argv) === JSON.stringify(['--model', 'sonnet']), JSON.stringify(sonnet.launch.argv));
     check('model: the app recorded Sonnet, with nothing typed by the participant', recordedModel() === 'sonnet', recordedModel());
 
@@ -1662,7 +1737,7 @@ async function stageModel() {
     const haiku = await startStepCli('cold', 'model: AI start on Haiku');
     check('model: Haiku starts the AI with its launch option', JSON.stringify(haiku.launch.argv) === JSON.stringify(['--model', 'haiku']), JSON.stringify(haiku.launch.argv));
     check('model: the app recorded Haiku', recordedModel() === 'haiku', recordedModel());
-    const events = readEvents().filter((e) => e.pid === sonnet.pid || e.pid === haiku.pid);
+    const events = readEvents().filter((e) => (e.pid === sonnet.pid && e.ts >= sonnet.launch.ts) || (e.pid === haiku.pid && e.ts >= haiku.launch.ts));
     check('model: the app typed nothing and answered no prompt in either start', !events.some((e) => e.event === 'line' || e.event === 'approved'), JSON.stringify(events.map((e) => e.event)));
     const stop2 = await post('/api/step/stop', { step: 'cold' });
     check('model: Stop works again', stop2.ok && (await L.waitFor(cliStopped, 15000, 'CLI stopped').then(() => true)));

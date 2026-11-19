@@ -49,6 +49,11 @@ STEP_ORDER = list(SCRIPT_ORDER)  # changed in place when a scenario or the prefl
 TRACK = {"name": "script"}
 mock_course.ACTIVE_STEPS = STEP_ORDER  # the course list shows the steps of the current track
 STEPS_CONTENT = json.loads((CONTENT_ROOT / "steps.json").read_text(encoding="utf-8"))["steps"]
+# The real loader puts the shared paste words under each paste-mode step's own ui.
+_PASTE_UI = json.loads((CONTENT_ROOT / "steps.json").read_text(encoding="utf-8"))["paste_ui"]
+for _text in STEPS_CONTENT.values():
+    if _text.get("cli_mode") == "paste":
+        _text["ui"] = {**_PASTE_UI, **_text.get("ui", {})}
 LIVE_TEXT = STEPS_CONTENT["live"]
 LIVE_LINE = LIVE_TEXT["line_template"]
 TITLES = {
@@ -253,7 +258,8 @@ def base_detail(step_id):
     if step_id in LINES or text.get("line"):
         raw = text.get("line") or text.get("line_template") if TRACK["name"] == "promptfoo" else LINES[step_id]
         line = raw.replace("{model}", MOCK_MODEL)
-        cli = {"line": line, "folder_label": text.get("folder_label") or FOLDER[step_id], "started": False, "sent": False, "blocked": None}
+        cli = {"line": line, "folder_label": text.get("folder_label") or FOLDER[step_id], "mode": "paste", "started": False,
+               "sent": False, "blocked": None, "can_auto_start": False, "has_result": False, "paste_ready": True}
     return {
         "id": step_id,
         "title": title_of(step_id),
@@ -261,13 +267,14 @@ def base_detail(step_id):
         "track": TRACK["name"],
         "goal": f"The goal of {title_of(step_id).lower()}.",
         "why": ["You decide what good means. The agent writes the code."],
-        "instructions": ["Start your AI.", "Press Send to AI when it is ready.", "Answer any approvals in the terminal."],
+        "instructions": ["Wait until your AI is ready.", "Press Copy, paste the line into your AI window and press Enter.", "Answer any approvals in the terminal."],
         "cli": cli,
         "checklist": [],
         "last_check": None,
-        "troubleshooting": [{"problem": "Nothing happens", "fix": "Press Start again."}],
+        "troubleshooting": [{"problem": "Nothing happens", "fix": "Press Open a new AI chat."}],
         "ui": copy.deepcopy(text.get("ui", {})),
         "data": {},
+        "restart": {"available": False},
     }
 
 
@@ -280,14 +287,16 @@ def live_cli_view(detail):
     cli["blocked"] = None
     cli["start_blocked"] = (LIVE_TEXT["messages"]["not_acknowledged"] if not data["acknowledged"]
                             else None if chosen else LIVE_TEXT["messages"]["no_cli"])
+    cli["paste_ready"] = cli["start_blocked"] is None
 
 
 def live_detail():
     detail = {
         "id": "live", "title": LIVE_TEXT["title"], "status": "active", "track": "promptfoo", "optional": True,
         "goal": LIVE_TEXT["goal"], "why": LIVE_TEXT["why"], "instructions": LIVE_TEXT["instructions"],
-        "cli": {"line": "", "folder_label": LIVE_TEXT["folder_label"], "started": False, "sent": False, "blocked": None,
-                "start_blocked": None},
+        "cli": {"line": "", "folder_label": LIVE_TEXT["folder_label"], "mode": "paste", "started": False, "sent": False,
+                "blocked": None, "start_blocked": None, "can_auto_start": False, "has_result": False,
+                "paste_ready": True},
         "checklist": [], "last_check": None, "troubleshooting": LIVE_TEXT["troubleshooting"],
         "ui": copy.deepcopy(LIVE_TEXT["ui"]),
         "data": {"clis": copy.deepcopy(LIVE_TEXT["clis"]), "cli": "", "acknowledged": False,
@@ -410,6 +419,7 @@ class World:
                 self.preflight = build_preflight(scenario not in ("setup", "preflight"))
                 self.course = CourseState()
             self.details = build_details()
+            self.auto_started = set()  # the steps whose AI window has already been opened once
             self.part1 = {"done": 0, "statuses": {}}
             self.part2 = {"done": 0, "statuses": {}}
             self.live_done = False
@@ -526,6 +536,11 @@ class World:
                     step = self.step_preview(sid)  # reading ahead: the words only, never the step's data
                 elif self.course_mode and step["status"] == "done" and sid in STEP_ORDER:
                     step["question"] = self.course.step_question_view(sid)
+                cli = step.get("cli")
+                if isinstance(cli, dict) and cli.get("mode") == "paste":
+                    # The server's start rule, as far as the page can tell: an open step, nothing running, not tried yet.
+                    cli["can_auto_start"] = (step["status"] == "active" and sid != "live"
+                                             and not self.terminal["running"] and sid not in self.auto_started)
         elif self.course_mode and not self.preflight["passed"] and step_id in STEP_ORDER:
             step = self.step_preview(step_id)
         locked = self.configured and self.current_index > 0 and not self.course_mode
@@ -832,20 +847,22 @@ class Handler(BaseHTTPRequestHandler):
                 raise MockError("bad_model", AI_MODEL_TEXT["bad_model"])
             world.ai_model["preference"] = body["preference"]
         elif path == "/api/step/start":
-            if body["step"] == "live" and world.details["live"]["cli"]["start_blocked"]:
-                raise MockError("warning_not_acknowledged", world.details["live"]["cli"]["start_blocked"])
-            cli = world.details[body["step"]]["cli"]
-            cli["started"] = True
-            cli["sent"] = False
-            world.terminal.update(running=True, exit_code=None, owner=body["step"])
-            self._greet()
+            self._start_step(body["step"])
+        elif path == "/api/step/auto-start":
+            sid = body["step"]
+            shown = world.state(sid)["step"]
+            if shown and shown.get("cli") and shown["cli"].get("can_auto_start"):
+                self._start_step(sid)
         elif path == "/api/step/send":
+            cli = world.details[body["step"]]["cli"]
+            if cli.get("mode") == "paste":
+                raise MockError("not_supported", "This step does not do that.")
             if body["step"] == "live" and world.details["live"]["cli"]["start_blocked"]:
                 raise MockError("warning_not_acknowledged", world.details["live"]["cli"]["start_blocked"])
-            blocked = world.details[body["step"]]["cli"].get("blocked")
+            blocked = cli.get("blocked")
             if blocked:
                 raise ValueError(blocked)
-            world.details[body["step"]]["cli"]["sent"] = True
+            cli["sent"] = True
         elif path == "/api/step/stop":
             world.details[body["step"]]["cli"]["started"] = False
             world.terminal.update(running=False, exit_code=0)
@@ -878,6 +895,17 @@ class Handler(BaseHTTPRequestHandler):
         else:
             raise ValueError(f"unknown route {path}")
         return None
+
+    def _start_step(self, sid):
+        """A new AI window for the step, by the button or by itself. Any start uses up the automatic one."""
+        if sid == "live" and world.details["live"]["cli"]["start_blocked"]:
+            raise MockError("warning_not_acknowledged", world.details["live"]["cli"]["start_blocked"])
+        cli = world.details[sid]["cli"]
+        cli["started"] = True
+        cli["sent"] = False
+        world.auto_started.add(sid)
+        world.terminal.update(running=True, exit_code=None, owner=sid)
+        self._greet()
 
     def _use_example_fixtures(self, body):
         """The same refusals as the real route, so the page's error handling is exercised."""
@@ -916,7 +944,7 @@ class Handler(BaseHTTPRequestHandler):
             data = detail["data"]
             items = [
                 {"label": "Warning read", "ok": data["acknowledged"], "detail": "" if data["acknowledged"] else "Read the warning and tick the box that says you have read it."},
-                {"label": "promptfooconfig.live.yaml exists", "ok": data["config_exists"], "detail": "" if data["config_exists"] else "promptfooconfig.live.yaml was not found in your project folder. Press Start my AI, then Send to AI, so your AI writes it."},
+                {"label": "promptfooconfig.live.yaml exists", "ok": data["config_exists"], "detail": "" if data["config_exists"] else "promptfooconfig.live.yaml was not found in your project folder. Press Copy and paste the line into your AI window, so your AI writes it."},
             ]
             ok = all(i["ok"] for i in items)
             detail["last_check"] = {"ok": ok, "items": items, "nudges": []}
@@ -1085,6 +1113,8 @@ class Handler(BaseHTTPRequestHandler):
                 world.reset(body.get("scenario", "setup"))
             elif parts.path == "/__mock/set_data":
                 world.details[body["step"]]["data"].update(body["data"])
+            elif parts.path == "/__mock/set_cli":
+                world.details[body["step"]]["cli"].update(body["changes"])
             elif parts.path == "/__mock/set_starter":
                 world.setup["starter"] = body["starter"]
                 world.details["fixtures"]["data"]["example"]["offered"] = body["starter"] == "northwind"

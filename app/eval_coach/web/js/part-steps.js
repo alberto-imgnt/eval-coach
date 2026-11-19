@@ -160,6 +160,54 @@ function renderEditor(ctx, step) {
   );
 }
 
+// Copies the text to paste. A browser that refuses (or has no clipboard) leaves the text selected, so Ctrl+C works.
+// Part 1 pastes a step's saved text; Part 3 passes its fixed line.
+export async function copyPasteText(ctx, step, node, text = step.data.paste_text) {
+  const { ui } = step;
+  const note = (message) => ctx.setLocal(`copy-${step.id}`, { text, message });
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('no clipboard');
+    await navigator.clipboard.writeText(text);
+    note(ui.copied);
+  } catch {
+    const target = node || document.getElementById('run-paste');
+    if (target) {
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      target.focus();
+    }
+    note(ui.copy_failed);
+  }
+  ctx.rerender();
+}
+
+function renderPasteSection(ctx, step) {
+  const { data, ui } = step;
+  const copied = ctx.local(`copy-${step.id}`);
+  const message = copied && copied.text === data.paste_text ? copied.message : '';
+  return section(
+    'paste',
+    ui.paste_heading,
+    h('p', { class: 'hint' }, ui.paste_note),
+    data.prompt_saved ? plainText('run-paste', data.paste_text, ui.paste_heading) : h('p', { class: 'hint', id: 'run-paste-empty' }, ui.paste_empty),
+    h(
+      'div',
+      { class: 'row' },
+      actionButton(ctx, {
+        label: ui.copy,
+        id: 'copy-paste',
+        kind: 'primary',
+        disabled: !data.prompt_saved || ctx.readOnly,
+        onClick: () => copyPasteText(ctx, step, document.getElementById('run-paste')),
+      }),
+      h('span', { class: 'hint', id: 'copy-status', role: 'status' }, data.prompt_saved ? message : ''),
+    ),
+  );
+}
+
 function renderRunPanel(ctx, step) {
   const { data, ui } = step;
   return [
@@ -168,12 +216,7 @@ function renderRunPanel(ctx, step) {
       ? h('details', { class: 'raw', key: 'cold-prompt', id: 'cold-prompt' }, h('summary', null, ui.cold_heading), plainText('cold-prompt-text', data.cold_prompt, ui.cold_heading))
       : null,
     renderEditor(ctx, step),
-    section(
-      'preview',
-      ui.preview_heading,
-      h('p', { class: 'hint' }, ui.preview_note),
-      data.prompt_saved ? plainText('run-preview', data.preview, ui.preview_heading) : h('p', { class: 'hint', id: 'run-preview-empty' }, ui.preview_empty),
-    ),
+    renderPasteSection(ctx, step),
     data.model_note
       ? section(
           'model',

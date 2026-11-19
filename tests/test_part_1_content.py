@@ -424,15 +424,26 @@ class Steps(unittest.TestCase):
                     if "label" in gate:
                         self.assertEqual(set(gate), {"label", "ok", "fail"})
 
-    def test_the_run_steps_type_the_exact_line_and_name_the_best_guess_reply(self):
-        part3 = json.loads(resources.read_text("content/steps.json"))["steps"]["generate"]["line"]
+    def test_the_run_steps_have_the_paste_flow_and_name_the_best_guess_reply(self):
         for step in ("cold", "rewrite"):
             data = steps_data()[step]
-            self.assertEqual(data["line"], part3)
-            self.assertEqual(data["line"], "Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.")
+            self.assertNotIn("line", data)
+            self.assertEqual(data["cli_mode"], "paste")
+            self.assertEqual(data["instruction"], "Save only your answer to output.txt. Do nothing else.")
             self.assertIn("go ahead with your best guess", text_of(data["troubleshooting"]))
             self.assertRegex(text_of(data["why"]), r"(?i)other approaches work too")
             self.assertRegex(text_of(data["why"]), r"(?i)holds only your prompt")
+            self.assertRegex(text_of(data["instructions"]), r"(?i)new chat")
+            for key in ("paste_heading", "paste_note", "paste_empty", "copy", "copied", "copy_failed", "ai_note",
+                        "new_chat", "new_chat_confirm_title", "new_chat_confirm_body", "new_chat_confirm", "ready_hint"):
+                self.assertTrue(data["ui"][key].strip(), key)
+        self.assertEqual(steps_data()["cold"]["ui"]["new_chat"], "Open a new AI chat")
+
+    def test_no_part_one_step_uses_the_old_buttons_or_a_bare_cli(self):
+        text = text_of(steps_data())
+        for old in ("Send to AI", "Start my AI", "Check my work", "check your work"):
+            self.assertNotIn(old, text)
+        self.assertNotRegex(text, r"\bCLIs?\b")
 
     def test_the_divider_is_a_plain_line_that_is_not_a_label(self):
         for step in ("cold", "rewrite"):
@@ -510,8 +521,8 @@ class Steps(unittest.TestCase):
 
     def test_part_one_progress_holds_only_the_participants_own_answers(self):
         record = state.new_part_1_steps()
-        allowed = {"model_name", "prompt_hash", "last_check", "answers", "gap", "in_prompt", "framework", "reflections",
-                   "labels"}
+        allowed = {"model_name", "prompt_hash", "auto_started", "last_check", "answers", "gap", "in_prompt", "framework",
+                   "reflections", "labels"}
         for step, entry in record.items():
             self.assertTrue(set(entry) <= allowed, (step, set(entry) - allowed))
         for step in record:

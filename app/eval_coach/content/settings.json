@@ -85,12 +85,36 @@
       "done_no_backup": "The app configuration was reset. There were no files to back up. Setup starts again."
     }
   },
+  "restart": {
+    "button": "Start this step again",
+    "title": "Start this step again?",
+    "lead": "{steps} will start again from the beginning, because each step builds on the one before it.",
+    "clears_title": "This clears",
+    "clears": [
+      "Your saved work for {steps}: answers, marks, written notes, ticks and choices, and the files those steps made.",
+      "Your answers to the Quick check questions for those steps."
+    ],
+    "keeps_title": "This keeps",
+    "keeps": [
+      "The steps before this one, your other Parts and your lesson progress.",
+      "Your setup, your AI and your Sonnet / Haiku choice."
+    ],
+    "backup": "Any file that is cleared is moved to one backup folder, not deleted: {folder}. It replaces the previous backup.",
+    "keep_button": "Keep everything",
+    "confirm_button": "Start again",
+    "and": "and",
+    "done": "{steps} will start again. The files that were cleared are in the backup folder: {folder}.",
+    "done_no_backup": "{steps} will start again. There were no files to back up."
+  },
   "errors": {
     "confirm_required": "Nothing was changed. This needs your confirmation first.",
     "job_busy": "Nothing was changed. The app is still checking or installing something for setup. Wait for it to finish, then try again.",
     "backup_failed": "Nothing was changed. The backup could not be made: {error}. Check that the app's storage folder can be written to and has free space, then try again.",
     "key_failed": "Nothing was changed. The answer key could not be deleted: {error}.",
     "reset_failed": "Nothing was changed. The reset could not finish: {error}.",
-    "scaffold_failed": "The files were cleared and backed up, but the app could not set up the empty course folders: {error}. Open Settings and run setup again."
+    "scaffold_failed": "The files were cleared and backed up, but the app could not set up the empty course folders: {error}. Open Settings and run setup again.",
+    "restart_unavailable": "Nothing was changed. This step cannot be started again.",
+    "restart_not_done": "Nothing was changed. Only a step you have finished can be started again.",
+    "restart_failed": "Nothing was changed. The step could not be started again: {error}."
   }
 }

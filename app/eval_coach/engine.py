@@ -86,6 +86,7 @@ class Engine:
         self.progress = None
         self._warnings = []
         self._cli_step = None
+        self._cli_blocked = {}  # step id -> why the AI could not start by itself, until the next start works
         self._sent = False
         self._watcher_cancel = None
         self._checker_running = False
@@ -443,7 +444,7 @@ class Engine:
                 "held_by": self._held_by(step),
                 "goal": text["goal"], "why": text["why"], "instructions": text["instructions"], "cli": None,
                 "checklist": [], "last_check": None, "question": None, "troubleshooting": text["troubleshooting"],
-                "ui": text.get("ui", {}), "data": {}}
+                "ui": text.get("ui", {}), "data": {}, "restart": {"available": False}}
 
     def _settings_view(self):
         """What the Settings panel needs: its words and where a reset would put the backup."""
@@ -469,13 +470,18 @@ class Engine:
         cli = None
         if text.get("line") or text.get("line_template"):
             line = self._step_line(step)
-            cli = {"line": line, "folder_label": text["folder_label"],
+            paste = text.get("cli_mode") == "paste"
+            cli = {"line": line, "folder_label": text["folder_label"], "mode": "paste" if paste else "typed",
                    "started": self._cli_active(step),
                    "sent": self._cli_active(step) and self._sent,
-                   "blocked": None}
+                   "blocked": self._cli_blocked.get(step) if paste else None}
             if step == LIVE:
                 not_ready = self._live_not_ready()
                 cli["start_blocked"] = not_ready[1] if not_ready else None
+            if paste:
+                cli["can_auto_start"] = self._auto_start_ok(step)
+                cli["has_result"] = self._scratch_has_result(step)
+                cli["paste_ready"] = "<model>" not in line and not (step == LIVE and not_ready)
         ticked = self._step(step)["checklist"]
         detail = {
             "id": step,
@@ -493,6 +499,7 @@ class Engine:
             "troubleshooting": text["troubleshooting"],
             "ui": text.get("ui", {}),
             "data": getattr(self, "_data_" + step.replace("-", "_"))(),
+            "restart": self._restart_view(step),
         }
         if step == LIVE:
             detail["optional"] = True
@@ -959,6 +966,92 @@ class Engine:
             message = words["done"].format(folder=str(backup)) if done else words["done_no_backup"]
             return {"kind": kind, "backup_folder": str(backup) if done else None, "message": message}
 
+    # --- starting one step again ----------------------------------------------
+
+    def _join_titles(self, titles):
+        word = self.settings_text["restart"]["and"]
+        return titles[0] if len(titles) == 1 else ", ".join(titles[:-1]) + f" {word} " + titles[-1]
+
+    def _restart_steps(self, part, step):
+        """The step and every later step of its Part, in course order."""
+        ids = list(self._steps(part))
+        return ids[ids.index(step):]
+
+    def _restart_view(self, step):
+        """What the page needs for "Start this step again": whether it is offered, and the steps it would clear."""
+        if self.progress is None or self.paths is None:
+            return {"available": False}
+        part = self._part_of(step)
+        if part.restart is None or step not in part.restart or self._status(step) != "done":
+            return {"available": False}
+        titles = [self._text(s)["title"] for s in self._restart_steps(part, step)]
+        return {"available": True, "steps": titles, "steps_text": self._join_titles(titles),
+                "backup_folder": str(self.home / reset_lib.BACKUP_NAME)}
+
+    def step_restart(self, step, confirm):
+        """POST /api/step/restart: clear a finished step and every later step of its Part, all or nothing.
+
+        What is cleared from disk goes to the one reset backup; earlier steps, other Parts, lessons and setup stay.
+        """
+        text = self.settings_text
+        errors, words = text["errors"], text["restart"]
+        if confirm is not True:
+            raise EngineError("confirm_required", errors["confirm_required"])
+        with self._lock:
+            self._require_configured()
+            self._require_known(step)
+            self._require_preflight()
+            part = self._part_of(step)
+            if part.restart is None or step not in part.restart:
+                raise EngineError("restart_unavailable", errors["restart_unavailable"])
+            if self._status(step) != "done":
+                raise EngineError("restart_not_done", errors["restart_not_done"])
+            if self.preflight.job_running():
+                raise EngineError("job_busy", errors["job_busy"])
+            self._stop_cli()
+            cleared = self._restart_steps(part, step)
+            try:
+                plan, rewrites = reset_lib.build_restart_plan(self.home, self.paths, part, cleared)
+            except ValueError as exc:
+                raise EngineError("restart_failed", errors["restart_failed"].format(error=exc)) from exc
+            staging = self.home / reset_lib.STAGING_NAME
+            done, rewritten = [], []
+            try:
+                done = reset_lib.stage(plan, staging, text)
+                for source, rel in rewrites:
+                    original = gates.read_text(staging / "project" / Path(*rel.split("/")))
+                    store.write_bytes_atomic(source, criteria_steps.REWRITES[rel](original).encode("utf-8"))
+                    rewritten.append(source)
+                if done:
+                    reset_lib.swap_backup(self.home, staging)
+                else:
+                    reset_lib.remove_tree_quietly(staging)
+            except reset_lib.ResetError as exc:
+                raise EngineError(exc.code, exc.message) from exc
+            except OSError as exc:
+                for source in rewritten:
+                    try:
+                        source.unlink()
+                    except OSError:
+                        pass
+                reset_lib.rollback(done, staging)
+                reset_lib.remove_tree_quietly(staging)
+                raise EngineError("restart_failed", errors["restart_failed"].format(error=exc)) from exc
+            block = self._progress_of(part)
+            fresh = part.new_steps()
+            checks = self._lessons_block().setdefault("step_checks", {})
+            for name in cleared:
+                block["steps"][name] = fresh[name]
+                checks.pop(name, None)
+                self._cli_blocked.pop(name, None)
+            block["done"][:] = [name for name in block["done"] if name not in cleared]
+            self._save()
+            steps = self._join_titles([self._text(name)["title"] for name in cleared])
+            backup = self.home / reset_lib.BACKUP_NAME
+            message = (words["done"].format(steps=steps, folder=str(backup)) if done
+                       else words["done_no_backup"].format(steps=steps))
+            return {"steps": cleared, "backup_folder": str(backup) if done else None, "message": message}
+
     def _discard_pending(self):
         """Clear course progress held outside a project (kept by earlier versions of the app)."""
         try:
@@ -972,6 +1065,7 @@ class Engine:
     def _finish_reset(self, paths, configuration, errors):
         """Rebuild the in-memory state and the empty course folders. Returns an error to raise afterwards, or None."""
         self._pending_block = None
+        self._cli_blocked = {}
         self._review_sitting = None
         self._review_postponed = False
         self._warnings = []
@@ -1074,33 +1168,107 @@ class Engine:
                 raise EngineError("no_cli", "This step does not use your AI.")
             if step == LIVE:
                 self._require_live_ready()
-            run_n = None
-            if step == "generate":
-                run_n = self._next_run()
-                if run_n is None:
-                    raise EngineError("runs_complete", "All five runs are saved.")
-            self._stop_cli()
-            try:
-                cwd = self._prepare_folder(step)
-            except project.ProjectError as exc:
-                raise EngineError(exc.code, exc.message) from exc
-            except OSError as exc:
-                raise EngineError("folder_busy", f"The working folder could not be prepared: {exc}") from exc
-            label = text["title"] if run_n is None else f"{text['title']}: run {run_n} of {gates.RUNS}"
-            try:
-                label_model = self._ai_start(self.progress["cli_command"], cwd, label, step)
-            except (ValueError, OSError) as exc:
-                raise EngineError("cli_start_failed", f"Your AI could not be started: {exc}") from exc
-            self._cli_step = step
-            self._sent = False
-            self._record_model(label_model)
+            self._launch_step(step)
+
+    def _launch_step(self, step):
+        """Start a fresh AI window for a Part 3 step: prepare its folder, record the model, watch for the run.
+
+        Every start (the participant's or the automatic one) goes through here. Call with the lock held and the
+        step already checked.
+        """
+        text = self._text(step)
+        run_n = None
+        if step == "generate":
+            run_n = self._next_run()
+            if run_n is None:
+                raise EngineError("runs_complete", "All five runs are saved.")
+        self._stop_cli()
+        try:
+            cwd = self._prepare_folder(step)
+        except project.ProjectError as exc:
+            raise EngineError(exc.code, exc.message) from exc
+        except OSError as exc:
+            raise EngineError("folder_busy", f"The working folder could not be prepared: {exc}") from exc
+        label = text["title"] if run_n is None else f"{text['title']}: run {run_n} of {gates.RUNS}"
+        try:
+            label_model = self._ai_start(self.progress["cli_command"], cwd, label, step)
+        except (ValueError, OSError) as exc:
+            raise EngineError("cli_start_failed", f"Your AI could not be started: {exc}") from exc
+        self._cli_step = step
+        self._sent = False
+        self._cli_blocked.pop(step, None)
+        self._record_model(label_model)
+        if text.get("cli_mode") == "paste":
+            self._step(step)["auto_started"] = True  # after any start the window is the participant's to reopen
+        self._save()
+        if step == LIVE and self._step(LIVE)["start_hashes"] is None:
+            # Noted once, before the CLI can touch anything, so the gate can tell whether these files changed.
+            self._step(LIVE)["start_hashes"] = gates.live_start_hashes(self.paths)
             self._save()
-            if step == LIVE and self._step(LIVE)["start_hashes"] is None:
-                # Noted once, before the CLI can touch anything, so the gate can tell whether these files changed.
-                self._step(LIVE)["start_hashes"] = gates.live_start_hashes(self.paths)
-                self._save()
-            if run_n is not None:
-                self._start_watcher(self.paths.blind_output, self.paths.run_file(run_n))
+        if run_n is not None:
+            self._start_watcher(self.paths.blind_output, self.paths.run_file(run_n))
+
+    def _blind_holds_unsaved(self):
+        """True when the blind folder holds anything but prompt.md that a new start would clear and no run file has."""
+        blind = self.paths.blind
+        if not blind.exists():
+            return False
+        for item in blind.iterdir():
+            if item == self.paths.blind_prompt:
+                continue
+            if item == self.paths.blind_output and item.is_file():
+                data = gates.read_text(item)
+                if not data.strip() or any(gates.read_text(self.paths.run_file(n)) == data
+                                           for n in range(1, gates.RUNS + 1)):
+                    continue
+            return True
+        return False
+
+    def _scratch_has_result(self, step):
+        """True when a new start would clear a result the participant has not saved elsewhere. Reads no sealed key."""
+        p = self.paths
+        if step == "generate":
+            return self._blind_holds_unsaved()
+        if step == "fixtures":
+            return self._work_fixtures_have_text()
+        if step == "key":
+            return gates.has_text(p.key_work_key)
+        return False
+
+    def _auto_start_ok(self, step):
+        """The one rule for starting the AI by itself when a step is opened. Reads only; the sealed key is only
+        looked for, never opened."""
+        if self._text(step).get("cli_mode") != "paste" or step == LIVE:
+            return False
+        try:
+            self._require_active(step)
+        except EngineError:
+            return False
+        if self.terminal.running or self._step(step).get("auto_started") or step in self._cli_blocked:
+            return False
+        p = self.paths
+        if step == "generate":
+            return self._next_run() is not None and not self._blind_holds_unsaved()
+        if step == "fixtures":
+            return not self._work_fixtures_have_text() and not any(gates.has_text(p.fixtures / n)
+                                                                    for n in project.FIXTURE_NAMES)
+        if step == "key":
+            return not gates.has_text(p.key_work_key) and not p.sealed_key.exists()
+        return True
+
+    def step_auto_start(self, step):
+        """POST /api/step/auto-start: open the AI window for a step the page just showed, if the rule allows it.
+
+        A no-op is a success, so the page may ask freely. A start that fails never raises: the step shows why.
+        """
+        with self._lock:
+            self._require_known(step)
+            if not self._auto_start_ok(step):
+                return
+            try:
+                self._launch_step(step)
+            except EngineError as exc:
+                self._cli_blocked[step] = exc.message
 
     def _require_live_ready(self):
         not_ready = self._live_not_ready()
@@ -1113,6 +1281,8 @@ class Engine:
             return handled
         with self._lock:
             self._require_active(step)
+            if self._text(step).get("cli_mode") == "paste":
+                raise EngineError("not_supported", "This step does not do that.")
             line = self._step_line(step)
             if not line:
                 raise EngineError("no_cli", "This step does not use your AI.")
@@ -1192,12 +1362,14 @@ class Engine:
 
     # --- generate watcher --------------------------------------------------
 
-    def _start_watcher(self, source, destination):
+    def _start_watcher(self, source, destination, on_saved=None):
+        """Watch for the CLI's output file. `on_saved` runs, with the lock held, once the output is saved."""
         cancel = threading.Event()
         self._watcher_cancel = cancel
-        threading.Thread(target=self._watch_output, args=(self.paths, source, destination, cancel), daemon=True).start()
+        threading.Thread(target=self._watch_output, args=(self.paths, source, destination, cancel, on_saved),
+                         daemon=True).start()
 
-    def _watch_output(self, paths, source, destination, cancel):
+    def _watch_output(self, paths, source, destination, cancel, on_saved=None):
         """Wait until output.txt is non-empty and unchanged across two polls."""
         previous, unchanged = None, 0
         while not cancel.wait(self.poll_interval):
@@ -1215,10 +1387,10 @@ class Engine:
                 continue
             unchanged += 1
             if unchanged >= 2:
-                self._finish_run(paths, destination, data, cancel)
+                self._finish_run(paths, destination, data, cancel, on_saved)
                 return
 
-    def _finish_run(self, paths, destination, data, cancel):
+    def _finish_run(self, paths, destination, data, cancel, on_saved=None):
         with self._lock:
             if cancel.is_set() or self.paths is not paths:
                 return
@@ -1228,6 +1400,8 @@ class Engine:
             self._cli_step = None
             self._sent = False
             self._save()
+            if on_saved is not None:
+                on_saved()
         self.terminal.publish_state()
 
     # --- submit ------------------------------------------------------------
@@ -1496,6 +1670,8 @@ class Engine:
                 result = gates.check_fix(self.paths, s, self._fix_facts(), report, self._track())
             s["last_check"] = result
             if result["ok"]:
+                if self._cli_active(step):
+                    self._stop_cli()  # a finished step's chat closes, so the next step can open its own by itself
                 if step == "fixtures":
                     self._stop_cli()  # that chat is finished; it should not stay open
                     try:

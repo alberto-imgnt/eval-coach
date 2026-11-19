@@ -64,6 +64,12 @@ class Registry(unittest.TestCase):
                              + (ph.INTRO, ph.CHOICE))
         self.assertIsNone(store.part_of(ph.CHOICE))
 
+    def test_parts_one_and_two_register_a_restart_plan_for_every_step_and_part_three_registers_none(self):
+        self.assertIsNone(store.PART_3.restart)
+        for part in (store.PART_1, store.PART_2):
+            self.assertEqual(list(part.restart), list(part.step_ids), part.id)
+            self.assertEqual(set(part.new_steps()), set(part.restart), part.id)
+
     def test_register_part_restores_the_registry_even_after_an_error(self):
         before = store.PARTS
         with self.assertRaises(RuntimeError):
@@ -216,15 +222,18 @@ class Loader(unittest.TestCase):
         file = json.loads(resources.read_text("content/steps.json"))
         part_one = json.loads(resources.read_text("content/part-1-steps.json"))["steps"]
         part_two = json.loads(resources.read_text("content/part-2-steps.json"))["steps"]
+        # A paste-mode step gets the shared paste words under its own ui on load; every other step is the file's text.
+        expected = {k: dict(v, ui={**file["paste_ui"], **v.get("ui", {})}) if v.get("cli_mode") == "paste" else v
+                    for k, v in file["steps"].items()}
         content, ui = L.load_step_content()
         self.assertEqual({k: v for k, v in content["steps"].items() if k not in part_one and k not in part_two},
-                         file["steps"])
+                         expected)
         self.assertEqual({k: v for k, v in content.items() if k != "steps"}, {k: v for k, v in file.items() if k != "steps"})
         self.assertEqual(ui, {})
         with ph.synthetic_part():
             content, ui = L.load_step_content()
         self.assertEqual({k: v for k, v in content["steps"].items()
-                          if k not in part_one and k not in part_two and k != ph.STEP}, file["steps"])
+                          if k not in part_one and k not in part_two and k != ph.STEP}, expected)
         self.assertEqual(content["steps"][ph.STEP]["kind"], ph.KIND)
         self.assertEqual(content["messages"], file["messages"])
         self.assertEqual(ui, {PART_9: {ph.ui_key(): "Words for the test Part"}})

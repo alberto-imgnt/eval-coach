@@ -1,6 +1,7 @@
 """Shared test helpers. Importing this puts app/ on sys.path."""
 from __future__ import annotations
 
+import base64
 import json
 import os
 import sys
@@ -55,6 +56,16 @@ def wait_until(predicate, timeout=10.0, interval=0.01):
             return True
         time.sleep(interval)
     return bool(predicate())
+
+
+def paste_step_line(engine, step):
+    """What a participant does in a Part 3 step: copy the line the page shows and paste it into the AI window.
+
+    The text goes through the engine's keystroke route, the one the terminal uses, followed by Enter. Returns the line.
+    """
+    line = engine.get_state(step)["step"]["cli"]["line"]
+    engine.terminal_input(base64.b64encode((line + "\r").encode("utf-8")).decode("ascii"))
+    return line
 
 
 class FakeTerminal:

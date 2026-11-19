@@ -415,6 +415,21 @@ class RevealCompare:
             _finish(engine, step, report.result())
 
 
+def strip_thresholds(raw):
+    """The worksheet with every threshold emptied. A restart of `thresholds` puts this back in place."""
+    try:
+        rows = json.loads(raw).get("rows", []) if raw.strip() else []
+    except (ValueError, AttributeError):
+        rows = []
+    clean = [{key: (row.get(key, "") if key != "threshold" and isinstance(row.get(key, ""), str) else "")
+              for key in ("requirement", "criterion", "type", "threshold")}
+             for row in (rows if isinstance(rows, list) else []) if isinstance(row, dict)]
+    return json.dumps({"rows": clean[:MAX_ROWS]}, indent=2, ensure_ascii=False)
+
+
+# What a step restart puts back, by project file: the original goes to the backup first.
+REWRITES = {"part-2/worksheet.json": strip_thresholds}
+
 KINDS = {"criteria_table": CriteriaTable(), "test_file": TestCaseFile(), "reveal_compare": RevealCompare()}
 for _kind, _handler in KINDS.items():
     store.STEP_KINDS.setdefault(_kind, _handler)

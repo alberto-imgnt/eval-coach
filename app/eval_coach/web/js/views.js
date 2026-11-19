@@ -7,6 +7,7 @@ import { hasLessons, renderCourseNav, renderStepQuestion, tx } from './lessons.j
 import { PANELS } from './panels.js';
 import { renderSeriesNav } from './series.js';
 import { actionButton, modelToggle, optionalLive, section } from './ui.js';
+import { copyPasteText } from './part-steps.js';
 
 const STATUS_WORD = { locked: 'Not started', active: 'Now', done: 'Done', optional: 'Optional' };
 
@@ -231,12 +232,14 @@ function renderChecklist(ctx, step) {
   );
 }
 
-function renderCheckResult(check) {
+function renderCheckResult(check, heading) {
   if (!check) return null;
   return h(
     'div',
     { class: 'check-result', key: 'check-result', role: 'status', 'aria-live': 'polite' },
-    h('p', { class: check.ok ? 'ok-text check-head' : 'bad-text check-head' }, check.ok ? 'Passed. This step is done.' : 'Not done yet. Here is what is missing:'),
+    heading
+      ? h('p', { class: 'check-head', id: 'gate-heading' }, heading)
+      : h('p', { class: check.ok ? 'ok-text check-head' : 'bad-text check-head' }, check.ok ? 'Passed. This step is done.' : 'Not done yet. Here is what is missing:'),
     h(
       'ul',
       { class: 'check-items' },
@@ -260,7 +263,84 @@ function renderCheckResult(check) {
   );
 }
 
+// The way back to an earlier step: offered on a finished step of a Part that allows it, never on Part 3.
+function renderRestart(ctx, step) {
+  const restart = step.restart;
+  const words = ctx.state.settings && ctx.state.settings.text.restart;
+  if (!restart || !restart.available || !words || step.preview) return null;
+  return h(
+    'div',
+    { class: 'row restart-row', key: 'restart' },
+    actionButton(ctx, {
+      label: words.button,
+      id: 'step-restart',
+      busyKey: `restart-${step.id}`,
+      busyLabel: '…',
+      onClick: () => ctx.actions.restart(step.id),
+    }),
+  );
+}
+
+// What a restart just did, read out by a screen reader. It sits at the top of the step that was restarted.
+function renderRestartResult(ctx, step) {
+  const result = ctx.local('restart-result');
+  if (!result || result.step !== step.id || step.status === 'done') return null;
+  return h('p', { class: 'callout callout-good', id: 'restart-result', key: 'restart-result', role: 'status' }, result.message);
+}
+
+// A step that finishes without a Check button (Part 1): what is still missing shows as the participant works, and
+// a score form finishes on the participant's own Continue.
+function renderFlowSection(ctx, step) {
+  const done = step.status === 'done';
+  const status = ctx.saveStatus(step.id);
+  const upNext = ctx.nextStep || (step.kind === 'score_form' ? followingItem(ctx, step) : null);
+  return section(
+    'check',
+    null,
+    !done && !ctx.readOnly ? renderCheckResult(step.gate, tx(ctx, 'gate_heading')) : null,
+    !done && !ctx.readOnly && step.kind === 'score_form'
+      ? h(
+          'div',
+          { class: 'row', key: 'continue-early' },
+          actionButton(ctx, {
+            label: upNext ? `Continue to: ${upNext.title}` : tx(ctx, 'continue'),
+            id: 'continue',
+            busyKey: 'check',
+            busyLabel: tx(ctx, 'continuing'),
+            kind: 'primary',
+            disabled: !step.ready,
+            onClick: () => ctx.actions.finishStep(),
+          }),
+          status === 'saving' || status === 'pending'
+            ? h('span', { class: 'hint' }, 'Saving your answers…')
+            : status === 'error'
+              ? h('span', { class: 'bad-text' }, 'Could not save. Your answers are still here.')
+              : !step.ready
+                ? h('span', { class: 'hint', id: 'continue-hint' }, tx(ctx, 'continue_step_disabled_hint'))
+                : h('span', { class: 'hint', id: 'continue-hint' }, tx(ctx, 'gate_ready')),
+        )
+      : null,
+    renderStepQuestion(ctx, step),
+    done && ctx.nextStep
+      ? h(
+          'div',
+          { class: 'row', key: 'continue' },
+          actionButton(ctx, { label: `Continue to: ${ctx.nextStep.title}`, id: 'continue', kind: 'primary', onClick: () => ctx.actions.continueToNext() }),
+        )
+      : null,
+    done ? renderRestart(ctx, step) : null,
+  );
+}
+
+// The item after a step in the course list, even while it is still locked.
+function followingItem(ctx, step) {
+  const list = ctx.state.course || [];
+  const i = list.findIndex((item) => item.kind === 'step' && item.id === step.id);
+  return i >= 0 ? list[i + 1] || null : null;
+}
+
 function renderCheckSection(ctx, step) {
+  if (step.gate) return renderFlowSection(ctx, step);
   const status = ctx.saveStatus(step.id);
   return section(
     'check',
@@ -295,6 +375,7 @@ function renderCheckSection(ctx, step) {
           actionButton(ctx, { label: `Continue to: ${ctx.nextStep.title}`, id: 'continue', kind: 'primary', onClick: () => ctx.actions.continueToNext() }),
         )
       : null,
+    step.status === 'done' ? renderRestart(ctx, step) : null,
   );
 }
 
@@ -362,6 +443,7 @@ export function renderStep(ctx) {
     h('p', { class: 'kicker' }, step.optional ? 'Optional step' : `Step ${stepNumber} of ${(ctx.state.steps || []).length}`),
     h('h1', { id: 'step-heading', tabindex: -1 }, step.title),
     step.status === 'done' && ctx.readOnly ? h('p', { class: 'hint', key: 'done-note' }, 'You finished this step. It is shown here as a record.') : null,
+    renderRestartResult(ctx, step),
     h('p', { class: 'lede', key: 'goal' }, step.goal),
     step.why && step.why.length ? section('why', 'Why this matters', h('ul', { class: 'prose-list' }, step.why.map((w, i) => h('li', { key: `why-${i}` }, w)))) : null,
     step.instructions && step.instructions.length
@@ -414,18 +496,75 @@ function terminalStatusText(terminal) {
   return 'Your AI is not running.';
 }
 
+// The head of the AI window for a step where the participant pastes the text themselves: no typed line, no Send
+// and no Start again. The window opens by itself (Part 1: when a prompt is first saved; Part 3: when the step is
+// opened), and "Open a new AI chat" replaces it. Part 3 has no prompt editor, so its line to paste sits here.
+function renderPasteTermHead(ctx, step, cli, running, title) {
+  const ui = step.ui;
+  const copied = cli.line ? ctx.local(`copy-${step.id}`) : null;
+  const copyMessage = copied && copied.text === cli.line ? copied.message : '';
+  return [
+    title,
+    h('div', { class: 'row term-ai-link', key: 'ai-window-link' }, aiWindowLink(ctx)),
+    modelToggle(ctx),
+    h(
+      'div',
+      { class: 'term-line-block', key: 'line' },
+      h('span', { class: 'hint block', id: 'cli-chat-note' }, ui.ai_note),
+      h('span', { class: 'hint block' }, 'Your AI starts in: ', cli.folder_label),
+      cli.blocked ? h('p', { class: 'callout callout-attn', id: 'cli-blocked', role: 'status' }, cli.blocked) : null,
+      cli.start_blocked && !ctx.readOnly ? h('p', { class: 'callout callout-attn', id: 'cli-start-blocked', role: 'status' }, cli.start_blocked) : null,
+      cli.line
+        ? [
+            h('span', { class: 'hint block', key: 'paste-heading' }, ui.paste_heading, ': ', ui.paste_note),
+            h('code', { class: 'term-line', id: 'cli-line', key: 'paste-line', tabindex: '0' }, cli.line),
+          ]
+        : null,
+    ),
+    ctx.readOnly
+      ? h('p', { class: 'hint', key: 'readonly' }, 'This step is finished, so the controls are off here.')
+      : h(
+          'div',
+          { class: 'row term-actions', key: 'actions' },
+          cli.line
+            ? actionButton(ctx, {
+                label: ui.copy,
+                id: 'copy-paste',
+                kind: running && cli.paste_ready ? 'primary' : null,
+                disabled: !cli.paste_ready,
+                onClick: () => copyPasteText(ctx, step, document.getElementById('cli-line'), cli.line),
+              })
+            : null,
+          actionButton(ctx, {
+            label: ui.new_chat,
+            id: 'cli-start',
+            busyKey: 'start',
+            busyLabel: 'Starting…',
+            kind: running || cli.start_blocked || cli.line ? null : 'primary',
+            disabled: Boolean(cli.start_blocked),
+            onClick: () => ctx.actions.newChat(),
+          }),
+          actionButton(ctx, { label: 'Stop', id: 'cli-stop', busyKey: 'stop', busyLabel: 'Stopping…', disabled: !running, onClick: () => ctx.actions.stop() }),
+          cli.line ? h('span', { class: 'hint', id: 'copy-status', role: 'status' }, copyMessage) : null,
+        ),
+    !ctx.readOnly && running ? h('p', { class: 'hint', key: 'ready' }, ui.ready_hint) : null,
+  ];
+}
+
 export function renderTermHead(ctx) {
   const { state, step } = ctx;
   const { terminal } = state;
   const { cli } = step;
   const running = terminal.running;
+  const title = h(
+    'div',
+    { class: 'term-title-row', key: 'title' },
+    h('h2', { class: 'term-label' }, terminal.label || 'Your AI'),
+    h('span', { class: `term-status${running ? ' is-on' : ''}`, role: 'status' }, terminalStatusText(terminal)),
+  );
+  if (cli.mode === 'paste') return renderPasteTermHead(ctx, step, cli, running, title);
   return [
-    h(
-      'div',
-      { class: 'term-title-row', key: 'title' },
-      h('h2', { class: 'term-label' }, terminal.label || 'Your AI'),
-      h('span', { class: `term-status${running ? ' is-on' : ''}`, role: 'status' }, terminalStatusText(terminal)),
-    ),
+    title,
     h('div', { class: 'row term-ai-link', key: 'ai-window-link' }, aiWindowLink(ctx)),
     modelToggle(ctx),
     h(

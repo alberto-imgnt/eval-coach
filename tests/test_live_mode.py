@@ -1,6 +1,7 @@
 """Optional live mode on the promptfoo track (built on purpose, with an explicit warning)."""
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import re
@@ -142,7 +143,9 @@ class Availability(LiveCase):
         self.to_live()
         for step in PF_STEPS:
             self.assertNotIn("optional", self.state(step)["step"])
-        self.assertEqual(set(self.state("baseline")["step"]["cli"]), {"line", "folder_label", "started", "sent", "blocked"})
+        self.assertEqual(set(self.state("baseline")["step"]["cli"]),
+                         {"line", "folder_label", "mode", "started", "sent", "blocked", "can_auto_start",
+                          "has_result", "paste_ready"})
 
     def test_live_cannot_be_skipped_or_run_by_the_app(self):
         self.to_live()
@@ -180,28 +183,40 @@ class Availability(LiveCase):
 
 
 class WarningText(LiveCase):
-    def test_nothing_can_start_or_send_before_the_box_is_ticked_and_a_cli_chosen(self):
+    def test_nothing_can_start_or_be_copied_before_the_box_is_ticked_and_a_cli_chosen(self):
         self.to_live()
         message = self.refused("warning_not_acknowledged", self.engine.step_start, "live")
         self.assertIn("tick the box", message)
-        self.refused("warning_not_acknowledged", self.engine.step_send, "live")
+        self.assertFalse(self.live()["cli"]["paste_ready"])
         self.assertEqual(self.terminal.starts[-1]["label"], "Log your baseline")  # no CLI started for live
         self.assertEqual(self.live()["cli"]["start_blocked"], message)
         self.engine.step_submit("live", {"acknowledged": True})
         message = self.refused("cli_not_chosen", self.engine.step_start, "live")
         self.assertIn("Choose the AI tool", message)
-        self.refused("cli_not_chosen", self.engine.step_send, "live")
+        self.assertFalse(self.live()["cli"]["paste_ready"])
         self.engine.step_submit("live", {"cli": "claude"})
         self.assertIsNone(self.live()["cli"]["start_blocked"])
+        self.assertTrue(self.live()["cli"]["paste_ready"])
         self.engine.step_start("live")
         self.assertEqual(self.terminal.starts[-1]["label"], "Optional: live mode")
 
-    def test_unticking_blocks_sending_again(self):
+    def test_unticking_turns_the_text_to_paste_off_again(self):
         self.to_live()
         self.started()
+        self.assertTrue(self.live()["cli"]["paste_ready"])
         self.engine.step_submit("live", {"acknowledged": False})
-        self.refused("warning_not_acknowledged", self.engine.step_send, "live")
-        self.assertNotIn(LIVE_LINE.format(cli="copilot", model="sonnet"), self.terminal.typed)
+        self.assertFalse(self.live()["cli"]["paste_ready"])
+        self.refused("not_supported", self.engine.step_send, "live")
+        self.assertEqual(self.terminal.typed, [])
+
+    def test_live_mode_is_never_started_by_itself(self):
+        self.to_live()
+        self.ready()
+        cli = self.live()["cli"]
+        self.assertEqual((cli["mode"], cli["can_auto_start"]), ("paste", False))
+        starts = len(self.terminal.starts)
+        self.engine.step_auto_start("live")
+        self.assertEqual(len(self.terminal.starts), starts)
 
     def test_the_acknowledgement_and_cli_are_validated(self):
         self.to_live()
@@ -239,20 +254,19 @@ class TypedLine(LiveCase):
             self.started(cli)
             self.engine.step_submit("live", {"model_name": "  my\nmodel\t\x07 v2 "})
             self.assertEqual(self.live()["cli"]["line"], LIVE_LINE.format(cli=cli, model="my model v2"))
-            self.engine.step_send("live")
-            self.assertEqual(self.terminal.typed[-1], LIVE_LINE.format(cli=cli, model="my model v2"))
+            self.assertEqual(self.paste("live"), LIVE_LINE.format(cli=cli, model="my model v2"))
             self.engine.step_stop("live")
 
-    def test_only_that_line_is_typed_and_the_cli_command_gets_no_flag(self):
+    def test_only_that_line_is_pasted_and_the_cli_command_gets_no_flag(self):
         self.to_live()
         self.started("devin")
         start = self.terminal.starts[-1]
         self.assertEqual(start["command"], self.engine.progress["cli_command"])
         self.assertEqual(start["cwd"], str(self.project))
-        typed_before = len(self.terminal.typed)
-        self.engine.step_send("live")
-        self.assertEqual(self.terminal.typed[typed_before:], [LIVE_LINE.format(cli="devin", model="sonnet")])
-        self.assertEqual(self.terminal.keystrokes, [])  # the app never answers a prompt
+        before = len(self.terminal.keystrokes)
+        self.assertEqual(self.paste("live"), LIVE_LINE.format(cli="devin", model="sonnet"))
+        self.assertEqual(len(self.terminal.keystrokes), before + 1)  # only the participant's paste reached the AI
+        self.assertEqual(self.terminal.typed, [])
         self.assertNotIn("--permission-mode", json.dumps(start))
         self.assertNotIn("auto", self.engine.progress["cli_command"])
 
@@ -261,15 +275,14 @@ class TypedLine(LiveCase):
         self.assertEqual(self.live()["cli"]["line"],
                          LIVE_LINE.format(cli="<copilot | claude | devin>", model="sonnet"))
 
-    def test_a_start_records_a_model_so_send_is_never_blocked_for_a_missing_one(self):
+    def test_a_start_records_a_model_so_the_line_is_never_blocked_for_a_missing_one(self):
         self.to_live()
         self.ready()
         self.engine.step_submit("live", {"model_name": "   "})
         self.engine.step_start("live")
         self.assertIsNone(self.live()["cli"]["blocked"])
         self.assertEqual(self.engine.progress["steps"]["generate"]["models_used"], ["sonnet"])
-        self.engine.step_send("live")
-        self.assertEqual(self.terminal.typed[-1], LIVE_LINE.format(cli="copilot", model="sonnet"))
+        self.assertEqual(self.paste("live"), LIVE_LINE.format(cli="copilot", model="sonnet"))
 
     def test_the_model_has_one_home_shared_with_the_baseline(self):
         self.to_live()
@@ -545,9 +558,13 @@ class Http(ServerCase):
         pty = FakePty.created[-1]
         self.assertEqual(pty.argv, ["cli"])
         status, body = self.post("/api/step/send", {"step": "live"})
+        self.assertEqual((status, body["error"]["code"]), (400, "not_supported"))
+        line = body["state"]["step"]["cli"]["line"]
+        self.assertEqual(line, LIVE_LINE.format(cli="claude", model="the AI's own default model"))
+        status, body = self.post("/api/terminal/input", {"data": base64.b64encode((line + "\r").encode()).decode()})
         self.assertEqual(status, 200, body)
-        self.assertEqual(pty.lines, [LIVE_LINE.format(cli="claude", model="the AI's own default model")])
-        self.assertEqual(pty.written, [])
+        self.assertEqual(pty.written, [(line + "\r").encode()])
+        self.assertEqual(pty.lines, [])
         status, body = self.post("/api/step/check", {"step": "live"})
         self.assertEqual(status, 200)
         self.assertFalse(body["state"]["step"]["last_check"]["ok"])

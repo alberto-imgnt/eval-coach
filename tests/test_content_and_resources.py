@@ -142,7 +142,7 @@ class Content(unittest.TestCase):
                 self.assertIn(phrase, text)
         self.assertNotIn("/model", text)
         self.assertEqual(self.steps["generate"]["gate"]["model"]["fail"],
-                         "Start your AI first, so the app can record the model.")
+                         "Open your AI window first, so the app can record the model.")
 
     def test_required_teaching_lines(self):
         text = " ".join(strings_in(self.data))

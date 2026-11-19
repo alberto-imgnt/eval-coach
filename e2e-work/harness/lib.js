@@ -25,7 +25,7 @@ const CLI_COMMAND = STANDIN ? `${PYTHON} ${path.join(WORK, 'harness', 'fake_cli.
 const MODEL = STANDIN ? "the AI's own default model" : 'sonnet';
 const CLI_TIMEOUT_MS = 240000;
 // stand-in: 13 before the lessons + 4 hook runs (one silent) + 2 practice runs (build-try, fix-try) + 2 baseline sessions (+1 for the promptfoo track's extra step, +1 for its optional live step) + 4 for Part 1 (the cold run and one rewrite run for each of the three label sets). real: 13 used + fixtures, readback, fix + 1 retry (user-approved option A); Part 1 needs two more real sessions only after the user approves them
-const MAX_SESSIONS = STANDIN ? 29 : 17;
+const MAX_SESSIONS = STANDIN ? 30 : 17;
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9.-]+/g;
 
 for (const d of [WORK, HOME, LOG_DIR, SHOTS]) fs.mkdirSync(d, { recursive: true });
@@ -562,20 +562,39 @@ function classify(screen) {
   const plainYesNo = lines.some((l) => /^\d+\.\s+(Yes|No)\b/.test(l));
   const flat = lines.join(' ');
   const promptSignals = /Enter to confirm|Enter to select|Press Enter to continue|Esc to (cancel|exit|go back)|\(y\/n\)|\[y\/N\]|\[Y\/n\]/i.test(flat);
-  if (selected < 0 && !plainYesNo && !promptSignals) return { kind: 'none' };
+  // Devin CLI's folder-trust question has its own shape: the question line, then "❭ 1 Yes, trust <folder>" and "· 2 No, exit".
+  const devinTrust = lines.some((l) => /^Do you trust the authors of this directory\?/.test(l));
+  // Devin CLI's file-write approval: a "● Writing <file>" heading and a menu whose first choice is "❭ 1 Yes  (Approve once)".
+  const devinMenu = lines.some((l) => /^[❭·]\s*\d\s+(Yes|No)\b/.test(l));
+  const devinOnce = lines.some((l) => /^❭\s*1\s+Yes\s+\(Approve once\)$/.test(l));
+  if (selected < 0 && !plainYesNo && !promptSignals && !devinTrust && !devinMenu) return { kind: 'none' };
 
   const stop = (reason) => ({ kind: 'stop', reason });
 
   // (a) Trusting a folder under e2e-work.
-  if (lastIndex(lines, (l) => /^Do you want to /.test(l)) < 0 && /trust the files|trust this folder|project you created or one you trust/i.test(flat)) {
+  if (lastIndex(lines, (l) => /^Do you want to /.test(l)) < 0 && /trust the files|trust this folder|project you created or one you trust|trust the authors of this directory/i.test(flat)) {
     const compact = screen.replace(/[\s│┃║╭╮╰╯┌┐└┘─━═]/g, '').toLowerCase();
-    if (!compact.includes(WORK.replace(/\s/g, '').toLowerCase())) return stop('trust prompt for a folder not under e2e-work');
-    const marked = lines.find((l) => /^[❯›]\s*(\d+\.\s*)?(Yes|No)\b/i.test(l));
-    if (marked && /^[❯›]\s*(\d+\.\s*)?Yes\b/i.test(marked)) return { kind: 'allow', what: 'trust', sig: 'trust' };
+    // GitHub Copilot CLI's trust dialog names no folder at all. It is accepted only when nothing on screen names another
+    // folder and the harness itself started that AI in a folder under e2e-work (setCliFolder), so the question can only be
+    // about that folder.
+    const nameless = /Confirm folder trust/.test(flat) && !/[a-zA-Z]:[\\/]/.test(flat) && Boolean(cliFolder)
+      && normFolder(cliFolder).startsWith(`${normFolder(WORK)}/`);
+    if (!compact.includes(WORK.replace(/\s/g, '').toLowerCase()) && !nameless) return stop('trust prompt for a folder not under e2e-work');
+    const marked = lines.find((l) => /^[❯›>❭]\s*(\d+\.?\s*)?(Yes|No)\b/i.test(l));
+    if (marked && /^[❯›>❭]\s*(\d+\.?\s*)?Yes\b/i.test(marked)) return { kind: 'allow', what: 'trust', sig: 'trust' };
     if (marked && lines.some((l) => /^(\d+\.\s*)?Yes, I trust this folder/i.test(l))) {
       return { kind: 'allow', what: 'trust (move selection from No to Yes)', sig: 'trust-move', keys: ['ArrowDown'] };
     }
     return stop('trust prompt without a Yes option that can be selected');
+  }
+
+  // (a2) Devin CLI's write approval: only a plain relative file, with its first choice highlighted. Never choice 2 or 3.
+  if (devinMenu && !devinTrust) {
+    if (!devinOnce) return stop('Devin menu without a highlighted "Yes (Approve once)"');
+    const head = lines.map((l) => l.match(/^● Writing\s+(\S+)$/)).filter(Boolean).pop();
+    if (!head) return stop('Devin approval without a "Writing <file>" heading');
+    if (/^[a-zA-Z]:|^[\\/]/.test(head[1]) || !pathAllowed(head[1])) return stop(`Devin write outside the scratch folder: ${head[1]}`);
+    return { kind: 'allow', what: `write ${head[1]}`, sig: `devin write ${head[1]}` };
   }
 
   // (b) Permission prompts.
@@ -650,8 +669,11 @@ async function answerYes(page, keys) {
   for (const key of keys || ['Enter']) await page.keyboard.press(key);
 }
 
-// Auto or bypass mode means the CLI handles approvals itself: never continue.
+// Auto or bypass mode means the CLI handles approvals itself: never continue. One opt-in exists for the real-tool
+// paste-flow check (real-paste.js, set by the user's 2026-11-19 decision): Claude Code now starts in auto mode by default on
+// every computer, with no flag from this app, so that start alone is not stopped. Nothing else changes in the checker.
 function modeViolation(screen) {
+  if (process.env.ALLOW_CLI_DEFAULT_AUTO_MODE === '1') return null;
   return normLines(screen).find((l) => /\b(auto|bypass\w*)\s+(mode|permissions)\b.*\bon\b/i.test(l)) || null;
 }
 
@@ -731,7 +753,7 @@ async function waitReady(page, tag) {
     }
     const lines = normLines(scr);
     if (modeViolation(scr)) await stopRun(page, `CLI is in a mode that handles approvals itself (${tag}): ${modeViolation(scr)}`, scr);
-    const ready = lines.some((l) => /^[>❯](\s|$)/.test(l) || /\? for shortcuts/.test(l) || /manual mode on/.test(l));
+    const ready = lines.some((l) => /^[>❯❭](\s|$)/.test(l) || /\? for shortcuts/.test(l) || /manual mode on/.test(l));
     if (ready) {
       if (!readySince) readySince = Date.now();
       if (Date.now() - readySince > 2000) return;

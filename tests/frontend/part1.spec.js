@@ -9,7 +9,6 @@ const PORT = Number(process.env.PART1_TEST_PORT) || 38927;
 const CONTROL = `http://127.0.0.1:${PORT + 1}`;
 const SHOTS = path.join(__dirname, '.tmp', 'screenshots');
 const CSP_WORDS = /content security policy|refused to|csp/i;
-const LINE = 'Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.';
 const FRAMEWORK_WORDS = /framework|RTCC|RISE|CO-STAR|RISEN|bucket/i;
 
 const test = base.extend({
@@ -157,37 +156,52 @@ test('the cold step shows the scenario card and no coaching, and cannot start be
   await expect(page.locator('#prompt-editor')).toHaveValue('');
   await expect(page.locator('#part-save')).toHaveAttribute('aria-disabled', 'true');
   await expect(page.locator('#cli-start')).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('#cli-start')).toHaveText('Open a new AI chat');
   await expect(page.locator('#cli-start-blocked')).toContainText('Save your prompt first');
-  await expect(page.locator('#run-preview-empty')).toBeVisible();
+  await expect(page.locator('#run-paste-empty')).toBeVisible();
+  await expect(page.locator('#copy-paste')).toHaveAttribute('aria-disabled', 'true');
   await expect(page.locator('#run-output-empty')).toBeVisible();
+  await expect(page.locator('#cli-chat-note')).toContainText('Each step opens a new chat');
+  for (const id of ['#cli-send', '#cli-retry', '.term-line', '#check-work']) await expect(page.locator(id)).toHaveCount(0);
   const text = await page.locator('.step-page').innerText();
   expect(text).not.toMatch(FRAMEWORK_WORDS);
   expect(text).not.toMatch(/Stage 3/);
 });
 
-test('the cold step: Save keeps only the participant\'s words, Start and Send run the CLI once, and the answer shows as plain text', async ({ page, request }) => {
+test('the cold step: saving opens the AI window by itself, Copy gives the text to paste, and the captured answer finishes the step', async ({ page, request }) => {
+  await page.addInitScript(() => {
+    window.__copied = [];
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: (text) => { window.__copied.push(text); return Promise.resolve(); } }, configurable: true });
+  });
   await openPart1(page, request, { reach: 'cold' });
   const words = 'Please write my Friday update.';
   await page.locator('#prompt-editor').fill(words);
   await expect(page.locator('#part-save-status')).toHaveText('You have changes that are not saved yet.');
   await expect(page.locator('#part-save')).not.toHaveAttribute('aria-disabled', 'true');
+  expect((await files(request)).launched).toEqual([]);
   await page.locator('#part-save').click();
   await expect(page.locator('#part-save-status')).toHaveText('Your prompt is saved.');
   expect(await readFile(request, 'prompt-cold.md')).toBe(words);
   expect((await files(request)).part1).toEqual(['prompt-cold.md']);
-  const preview = page.locator('#run-preview');
-  await expect(preview).toContainText(words);
-  await expect(preview).toContainText('Rough notes (added by the app)');
-  await expect(preview).toContainText('Mon: standup and two Northwind client meetings');
-  await expect(page.locator('#cli-start')).not.toHaveAttribute('aria-disabled', 'true');
-
-  await expect(page.locator('#model-name')).toHaveCount(0);
-  await expect(page.getByRole('radio', { name: 'Sonnet' })).toBeChecked();
-  await page.locator('#cli-start').click();
-  await expect(page.locator('#cli-send')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect.poll(async () => (await files(request)).launched.length).toBe(1);
+  await expect(page.locator('.term-status')).toHaveText('Your AI is running.');
   expect((await files(request)).cold_work).toEqual(['prompt.md']);
-  await page.locator('#cli-send').click();
-  await expect.poll(async () => (await files(request)).typed).toEqual([LINE]);
+  const paste = page.locator('#run-paste');
+  await expect(paste).toContainText(words);
+  await expect(paste).toContainText('Rough notes (added by the app)');
+  await expect(paste).toContainText('Mon: standup and two Northwind client meetings');
+  await expect(paste).toContainText('Save only your answer to output.txt. Do nothing else.');
+  await expect(page.locator('#cli-start')).toHaveText('Open a new AI chat');
+  await expect(page.locator('#cli-start')).not.toHaveAttribute('aria-disabled', 'true');
+  for (const id of ['#cli-send', '#cli-retry', '#model-name', '#check-work']) await expect(page.locator(id)).toHaveCount(0);
+  await expect(page.getByRole('radio', { name: 'Sonnet' })).toBeChecked();
+
+  await page.locator('#copy-paste').click();
+  await expect(page.locator('#copy-status')).toContainText('Copied');
+  const [copied] = await page.evaluate(() => window.__copied);
+  expect(copied).toBe(await paste.textContent());
+  expect(copied.startsWith(words)).toBe(true);
+  expect(copied.endsWith('Do nothing else.\n')).toBe(true);
 
   const html = '<b>bold</b> <script>window.__xss = 1</script>';
   await control(request, '/control/output', { step: 'cold', text: html });
@@ -195,30 +209,44 @@ test('the cold step: Save keeps only the participant\'s words, Start and Send ru
   await expect(output).toHaveText(html);
   expect(await page.evaluate(() => window.__xss)).toBeUndefined();
   await expect(output.locator('b')).toHaveCount(0);
-
-  await page.locator('#check-work').click();
-  await expect(page.locator('.check-head')).toContainText('Passed');
+  await expect(page.locator('#continue')).toHaveText('Continue to: Score what you got');
+  await expect(page.locator('#check-work')).toHaveCount(0);
+  expect((await files(request)).typed).toEqual([]);
   await page.locator('#continue').click();
   await expect(page.locator('#step-heading')).toHaveText('Score what you got');
 });
 
-test('the cold step refuses a check until all three pieces are there, and asks to Save before it checks', async ({ page, request }) => {
+test('a browser that refuses the clipboard leaves the text selected and says how to copy it', async ({ page, request }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('denied')) }, configurable: true });
+  });
   await openPart1(page, request, { reach: 'cold' });
-  await page.locator('#prompt-editor').fill('An unsaved prompt.');
-  await page.locator('#check-work').click();
-  await expect(page.locator('.notice')).toContainText('not saved yet');
-  await page.locator('#part-save').click();
-  await expect(page.locator('#part-save-status')).toHaveText('Your prompt is saved.');
-  await page.locator('#check-work').click();
-  const items = page.locator('.check-items li');
-  await expect(items).toHaveCount(3);
-  await expect(items.nth(0)).toContainText('Prompt saved');
-  await expect(items.nth(0).locator('.check-mark')).toHaveText('OK');
-  await expect(items.nth(1).locator('.check-mark')).toHaveText('Not yet');
-  await expect(items.nth(2).locator('.check-mark')).toHaveText('Not yet');
+  await savePrompt(page, 'Please write my Friday update with <angle> brackets.');
+  await expect(page.locator('#run-paste')).toContainText('<angle> brackets');
+  await expect(page.locator('#run-paste').locator('angle')).toHaveCount(0);
+  await page.locator('#copy-paste').click();
+  await expect(page.locator('#copy-status')).toContainText('Ctrl+C');
+  const selected = await page.evaluate(() => window.getSelection().toString());
+  expect(selected).toContain('Please write my Friday update with <angle> brackets.');
 });
 
-test('a finished cold step shows its prompt and answer and offers no second run', async ({ page, request }) => {
+test('the cold step lists what is missing as the participant works, with no Check button', async ({ page, request }) => {
+  await openPart1(page, request, { reach: 'cold' });
+  const items = page.locator('.check-items li');
+  await expect(items).toHaveCount(3);
+  await expect(page.locator('#gate-heading')).toHaveText('What is still missing');
+  await expect(items.nth(0).locator('.check-mark')).toHaveText('Not yet');
+  await page.locator('#prompt-editor').fill('An unsaved prompt.');
+  await page.locator('#part-save').click();
+  await expect(page.locator('#part-save-status')).toHaveText('Your prompt is saved.');
+  await expect(items.nth(0).locator('.check-mark')).toHaveText('OK');
+  await expect(items.nth(1).locator('.check-mark')).toHaveText('Not yet');
+  await expect(items.nth(2).locator('.check-mark')).toHaveText('OK');
+  await expect(page.locator('#check-work')).toHaveCount(0);
+  await expect(page.locator('#continue')).toHaveCount(0);
+});
+
+test('a finished cold step shows its prompt and answer, offers no second run and offers to start the step again', async ({ page, request }) => {
   await openPart1(page, request, { reach: 'score' });
   await page.locator('.course-btn', { hasText: 'Write it your way' }).click();
   await expect(page.locator('#step-heading')).toHaveText('Write it your way');
@@ -227,6 +255,7 @@ test('a finished cold step shows its prompt and answer and offers no second run'
   await expect(page.locator('#cli-start')).toHaveCount(0);
   await expect(page.locator('#part-save')).toHaveAttribute('aria-disabled', 'true');
   await expect(page.locator('#prompt-editor')).toBeDisabled();
+  await expect(page.locator('#step-restart')).toHaveText('Start this step again');
 });
 
 test('the score form works by keyboard, counts n of 5 from the answers, and changes its question when all five are yes', async ({ page, request }) => {
@@ -256,21 +285,35 @@ test('the score form works by keyboard, counts n of 5 from the answers, and chan
   await expect(page.locator('#score-line')).toHaveText('Your score: 4 of 5');
 });
 
-test('the score gate needs every row, the missed thing and the prompt question, and never judges the answers', async ({ page, request }) => {
+test('the score list shows what is missing, never judges the answers, and Continue finishes the step only when everything is in', async ({ page, request }) => {
   await openPart1(page, request, { reach: 'score' });
-  await page.locator('#check-work').click();
+  await expect(page.locator('#check-work')).toHaveCount(0);
   await expect(page.locator('.check-items li')).toHaveCount(3);
   await expect(page.locator('.check-items li').nth(0)).toContainText('0 of 5 are answered');
+  await expect(page.locator('#continue')).toHaveText('Continue to: What your first prompt left out');
+  await expect(page.locator('#continue')).toHaveAttribute('aria-disabled', 'true');
   for (const id of ['r1', 'r2', 'r3', 'r4', 'r5']) await page.locator(`#score-row-${id} input[value="no"]`).check();
+  await expect(page.locator('.check-items li').nth(0)).toContainText('OK');
+  await expect(page.locator('#continue')).toHaveAttribute('aria-disabled', 'true');
   await page.locator('#score-gap').fill('It never said what I need from my lead.');
   await page.locator('#in-prompt input[value="no"]').check();
   await expect(page.locator('#score-line')).toHaveText('Your score: 0 of 5');
-  await page.locator('#check-work').click();
-  await expect(page.locator('.check-head')).toContainText('Passed');
+  await expect(page.locator('.check-items li.is-missing')).toHaveCount(0);
+  await expect(page.locator('#continue')).not.toHaveAttribute('aria-disabled', 'true');
+  // Typing is never cut off: the answers autosave and the step stays open until the participant presses Continue.
+  await page.locator('#score-gap').fill('It never said what I need from my lead, and it was too long.');
+  await expect(page.locator('#continue-hint')).toBeVisible();
+  await page.waitForTimeout(1500);
+  await expect(page.locator('#score-gap')).toBeEnabled();
   await expect(page.locator('#step-heading')).toHaveText('Score what you got');
-  await expect(page.locator('.step-question, #act-title-sc-score')).toBeVisible();
-  await page.locator('#continue').click();
+  await page.locator('#continue').focus();
+  await page.keyboard.press('Enter');
   await expect(page.locator('#step-heading')).toHaveText('What your first prompt left out');
+  await page.locator('.course-btn', { hasText: 'Score what you got' }).click();
+  await expect(page.locator('#step-heading')).toHaveText('Score what you got');
+  await expect(page.locator('#score-gap')).toHaveValue('It never said what I need from my lead, and it was too long.');
+  await expect(page.locator('#score-gap')).toBeDisabled();
+  await expect(page.locator('.step-question, #act-title-sc-score')).toBeVisible();
 });
 
 test('the gaps lesson sorts typical gaps into five numbered kinds with a set-aside group and unlimited retries', async ({ page, request }) => {
@@ -335,19 +378,23 @@ test('the rewrite step offers three equal label sets with none chosen, inserts a
 
 test('the rewrite step runs once in a new chat, fails an unchanged prompt, and notes a different model without blocking', async ({ page, request }) => {
   await openPart1(page, request, { reach: 'rewrite' });
-  // The same words as the first prompt fail the gate and say why.
-  await savePrompt(page, 'Please turn my notes into a Friday update for my lead.');
+  const before = (await files(request)).launched.length;
+  // The same words as the first prompt: saving opens the window, and the answer is captured but the list says why not.
   await page.locator('#label-sets .radio-card').nth(0).locator('input').check();
-  await page.locator('#cli-start').click();
+  await savePrompt(page, 'Please turn my notes into a Friday update for my lead.');
+  await expect.poll(async () => (await files(request)).launched.length).toBe(before + 1);
   await control(request, '/control/output', { step: 'rewrite', text: 'A second answer.' });
   await expect(page.locator('#run-output')).toHaveText('A second answer.');
-  await page.locator('#check-work').click();
   await expect(page.locator('.check-items li').nth(2)).toContainText('same as your first one');
-  await expect(page.locator('.check-head')).toContainText('Not done yet');
+  await expect(page.locator('#gate-heading')).toHaveText('What is still missing');
+  await expect(page.locator('#check-work')).toHaveCount(0);
+  await expect(page.locator('#continue')).toHaveCount(0);
   await expect(page.locator('#model-note')).toHaveCount(0);
 
-  // The toggle changes the model of the next run, and the app records it: a different model passes with a note.
+  // A new prompt is saved without opening another window. The toggle changes the model of the next chat, and the app
+  // records it: a different model finishes the step with a note.
   await savePrompt(page, 'Role: a consultant\nTask: write the update\nContext: two clients\nConstraints: short');
+  expect((await files(request)).launched.length).toBe(before + 1);
   await page.getByRole('radio', { name: 'Haiku' }).check();
   await expect.poll(async () => (await files(request)).model_preference).toBe('haiku');
   await page.locator('#cli-start').click();
@@ -355,12 +402,27 @@ test('the rewrite step runs once in a new chat, fails an unchanged prompt, and n
   await control(request, '/control/output', { step: 'rewrite', text: 'A third answer.' });
   await expect(page.locator('#run-output')).toHaveText('A third answer.');
   await expect(page.locator('#model-note')).toContainText('different model');
-  await page.locator('#check-work').click();
-  await expect(page.locator('.check-head')).toContainText('Passed');
-  await expect(page.locator('.callout-attn', { hasText: 'less fair' }).first()).toBeVisible();
+  await expect(page.locator('#model-note')).toContainText('less fair');
+  await expect(page.locator('#continue')).toHaveText('Continue to: Score it again');
   expect(await readFile(request, 'prompt-framework.md')).toContain('Role: a consultant');
   await page.locator('#continue').click();
   await expect(page.locator('#step-heading')).toHaveText('Score it again');
+});
+
+test('a running AI window asks before a new chat replaces it, and keeping it changes nothing', async ({ page, request }) => {
+  await openPart1(page, request, { reach: 'cold' });
+  await savePrompt(page, 'Please write my Friday update.');
+  await expect.poll(async () => (await files(request)).launched.length).toBe(1);
+  await expect(page.locator('.term-status')).toHaveText('Your AI is running.');
+  await expect(page.locator('#cli-stop')).not.toHaveAttribute('aria-disabled', 'true');
+  await page.locator('#cli-start').click();
+  const dialog = page.locator('dialog.confirm[open]');
+  await expect(dialog).toContainText('Open a new AI chat?');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  expect((await files(request)).launched.length).toBe(1);
+  await page.locator('#cli-start').click();
+  await page.locator('dialog.confirm[open]').getByRole('button', { name: 'Open a new chat' }).click();
+  await expect.poll(async () => (await files(request)).launched.length).toBe(2);
 });
 
 test('the compare puts both runs side by side on a wide screen and stacks them in the mid and narrow layouts', async ({ page, request }) => {
@@ -395,18 +457,22 @@ test('the compare puts both runs side by side on a wide screen and stacks them i
   }
 });
 
-test('a lower second score is explained without blaming the labels, and the written answers gate the step', async ({ page, request }) => {
+test('a lower second score is explained without blaming the labels, and the written answers are listed until they are in', async ({ page, request }) => {
   await openPart1(page, request, { reach: 'rescore' });
   for (const id of ['r1', 'r2', 'r3', 'r4', 'r5']) await page.locator(`#score-row-${id} input[value="no"]`).check();
   await expect(page.locator('#compare-change')).toHaveText('Your score went down by 2.');
   await expect(page.locator('#compare-notes')).toContainText('A lower second score can happen');
   await expect(page.locator('#compare-notes')).toContainText('still missing');
-  await page.locator('#check-work').click();
+  await expect(page.locator('#check-work')).toHaveCount(0);
   await expect(page.locator('.check-items li').nth(1)).toContainText('Write what your labels made you add');
+  await expect(page.locator('#continue')).toHaveAttribute('aria-disabled', 'true');
   await page.locator('#reflection-added').fill('The reader and the length.');
   await page.locator('#reflection-better').fill('It is not better; the ask is still missing.');
-  await page.locator('#check-work').click();
-  await expect(page.locator('.check-head')).toContainText('Passed');
+  await expect(page.locator('.check-items li.is-missing')).toHaveCount(0);
+  await expect(page.locator('#continue')).toHaveText('Continue to: Four ways a structured prompt helps you');
+  await page.locator('#continue').click();
+  await expect(page.locator('#step-heading')).toHaveText('Four ways a structured prompt helps you');
+  await page.locator('.course-btn', { hasText: 'Score it again' }).click();
   await expect(page.locator('#act-title-sc-rescore')).toBeVisible();
   await expect(page.locator('#step-question, section[data-key="step-question"]').first()).toContainText('Quick check');
 });
@@ -425,15 +491,15 @@ test('the benefits lesson shows the sample prompts only after the rescore step',
   await page.keyboard.press('Escape');
 });
 
-test('the own step has no Start control, says what is private, and finishing it finishes Part 1', async ({ page, request }) => {
+test('the own step has no Start control, says what is private, and saving everything finishes it and Part 1', async ({ page, request }) => {
   await openPart1(page, request, { reach: 'own' });
   await expect(page.locator('#step-heading')).toHaveText('Use it on your own work');
   await expect(page.locator('#cli-start')).toHaveCount(0);
   await expect(page.locator('#cli-send')).toHaveCount(0);
   await expect(page.locator('#own-privacy')).toContainText('Leave out anything confidential');
   await expect(page.locator('#own-privacy')).toContainText('stays on this computer');
-  await page.locator('#check-work').click();
-  await expect(page.locator('.check-head')).toContainText('Not done yet');
+  await expect(page.locator('#check-work')).toHaveCount(0);
+  await expect(page.locator('.check-items li.is-missing')).toHaveCount(3);
   await page.locator('#own-before').fill('Write my weekly report.');
   await page.locator('#own-after').fill('Role: analyst\nTask: write my weekly report');
   await page.locator('#own-labels').fill('RTCC');
@@ -441,8 +507,8 @@ test('the own step has no Start control, says what is private, and finishing it 
   await expect(page.locator('#part-save-status')).toHaveText('Your work is saved.');
   expect(await readFile(request, 'own-before.md')).toBe('Write my weekly report.');
   expect(await readFile(request, 'own-after.md')).toBe('Role: analyst\nTask: write my weekly report');
-  await page.locator('#check-work').click();
-  await expect(page.locator('.check-head')).toContainText('Passed');
+  await expect(page.locator('#own-before')).toBeDisabled();
+  await expect(page.locator('#step-restart')).toBeVisible();
   await page.locator('#back-to-series').click();
   await expect(page.locator('#series-part-1')).toContainText('Done');
   await expect(page.locator('#series-part-1 .series-count')).toHaveText('9 of 9 done');
@@ -450,6 +516,60 @@ test('the own step has no Start control, says what is private, and finishing it 
   await expect(page.locator('#step-heading')).toHaveText('You have finished Part 1');
   await expect(page.locator('.finished-page')).toContainText('Part 2');
   await expect(page.locator('.finished-page')).toContainText('clear pass or fail rules');
+});
+
+test('a finished step offers Start this step again: keeping everything changes nothing and the keep action has focus', async ({ page, request }) => {
+  await openPart1(page, request, { reach: 'rescore' });
+  await page.locator('.course-btn', { hasText: 'Score what you got' }).click();
+  await expect(page.locator('#step-heading')).toHaveText('Score what you got');
+  await page.locator('#step-restart').focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.locator('dialog.confirm[open]');
+  await expect(dialog).toContainText('Start this step again?');
+  await expect(dialog.locator('#restart-lead')).toContainText('Score what you got, Try a framework, Score it again and Use it on your own work');
+  await expect(dialog.locator('#restart-keeps')).toContainText('The steps before this one, your other Parts and your lesson progress');
+  await expect(dialog.locator('#restart-backup-note')).toContainText('reset-backup');
+  await expect(dialog.locator('#restart-backup-note')).toContainText('replaces the previous backup');
+  await expect(dialog.getByRole('button', { name: 'Keep everything' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('dialog.confirm[open]')).toHaveCount(0);
+  expect((await files(request)).part1).toEqual(['output-cold.txt', 'output-framework.txt', 'prompt-cold.md', 'prompt-framework.md']);
+  await expect(page.locator('#step-restart')).toBeVisible();
+  await expect(page.locator('#score-gap')).toHaveValue('No ask for my lead');
+});
+
+test('restarting a step clears it and the later steps, keeps the earlier ones, backs up the files and announces the result', async ({ page, request }) => {
+  await openPart1(page, request, { reach: 'own' });
+  await page.locator('.course-btn', { hasText: 'Score what you got' }).click();
+  await expect(page.locator('#step-heading')).toHaveText('Score what you got');
+  await page.locator('#step-restart').click();
+  await page.locator('dialog.confirm[open]').getByRole('button', { name: 'Start again' }).click();
+  await expect(page.locator('#step-heading')).toHaveText('Score what you got');
+  await expect(page.locator('#restart-result')).toContainText('Score what you got, Try a framework, Score it again and Use it on your own work will start again');
+  await expect(page.locator('#restart-result')).toHaveAttribute('role', 'status');
+  await expect(page.locator('#score-gap')).toBeEnabled();
+  await expect(page.locator('#score-gap')).toHaveValue('');
+  await expect(page.locator('#step-restart')).toHaveCount(0);
+  await expect(page.locator('#continue')).toHaveAttribute('aria-disabled', 'true');
+  const after = await files(request);
+  expect(after.part1).toEqual(['output-cold.txt', 'prompt-cold.md']);
+  expect(after.backup).toEqual(expect.arrayContaining(['project/part-1/prompt-framework.md', 'project/part-1/output-framework.txt']));
+  expect(after.backup.some((name) => name.startsWith('project/part-1/prompt-cold'))).toBe(false);
+  // The next step is locked again until this one is done, and the earlier step stays a finished record.
+  await page.locator('.course-btn', { hasText: 'Try a framework' }).click();
+  await expect(page.locator('#preview-note')).toContainText('Score what you got');
+  await page.locator('.course-btn', { hasText: 'Write it your way' }).click();
+  await expect(page.locator('#run-output')).toContainText('Update for Friday.');
+  await expect(page.locator('#step-restart')).toBeVisible();
+});
+
+test('Start this step again is not offered on a step that is not finished or is only previewed', async ({ page, request }) => {
+  await openPart1(page, request, { reach: 'cold' });
+  await expect(page.locator('#step-heading')).toHaveText('Write it your way');
+  await expect(page.locator('#step-restart')).toHaveCount(0);
+  await page.locator('.course-btn', { hasText: 'Score what you got' }).click();
+  await expect(page.locator('#preview-note')).toBeVisible();
+  await expect(page.locator('#step-restart')).toHaveCount(0);
 });
 
 test('before setup the steps can be read, and nothing in them can be saved or started', async ({ page, request }) => {

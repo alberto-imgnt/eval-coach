@@ -85,6 +85,24 @@ export function resetDialogBody(text, kind, backupFolder, hasProject) {
   ];
 }
 
+// The confirmation dialog's body for "Start this step again": the steps that start again, what is cleared and kept,
+// and where the backup goes. `restart` is the step's own restart view from the server.
+export function restartDialogBody(w, restart) {
+  const values = { steps: restart.steps_text, folder: restart.backup_folder };
+  return [
+    h(
+      'div',
+      { class: 'reset-dialog', id: 'restart-dialog' },
+      h('p', { id: 'restart-lead' }, fmt(w.lead, values)),
+      h('h3', null, w.clears_title),
+      h('ul', { id: 'restart-clears' }, w.clears.map((item) => h('li', null, fmt(item, values)))),
+      h('h3', null, w.keeps_title),
+      h('ul', { id: 'restart-keeps' }, w.keeps.map((item) => h('li', null, item))),
+      h('p', { id: 'restart-backup-note' }, fmt(w.backup, values)),
+    ),
+  ];
+}
+
 function renderReset(ctx) {
   const s = words(ctx).settings;
   const t = words(ctx);

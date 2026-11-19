@@ -127,7 +127,7 @@ class ExampleFixtures(base.EngineCase):
         self.assert_no_key_in_tmp()
         message = self.capture_message(self.use)
         self.assertIn("Practice task", message)
-        self.assertIn("Press Start", message)
+        self.assertIn("paste its line", message)
         self.assertFalse(self.check("fixtures")["ok"])
 
     def capture_message(self, fn, **kw):

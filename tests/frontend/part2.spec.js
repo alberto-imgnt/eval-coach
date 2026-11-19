@@ -545,6 +545,38 @@ test('a finished step shows one Quick check that never stands in the way of the 
   await expect(page.locator('#step-heading')).toHaveText('Writing your rules down');
 });
 
+test('Start this step again on a Part 2 step keeps the criteria, empties the thresholds, backs up the file and leaves Part 3\'s file alone', async ({ page, request }) => {
+  await openPart2(page, request, { reach: 'reference' });
+  const rootBefore = await readRoot(request, 'test-cases.md');
+  expect(rootBefore).not.toBeNull();
+  await page.locator('.course-btn', { hasText: 'Add a pass or fail rule' }).click();
+  await expect(page.locator('#step-heading')).toHaveText('Add a pass or fail rule');
+  await page.locator('#step-restart').click();
+  const dialog = page.locator('dialog.confirm[open]');
+  await expect(dialog.locator('#restart-lead')).toContainText('Add a pass or fail rule, Write your test cases down and Compare with an example');
+  await dialog.getByRole('button', { name: 'Keep everything' }).click();
+  expect(JSON.parse(await readPart2(request, 'worksheet.json')).rows[0].threshold).not.toBe('');
+  await page.locator('#step-restart').click();
+  await page.locator('dialog.confirm[open]').getByRole('button', { name: 'Start again' }).click();
+  await expect(page.locator('#restart-result')).toContainText('will start again');
+  await expect(page.locator('#step-heading')).toHaveText('Add a pass or fail rule');
+  await expect(page.locator('#row-1-threshold')).toHaveValue('');
+  await expect(page.locator('#check-work')).toBeVisible();
+  const rows = JSON.parse(await readPart2(request, 'worksheet.json')).rows;
+  expect(rows.map((row) => row.criterion)).toEqual(['The update is short', 'Work is grouped by client', 'The blocker is named']);
+  expect(rows.every((row) => row.threshold === '')).toBe(true);
+  expect(await readPart2(request, 'test-cases.md')).toBeNull();
+  expect((await filesOf(request, '/control/files')).backup).toEqual(
+    expect.arrayContaining(['project/part-2/worksheet.json', 'project/part-2/test-cases.md']),
+  );
+  expect(await readRoot(request, 'test-cases.md')).toBe(rootBefore);
+  await page.locator('.course-btn', { hasText: 'Draft your criteria' }).click();
+  await expect(page.locator('#step-restart')).toBeVisible();
+  await page.locator('.course-btn', { hasText: 'Write your test cases down' }).click();
+  await expect(page.locator('#preview-note')).toBeVisible();
+  await expect(page.locator('#step-restart')).toHaveCount(0);
+});
+
 // ---- the test-file step ------------------------------------------------------------------
 
 async function openTestFile(page, request) {

@@ -13,7 +13,7 @@ import { unsavedTexts } from './part-steps.js';
 import { setMapText } from './markdown.js';
 import { aiTesting, firstWizardItem, nextWizardPage, renderPreflightTermFoot, renderPreflightTermHead, renderWizard, wizardIndex, wizardPageId, wizardPages, wizardUsesTerminal } from './preflight.js';
 import { renderSeries } from './series.js';
-import { renderSettings, renderSetupBanner, resetDialogBody } from './settings.js';
+import { renderSettings, renderSetupBanner, resetDialogBody, restartDialogBody } from './settings.js';
 import { createTerminal } from './terminal.js';
 import { renderFinished, renderNotices, renderStep, renderTermFoot, renderTermHead, renderTopbar } from './views.js';
 
@@ -54,6 +54,7 @@ const app = {
   terminal: null,
   stepCache: new Map(), // latest detail per step, used to build save payloads
   lastRenderedStep: null,
+  autoStartAsked: null, // the step the page already asked the server to open an AI window for, in this visit
 };
 
 let noticeId = 0;
@@ -251,12 +252,22 @@ function handleServerState(state) {
   if (state) applyState(state);
 }
 
+// A step where the AI saves its answer finishes by itself in the background. Without this the page would move on to the
+// next step on its own, and the participant would not see the answer they just got or press Continue.
+function pinPasteStep() {
+  const step = app.state && app.state.step;
+  if (!app.viewStep && !app.viewLesson && step && step.status === 'active' && step.cli && step.cli.mode === 'paste' && currentView(app.state) === 'course') {
+    app.viewStep = step.id;
+  }
+}
+
 async function refresh() {
   if (fetching) {
     fetchAgain = true;
     return;
   }
   fetching = true;
+  pinPasteStep();
   const wantedStep = app.viewStep;
   const generation = postGeneration;
   try {
@@ -662,6 +673,70 @@ const actions = {
     });
   },
 
+  // "Open a new AI chat" in a step where the participant pastes: it replaces a running window or clears a result in
+  // the step's folder, so it asks first.
+  newChat() {
+    const step = currentStepId();
+    return act('start', async () => {
+      const shown = app.state.step;
+      const ui = shown.ui;
+      const clears = Boolean(shown.cli && shown.cli.has_result && ui.new_chat_confirm_body_result);
+      if (app.state.terminal.running || clears) {
+        const ok = await confirmDialog({
+          title: ui.new_chat_confirm_title,
+          body: clears ? ui.new_chat_confirm_body_result : ui.new_chat_confirm_body,
+          confirmLabel: ui.new_chat_confirm,
+        });
+        if (!ok) return;
+      }
+      await beginCli(step);
+    });
+  },
+
+  // The participant's own Continue on a score form: the answers autosave, so only this finishes the step.
+  finishStep() {
+    const step = currentStepId();
+    return act('check', async () => {
+      await saver.flush();
+      app.viewStep = step;
+      const res = await mutate('/api/step/check', { step });
+      const checked = res && res.state && res.state.step;
+      if (checked && checked.id === step && checked.status === 'done') {
+        celebrate('#continue');
+        actions.continueToNext();
+      }
+    });
+  },
+
+  // "Start this step again": clears this step and the later steps of its Part, after a confirm.
+  restart(stepId) {
+    return act(`restart-${stepId}`, async () => {
+      const shown = app.state.step;
+      const words = app.state.settings.text.restart;
+      const ok = await confirmDialog({
+        title: words.title,
+        body: restartDialogBody(words, shown.restart),
+        confirmLabel: words.confirm_button,
+        cancelLabel: words.keep_button,
+        danger: true,
+      });
+      if (!ok) return;
+      await saver.flush();
+      app.viewStep = null;
+      const res = await mutate('/api/step/restart', { step: stepId, confirm: true });
+      for (const id of res.result.steps) {
+        for (const key of Array.from(app.drafts.keys())) {
+          if (key.startsWith(`${id}.`) || key.startsWith(`checklist.${id}.`)) app.drafts.delete(key);
+        }
+        for (const key of Array.from(app.local.keys())) if (key === `copy-${id}`) app.local.delete(key);
+        app.stepCache.delete(id);
+      }
+      app.local.set('restart-result', { step: stepId, message: res.result.message });
+      app.focusHeading = true;
+      await refresh();
+    });
+  },
+
   retry() {
     const step = currentStepId();
     return act('retry', async () => {
@@ -769,7 +844,12 @@ const actions = {
   // [draft key, value] pairs that were sent, so a text typed while saving stays as a draft.
   partSave(stepId, data, sent) {
     return act(`part-save-${stepId}`, async () => {
+      // The first save of a prompt can open the AI window by itself; the pane starts clear and fits the new window.
+      const shown = app.stepCache.get(stepId);
+      const mayStart = Boolean(shown && shown.cli && shown.cli.mode === 'paste' && 'prompt' in data && !app.state.terminal.running);
+      if (mayStart && app.terminal) app.terminal.clearForNewSession();
       await mutate('/api/step/submit', { step: stepId, data });
+      if (mayStart && app.terminal) app.terminal.syncSize();
       for (const [key, value] of sent) if (app.drafts.get(key) === value) app.drafts.delete(key);
     });
   },
@@ -799,6 +879,7 @@ const actions = {
         confirmLabel: 'Skip this step',
       });
       if (!ok) return;
+      app.viewStep = null; // a skipped step has nothing to read back, so the page moves on to the next one
       await mutate('/api/step/skip', { step: 'fix' });
     });
   },
@@ -1102,6 +1183,7 @@ function buildContext() {
     actions,
     busy: (key) => app.busy.has(key),
     local: (key) => app.local.get(key),
+    setLocal: (key, value) => app.local.set(key, value),
     draft: (key, fallback) => (app.drafts.has(key) ? app.drafts.get(key) : fallback),
     hasDraft: (key) => app.drafts.has(key),
     setDraft: (key, value) => app.drafts.set(key, value),
@@ -1290,10 +1372,26 @@ function render() {
       if (app.terminal) app.terminal.open($('term-host'));
     }
     startTerminal();
+    maybeAutoStart(ctx);
   } catch (err) {
     console.error(err);
     reportError('Something went wrong drawing this page.');
   }
+}
+
+// A Part 3 step opens its AI window by itself the first time it is shown. Ask once per visit, and only when the
+// step's own view says the server will start it; the server applies the full rule and ignores the rest.
+function maybeAutoStart(ctx) {
+  const { step } = ctx;
+  if (!step || step.id !== app.autoStartAsked) app.autoStartAsked = null;
+  if (!step || !step.cli || !step.cli.can_auto_start || app.autoStartAsked === step.id) return;
+  const id = step.id;
+  app.autoStartAsked = id;
+  act(`auto-start-${id}`, async () => {
+    if (app.terminal) app.terminal.clearForNewSession();
+    await mutate('/api/step/auto-start', { step: id });
+    if (app.terminal) app.terminal.syncSize();
+  });
 }
 
 function startTerminal() {
