@@ -12,7 +12,7 @@ import helpers
 from course_helpers import CourseBase
 from helpers import ROOT
 
-from eval_coach import project, reset
+from eval_coach import project, reset, state
 
 STANDIN_PROJECTS = ("standin-project", "standin-project-pf")
 STANDIN_HOMES = ("standin-home", "standin-home-pf")
@@ -72,6 +72,19 @@ class InventoryTests(unittest.TestCase):
             self.assertEqual(reset.classify_project_path(rel, True), "move", rel)
         self.assertIsNone(reset.classify_project_path("part-2/my-notes.txt"))
         self.assertIsNone(reset.classify_project_path("part-2/nested/test-cases.md"))
+
+    def test_every_file_a_restart_can_move_is_on_a_reset_list(self):
+        paths = project.Paths("C:\\home", "C:\\proj")
+        for part in (state.PART_1, state.PART_2):
+            for step, owns in part.restart.items():
+                for rel in owns.files + owns.rewrite:
+                    self.assertEqual(reset.classify_project_path(rel, True), "move", f"{part.id} {step}: {rel}")
+                for name in owns.scratch:
+                    self.assertEqual(reset.classify_home_path(name, True), "move", f"{part.id} {step}: {name}")
+                self.assertTrue(set(owns.rewrite) <= set(state.PART_2.restart["draft"].files), step)
+        with self.assertRaisesRegex(ValueError, "my-notes.txt is on no reset list"):
+            odd = state.Part("part-8", 8, "m", (), "", "", restart={"x": state.StepOwns(files=("part-1/my-notes.txt",))})
+            reset.build_restart_plan("C:\\home", paths, odd, ["x"])
 
     def test_finished_standin_projects_have_no_unlisted_file(self):
         found = False

@@ -57,9 +57,10 @@ def rough_notes():
     return resources.read_text(project.PART1_NOTES).replace("\r\n", "\n").strip("\n")
 
 
-def run_copy(prompt, divider):
-    """What the CLI reads: the participant's words, a plain divider and the rough notes."""
-    return prompt.rstrip() + "\n\n" + divider + "\n\n" + rough_notes() + "\n"
+def run_copy(prompt, divider, instruction):
+    """The text the participant pastes into the AI window, and the whole of prompt.md: their words, a plain divider,
+    the rough notes and the closing instruction."""
+    return prompt.rstrip() + "\n\n" + divider + "\n\n" + rough_notes() + "\n\n" + instruction + "\n"
 
 
 def requirements(engine, text):
@@ -76,13 +77,19 @@ def score_of(rows, answers):
 
 
 def _base(engine, step, text, data):
-    return {
+    view = {
         "id": step, "title": text["title"], "status": engine._status(step), "track": engine._track(),
         "kind": text["kind"], "goal": text["goal"], "why": text["why"], "instructions": text["instructions"],
         "cli": None, "checklist": [], "last_check": engine._step(step)["last_check"],
         "question": engine._step_question_public(step), "troubleshooting": text["troubleshooting"],
-        "ui": text.get("ui", {}), "data": data,
+        "ui": text.get("ui", {}), "data": data, "restart": engine._restart_view(step),
     }
+    report = getattr(store.STEP_KINDS[text["kind"]], "report", None)
+    if report is not None:
+        # The live gate, so the page can list what is still missing without a button or a request.
+        view["gate"] = report(engine, step)
+        view["ready"] = view["gate"]["ok"]
+    return view
 
 
 def _finish(engine, step, result, ends_cli=False):
@@ -93,6 +100,18 @@ def _finish(engine, step, result, ends_cli=False):
             engine._stop_cli()
         engine._mark_done(step)
     engine._save()
+
+
+def settle(engine, step, trigger):
+    """Finish a Part 1 step when its work is committed and its gate is met. Call with the engine lock held.
+
+    `trigger` is "output" (the AI's answer was saved) or "save" (the participant saved something). A step whose
+    kind does not finish on that moment is left alone; nothing here ever blocks a save.
+    """
+    handler = store.STEP_KINDS.get(engine.content["steps"].get(step, {}).get("kind"))
+    method = getattr(handler, "settle", None)
+    if method is not None and engine._status(step) == "active":
+        method(engine, step, trigger)
 
 
 class WriteAndRun:
@@ -126,7 +145,7 @@ class WriteAndRun:
             "scenario": text.get("scenario"),
             "prompt": prompt, "prompt_saved": saved,
             "notes": rough_notes(), "divider": text["divider"],
-            "preview": run_copy(prompt, text["divider"]) if saved else "",
+            "paste_text": run_copy(prompt, text["divider"], text["instruction"]) if saved else "",
             "output": output if output.strip() else None,
             "prompt_changed": bool(record["prompt_hash"]) and saved and _sha(prompt) != record["prompt_hash"],
         }
@@ -135,10 +154,9 @@ class WriteAndRun:
             data["framework"] = record["framework"]
             data["cold_prompt"] = self._prompt(engine, "cold")
             data["model_note"] = text["gate"]["nudge_model"]["text"] if self._model_differs(engine, step) else None
-        active = engine._cli_active(step)
         view = _base(engine, step, text, data)
-        view["cli"] = {"line": text["line"], "folder_label": text["folder_label"], "started": active,
-                       "sent": active and engine._sent, "blocked": None,
+        view["cli"] = {"mode": text["cli_mode"], "folder_label": text["folder_label"],
+                       "started": engine._cli_active(step), "blocked": engine._cli_blocked.get(step),
                        "start_blocked": None if saved else text["messages"]["start_blocked"]}
         return view
 
@@ -157,10 +175,11 @@ class WriteAndRun:
                 ids = [label["id"] for label in self._labels(text)]
                 if data["framework"] not in ids + [""]:
                     raise _error("bad_input", text["messages"]["bad_framework"])
+            saved_prompt = None
             if "prompt" in data:
-                value = _body(data["prompt"], text)
+                saved_prompt = _body(data["prompt"], text)
                 try:
-                    store.write_bytes_atomic(engine.paths.part1_prompt(step), value.encode("utf-8"))
+                    store.write_bytes_atomic(engine.paths.part1_prompt(step), saved_prompt.encode("utf-8"))
                 except OSError as exc:
                     raise _error("folder_busy", f"Your prompt could not be saved: {exc}") from exc
             if "model_name" in data:
@@ -168,69 +187,113 @@ class WriteAndRun:
             if "framework" in data:
                 record["framework"] = data["framework"]
             engine._save()
+            if saved_prompt is not None:
+                self._after_prompt_save(engine, step, text, record, saved_prompt)
+            settle(engine, step, "save")
+
+    def _after_prompt_save(self, engine, step, text, record, prompt):
+        """A running AI window keeps running and sees the new text; otherwise the first save may open one."""
+        if engine._cli_active(step):
+            try:
+                store.write_bytes_atomic(engine.paths.part1_work(step) / "prompt.md",
+                                         run_copy(prompt, text["divider"], text["instruction"]).encode("utf-8"))
+            except OSError as exc:
+                raise _error("folder_busy", f"Your prompt could not be copied to the AI's folder: {exc}") from exc
+            record["prompt_hash"] = _sha(prompt)  # the answer is not written yet, so it is still for this prompt
+            engine._save()
+        elif self._auto_start_ok(engine, step, text, record, prompt):
+            from .engine import EngineError  # engine imports this module, so the import waits until it is needed
+            try:
+                self._launch(engine, step, prompt)
+            except EngineError as exc:  # a failed start never fails the save: the page shows the reason instead
+                engine._cli_blocked[step] = exc.message
+
+    def _auto_start_ok(self, engine, step, text, record, prompt):
+        """The one rule for starting the AI by itself (shared by every step that pastes): once per step, only for a
+        step the participant may work in, and never when it would replace an answer or a file in the folder."""
+        from .engine import EngineError
+        if text.get("cli_mode") != "paste" or not prompt.strip() or record["auto_started"] or engine.terminal.running:
+            return False
+        try:
+            engine._require_active(step)
+        except EngineError:
+            return False
+        if self._output(engine, step).strip():
+            return False
+        work = engine.paths.part1_work(step)
+        return not work.exists() or all(p.name == "prompt.md" for p in work.iterdir())
+
+    def _launch(self, engine, step, prompt):
+        """Start a fresh AI window for the step: a clean folder holding only prompt.md. Call with the lock held."""
+        text, record, paths = engine._text(step), engine._step(step), engine.paths
+        engine._stop_cli()
+        work = paths.part1_work(step)
+        try:
+            project.clear_dir(work)
+            store.write_bytes_atomic(work / "prompt.md",
+                                     run_copy(prompt, text["divider"], text["instruction"]).encode("utf-8"))
+            try:
+                paths.part1_output(step).unlink()  # an earlier run's answer must not pass for this run's
+            except FileNotFoundError:
+                pass
+        except OSError as exc:
+            raise _error("folder_busy", f"The working folder could not be prepared: {exc}") from exc
+        try:
+            label_model = engine._ai_start(engine.progress["cli_command"], work, text["title"], step)
+        except (ValueError, OSError) as exc:
+            raise _error("cli_start_failed", f"Your AI could not be started: {exc}") from exc
+        engine._cli_step = step
+        engine._sent = False
+        engine._cli_blocked.pop(step, None)
+        record["prompt_hash"] = _sha(prompt)
+        record["model_name"] = label_model
+        record["auto_started"] = True
+        engine._save()
+        engine._start_watcher(work / "output.txt", paths.part1_output(step), lambda: settle(engine, step, "output"))
 
     def start(self, engine, step):
-        with engine._lock:
-            engine._require_active(step)
-            text, record, paths = engine._text(step), engine._step(step), engine.paths
-            prompt = self._prompt(engine, step)
-            if not prompt.strip():
-                raise _error("prompt_missing", text["messages"]["prompt_missing"])
-            engine._stop_cli()
-            work = paths.part1_work(step)
-            try:
-                project.clear_dir(work)
-                store.write_bytes_atomic(work / "prompt.md", run_copy(prompt, text["divider"]).encode("utf-8"))
-                try:
-                    paths.part1_output(step).unlink()  # an earlier run's answer must not pass for this run's
-                except FileNotFoundError:
-                    pass
-            except OSError as exc:
-                raise _error("folder_busy", f"The working folder could not be prepared: {exc}") from exc
-            try:
-                label_model = engine._ai_start(engine.progress["cli_command"], work, text["title"], step)
-            except (ValueError, OSError) as exc:
-                raise _error("cli_start_failed", f"Your AI could not be started: {exc}") from exc
-            engine._cli_step = step
-            engine._sent = False
-            record["prompt_hash"] = _sha(prompt)
-            record["model_name"] = label_model
-            engine._save()
-            engine._start_watcher(work / "output.txt", paths.part1_output(step))
-
-    def send(self, engine, step):
+        """POST /api/step/start: open a new AI chat on the saved prompt."""
         with engine._lock:
             engine._require_active(step)
             text = engine._text(step)
-            if not engine._cli_active(step):
-                raise _error("cli_not_running", text["messages"]["cli_not_running"])
-        try:
-            engine.terminal.type_line(text["line"])  # outside the lock: it takes 400 ms
-        except OSError as exc:
-            raise _error("cli_not_running", f"The line could not be typed: {exc}") from exc
-        with engine._lock:
-            if engine._cli_active(step):
-                engine._sent = True
+            prompt = self._prompt(engine, step)
+            if not prompt.strip():
+                raise _error("prompt_missing", text["messages"]["prompt_missing"])
+            self._launch(engine, step, prompt)
+
+    def report(self, engine, step):
+        """The gate's result now. Reads only; it changes nothing."""
+        text, record = engine._text(step), engine._step(step)
+        prompt, output = self._prompt(engine, step), self._output(engine, step)
+        report = gates.Report(text["gate"])
+        if self._labels(text):
+            report.add("framework", record["framework"] in [label["id"] for label in self._labels(text)])
+        report.add("prompt", bool(prompt.strip()))
+        if step == "rewrite":
+            first = self._prompt(engine, "cold")
+            report.add("differs", not prompt.strip() or _squash(prompt) != _squash(first))
+        report.add("output", bool(output.strip()))
+        report.add("model", bool(record["model_name"].strip()))
+        if self._model_differs(engine, step):
+            report.nudges.append(text["gate"]["nudge_model"]["text"])
+        if record["prompt_hash"] and prompt.strip() and _sha(prompt) != record["prompt_hash"]:
+            report.nudges.append(text["gate"]["nudge_prompt_changed"]["text"])
+        return report.result()
+
+    def settle(self, engine, step, trigger):
+        record = engine._step(step)
+        if trigger == "save":
+            # Only a saved answer that still matches the saved prompt can finish the step on a save.
+            prompt = self._prompt(engine, step)
+            if not (self._output(engine, step).strip() and record["prompt_hash"]
+                    and _sha(prompt) == record["prompt_hash"]):
+                return
+        _finish(engine, step, self.report(engine, step), ends_cli=True)
 
     def check(self, engine, step):
         with engine._lock:
             engine._require_active(step)
-            text, record = engine._text(step), engine._step(step)
-            prompt, output = self._prompt(engine, step), self._output(engine, step)
-            report = gates.Report(text["gate"])
-            if self._labels(text):
-                report.add("framework", record["framework"] in [label["id"] for label in self._labels(text)])
-            report.add("prompt", bool(prompt.strip()))
-            if step == "rewrite":
-                first = self._prompt(engine, "cold")
-                report.add("differs", not prompt.strip() or _squash(prompt) != _squash(first))
-            report.add("output", bool(output.strip()))
-            report.add("model", bool(record["model_name"].strip()))
-            if self._model_differs(engine, step):
-                report.nudges.append(text["gate"]["nudge_model"]["text"])
-            if record["prompt_hash"] and prompt.strip() and _sha(prompt) != record["prompt_hash"]:
-                report.nudges.append(text["gate"]["nudge_prompt_changed"]["text"])
-            _finish(engine, step, report.result(), ends_cli=True)
+            _finish(engine, step, self.report(engine, step), ends_cli=True)
 
 
 class ScoreForm:
@@ -328,22 +391,26 @@ class ScoreForm:
                     record["reflections"][key] = _body(value, text)
             engine._save()
 
+    def report(self, engine, step):
+        text, record = engine._text(step), engine._step(step)
+        rows = requirements(engine, text)
+        fields = text.get("fields", [])
+        report = gates.Report(text["gate"])
+        answered = sum(1 for row in rows if record["answers"].get(row["id"]) in YES_NO)
+        report.add("rows", answered == len(rows), count=answered)
+        if "gap" in fields:
+            report.add("gap", bool(record["gap"].strip()))
+        if "in_prompt" in fields:
+            report.add("in_prompt", bool(record["in_prompt"]))
+        for item in text.get("reflections", []):
+            report.add(item["id"], bool(record["reflections"].get(item["id"], "").strip()))
+        return report.result()
+
     def check(self, engine, step):
+        # The Continue button calls this: the answers autosave, so only the participant's own Continue finishes the step.
         with engine._lock:
             engine._require_active(step)
-            text, record = engine._text(step), engine._step(step)
-            rows = requirements(engine, text)
-            fields = text.get("fields", [])
-            report = gates.Report(text["gate"])
-            answered = sum(1 for row in rows if record["answers"].get(row["id"]) in YES_NO)
-            report.add("rows", answered == len(rows), count=answered)
-            if "gap" in fields:
-                report.add("gap", bool(record["gap"].strip()))
-            if "in_prompt" in fields:
-                report.add("in_prompt", bool(record["in_prompt"]))
-            for item in text.get("reflections", []):
-                report.add(item["id"], bool(record["reflections"].get(item["id"], "").strip()))
-            _finish(engine, step, report.result())
+            _finish(engine, step, self.report(engine, step))
 
 
 class WritePair:
@@ -377,19 +444,28 @@ class WritePair:
             if "labels" in data:
                 record["labels"] = _line(data["labels"], text)
             engine._save()
+            settle(engine, step, "save")
+
+    def report(self, engine, step):
+        text, record = engine._text(step), engine._step(step)
+        texts = self._texts(engine)
+        report = gates.Report(text["gate"])
+        report.add("before", bool(texts["before"].strip()))
+        report.add("after", bool(texts["after"].strip()))
+        report.add("labels", bool(record["labels"].strip()))
+        both = bool(texts["before"].strip() and texts["after"].strip())
+        report.add("differs", not both or _squash(texts["before"]) != _squash(texts["after"]))
+        return report.result()
+
+    def settle(self, engine, step, trigger):
+        result = self.report(engine, step)
+        if result["ok"]:
+            _finish(engine, step, result)
 
     def check(self, engine, step):
         with engine._lock:
             engine._require_active(step)
-            text, record = engine._text(step), engine._step(step)
-            texts = self._texts(engine)
-            report = gates.Report(text["gate"])
-            report.add("before", bool(texts["before"].strip()))
-            report.add("after", bool(texts["after"].strip()))
-            report.add("labels", bool(record["labels"].strip()))
-            both = bool(texts["before"].strip() and texts["after"].strip())
-            report.add("differs", not both or _squash(texts["before"]) != _squash(texts["after"]))
-            _finish(engine, step, report.result())
+            _finish(engine, step, self.report(engine, step))
 
 
 KINDS = {"write_and_run": WriteAndRun(), "score_form": ScoreForm(), "write_pair": WritePair()}

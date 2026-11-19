@@ -147,8 +147,7 @@ class TypedLine(BaselineCase):
         cli = self.state()["step"]["cli"]
         self.assertEqual(cli["line"], LINE.format(model="sonnet"))
         self.assertIsNone(cli["blocked"])
-        self.engine.step_send("baseline")
-        self.assertEqual(self.terminal.typed[-1], LINE.format(model="sonnet"))
+        self.assertEqual(self.paste("baseline"), LINE.format(model="sonnet"))
 
     def test_the_template_in_the_content_is_the_exact_line(self):
         text = self.engine.content["steps"]["baseline"]
@@ -165,8 +164,7 @@ class TypedLine(BaselineCase):
                               ("line one\n\n\nline two", "line one line two")):
             with self.subTest(raw=raw):
                 self.engine.step_submit("baseline", {"model_name": raw})
-                self.engine.step_send("baseline")
-                typed = self.terminal.typed[-1]
+                typed = self.paste("baseline")
                 self.assertEqual(typed, LINE.format(model=expected))
                 self.assertNotRegex(typed, r"[\r\n\t\x00-\x1f\x7f]")
                 self.assertEqual(self.state()["step"]["cli"]["line"], typed)
@@ -183,23 +181,20 @@ class TypedLine(BaselineCase):
         self.engine.step_start("baseline")
         self.assertEqual(self.engine.progress["steps"]["generate"]["models_used"], ["sonnet"])
         self.assertIsNone(self.state()["step"]["cli"]["blocked"])
-        self.engine.step_send("baseline")
-        self.assertEqual(self.terminal.typed[-1], LINE.format(model="sonnet"))
+        self.assertEqual(self.paste("baseline"), LINE.format(model="sonnet"))
 
     def test_every_model_used_is_named_once_in_the_line(self):
         self.to_baseline()
         self.engine.step_start("baseline")
         self.engine._record_model("haiku")
         self.engine.step_start("baseline")
-        self.engine.step_send("baseline")
-        self.assertEqual(self.terminal.typed[-1], LINE.format(model="sonnet and haiku"))
+        self.assertEqual(self.paste("baseline"), LINE.format(model="sonnet and haiku"))
 
     def test_a_model_with_braces_is_typed_as_written(self):
         self.to_baseline()
         self.engine.step_start("baseline")
         self.engine.step_submit("baseline", {"model_name": "m {x} {0}"})
-        self.engine.step_send("baseline")
-        self.assertEqual(self.terminal.typed[-1], LINE.format(model="m {x} {0}"))
+        self.assertEqual(self.paste("baseline"), LINE.format(model="m {x} {0}"))
 
     def test_the_model_must_be_text(self):
         self.to_baseline()
@@ -338,7 +333,7 @@ class Gate(BaselineCase):
         result, items = self.gate()
         self.assertFalse(result["ok"])
         self.assertIn("iteration-log.md was not found", items["iteration-log.md exists"]["detail"])
-        self.assertIn("Press Start my AI", items["iteration-log.md exists"]["detail"])
+        self.assertIn("paste it into your AI window", items["iteration-log.md exists"]["detail"])
         self.assertFalse(items["Iteration 0 entry found"]["ok"])
 
     def test_an_unusable_log(self):

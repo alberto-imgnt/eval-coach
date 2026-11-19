@@ -572,7 +572,8 @@ class MigrationState(unittest.TestCase):
         self.assertEqual(loaded["done"], done)
         self.assertNotIn("baseline", loaded["done"])
         self.assertEqual(loaded["steps"]["baseline"],
-                         {"run_check_hash": None, "run_runs_hash": None, "last_check": None, "checklist": {}})
+                         {"run_check_hash": None, "run_runs_hash": None, "auto_started": False, "last_check": None,
+                          "checklist": {}})
 
     def test_an_old_progress_with_no_lessons_block_and_no_baseline_entry_keeps_baseline_why_open(self):
         data = self.old([s for s in STEP_IDS if s != "baseline"])

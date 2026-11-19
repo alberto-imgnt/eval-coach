@@ -49,6 +49,15 @@ def course_items(track="script"):
 
 
 @dataclass(frozen=True)
+class StepOwns:
+    """What one step of a restartable Part leaves behind besides its saved record."""
+
+    files: tuple = ()  # project files it made, as forward-slash paths under the project folder
+    scratch: tuple = ()  # folders it used in the app's own folder
+    rewrite: tuple = ()  # project files a restart keeps but puts back changed (the original goes to the backup)
+
+
+@dataclass(frozen=True)
 class Part:
     """One Part of the series that has content: its course, its content files and where its steps are saved."""
 
@@ -62,6 +71,7 @@ class Part:
     track_courses: Dict[str, tuple] = field(default_factory=dict)  # a track's own order, when it differs
     extra_steps: tuple = ()  # steps outside the course order that still belong to this Part
     new_steps: Optional[Callable[[], dict]] = None  # default saved record of each step (Parts other than Part 3)
+    restart: Optional[Dict[str, StepOwns]] = None  # what each step owns; None means "Start this step again" is not offered
 
     def course_for(self, track="script"):
         return self.track_courses.get(track, self.course)
@@ -99,16 +109,24 @@ COURSE_1 = (
 def new_part_1_steps():
     """The saved record of each Part 1 step. It holds only what the participant answered, never a key."""
     return {
-        "cold": {"model_name": "", "prompt_hash": None, "last_check": None},
+        "cold": {"model_name": "", "prompt_hash": None, "auto_started": False, "last_check": None},
         "score": {"answers": {}, "gap": "", "in_prompt": "", "last_check": None},
-        "rewrite": {"framework": "", "model_name": "", "prompt_hash": None, "last_check": None},
+        "rewrite": {"framework": "", "model_name": "", "prompt_hash": None, "auto_started": False, "last_check": None},
         "rescore": {"answers": {}, "reflections": {}, "last_check": None},
         "own": {"labels": "", "last_check": None},
     }
 
 
 PART_1 = Part("part-1", 1, "p1-mission", COURSE_1, "content/part-1-lessons.json", "content/part-1-steps.json",
-              progress_key="part-1", new_steps=new_part_1_steps)
+              progress_key="part-1", new_steps=new_part_1_steps,
+              restart={
+                  "cold": StepOwns(files=("part-1/prompt-cold.md", "part-1/output-cold.txt"), scratch=("part1/cold",)),
+                  "score": StepOwns(),
+                  "rewrite": StepOwns(files=("part-1/prompt-framework.md", "part-1/output-framework.txt"),
+                                      scratch=("part1/rewrite",)),
+                  "rescore": StepOwns(),
+                  "own": StepOwns(files=("part-1/own-before.md", "part-1/own-after.md")),
+              })
 
 # Part 2: defining evaluation criteria. Its lesson ids carry a `p2-` prefix; its step ids are plain words that
 # neither Part 1 nor Part 3 uses (`reference` and not `compare`, a retired id).
@@ -132,7 +150,13 @@ def new_part_2_steps():
 
 
 PART_2 = Part("part-2", 2, "p2-mission", COURSE_2, "content/part-2-lessons.json", "content/part-2-steps.json",
-              progress_key="part-2", new_steps=new_part_2_steps)
+              progress_key="part-2", new_steps=new_part_2_steps,
+              restart={
+                  "draft": StepOwns(files=("part-2/worksheet.json", "part-2/test-cases.md")),
+                  "thresholds": StepOwns(rewrite=("part-2/worksheet.json",)),
+                  "test-file": StepOwns(files=("part-2/test-cases.md",)),
+                  "reference": StepOwns(),
+              })
 # Part 3 stays first: its steps file also holds the messages every Part shares.
 PARTS = (PART_3, PART_1, PART_2)
 
@@ -248,10 +272,10 @@ def new_lessons_block():
 def default_step_entry(step):
     """The saved record of a step that only one track has."""
     if step == EXTRA_STEP:
-        return {"last_check": None, "checklist": {}}
+        return {"last_check": None, "checklist": {}, "auto_started": False}
     if step == OPTIONAL_STEP:
         return {"last_check": None, "checklist": {}, "acknowledged": False, "cli": "", "done": False,
-                "start_hashes": None}
+                "start_hashes": None, "auto_started": False}
     raise KeyError(step)
 
 
@@ -267,20 +291,20 @@ def new_progress(project_path, cli_command, starter):
         "lessons": new_lessons_block(),
         "parts": {},  # step progress of every Part but Part 3, each created on first use
         "steps": {
-            "generate": {"model_name": "", "models_used": [], "last_check": None},
-            "build": {"checklist": {}, "last_check": None},
-            "fixtures": {"last_check": None},
-            "readback": {"answers": {}, "note": "", "last_check": None},
+            "generate": {"model_name": "", "models_used": [], "auto_started": False, "last_check": None},
+            "build": {"checklist": {}, "auto_started": False, "last_check": None},
+            "fixtures": {"auto_started": False, "last_check": None},
+            "readback": {"answers": {}, "note": "", "auto_started": False, "last_check": None},
             "predict": {"locked": False, "manual_criteria": [], "locked_criteria": [],
                         "bad": {}, "polished": {},
                         "answers": {"wrong": "", "catches": "", "worst_guess": ""},
                         "last_check": None},
-            "key": {"last_check": None},
+            "key": {"auto_started": False, "last_check": None},
             "run": {"classifications": {}, "last_check": None},
             "fix": {"start_tc_hash": None, "start_check_hash": None, "seen_tc_hash": None,
                     "tc_edit_check_hash": None, "rerun_check_hash": None, "rerun_tc_hash": None,
-                    "explanation": "", "last_check": None},
-            "baseline": {"run_check_hash": None, "run_runs_hash": None, "last_check": None},
+                    "explanation": "", "auto_started": False, "last_check": None},
+            "baseline": {"run_check_hash": None, "run_runs_hash": None, "auto_started": False, "last_check": None},
         },
     }
     for step in progress["steps"].values():

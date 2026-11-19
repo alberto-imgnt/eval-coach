@@ -184,9 +184,10 @@ def handle(line):
         if mode() != "silent":
             score, verdict, why = HOOK_VARIANTS[os.getpid() % len(HOOK_VARIANTS)]
             write("output.txt", f"Score: {score}/10. {verdict}. {why} <b>bold</b> & <script>x()</script>\n")
-    elif "Read prompt.md, follow it" in line and "part1" in os.getcwd().lower().replace("\\", "/"):
-        # Part 1 run folder: a prompt with label lines (a word, then a colon, at the start of a line) gets the better
-        # sample answer and any other prompt gets the weaker one. Harness only: it decides nothing for the app.
+    elif "Save only your answer to output.txt" in line and "part1" in os.getcwd().lower().replace("\\", "/"):
+        # Part 1 run folder: the participant pasted the text, so the stand-in reads prompt.md. A prompt with label lines
+        # (a word, then a colon, at the start of a line) gets the better sample answer and any other prompt gets the weaker
+        # one. Harness only: it decides nothing for the app.
         work(1)
         prompt = pathlib.Path("prompt.md").read_text(encoding="utf-8")
         labelled = any(re.match(r"^[A-Za-z][A-Za-z ]{0,40}:", row) for row in prompt.splitlines())

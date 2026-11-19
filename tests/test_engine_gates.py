@@ -15,7 +15,7 @@ from eval_coach.engine import Engine, EngineError
 from eval_coach.project import Paths, sealed_id
 from eval_coach.scan import scan_source
 from eval_coach.state import CorruptStateError, load_progress
-from eval_coach import runner
+from eval_coach import gates, runner
 
 KEY_SENTINEL = "SENTINEL-ANSWER-KEY-TEXT"
 STDLIB_CHECKER = (GOLDEN / "reference-check.py").read_text(encoding="utf-8")
@@ -85,12 +85,18 @@ class EngineCase(unittest.TestCase):
 
     # --- walking the steps ---
 
+    def paste(self, step):
+        """Paste the step's line into the AI window, as a participant does. Returns the line."""
+        line = helpers.paste_step_line(self.engine, step)
+        self.assertEqual(self.terminal.keystrokes[-1], (line + "\r").encode("utf-8"))
+        return line
+
     def do_generate(self, model=None):
         for n in range(1, 6):
             self.engine.step_start("generate")
             self.assertEqual(self.terminal.starts[-1]["cwd"], str(self.paths.blind))
             self.assertEqual(sorted(p.name for p in self.paths.blind.iterdir()), ["prompt.md"])
-            self.engine.step_send("generate")
+            self.paste("generate")
             shutil.copy(str(NORTHWIND / f"sample-run-{n}.txt"), str(self.paths.blind_output))
             self.assertTrue(wait_until(lambda: self.paths.run_file(n).is_file()), f"run {n} never saved")
         if model is not None:  # the test-only typed route; the app records the model itself when it starts the AI
@@ -164,7 +170,7 @@ class WalkAllSteps(EngineCase):
         self.assertFalse(self.check("generate")["ok"])
         self.do_generate()
         self.assertEqual(self.state()["step"]["data"]["current_run"], 5)
-        self.assertEqual(self.terminal.typed[-1], EXPECTED_LINES["generate"])
+        self.assertEqual(self.state("generate")["step"]["cli"]["line"], EXPECTED_LINES["generate"])
         self.assertTrue(self.check("generate")["ok"])
         self.assertEqual(self.status("build"), "active")
         self.assert_key_hidden()
@@ -173,8 +179,7 @@ class WalkAllSteps(EngineCase):
         self.assertFalse(self.check("build")["ok"])
         self.do_build()
         self.assertEqual(self.terminal.starts[-1]["cwd"], str(self.project))
-        self.engine.step_send("build")
-        self.assertEqual(self.terminal.typed[-1], EXPECTED_LINES["build"])
+        self.assertEqual(self.paste("build"), EXPECTED_LINES["build"])
         result = self.data("build")["first_look"]
         self.assertTrue(result["ok"], result)
         self.assertEqual(result["exit_code"], 0)
@@ -190,8 +195,7 @@ class WalkAllSteps(EngineCase):
                          ["fixtures", "prompt-v0.md", "skills", "test-cases.md"])
         self.assertTrue((cwd / "skills" / "make-eval-fixtures" / "SKILL.md").is_file())
         self.assertEqual([p.name for p in (cwd / "skills").iterdir()], ["make-eval-fixtures"])
-        self.engine.step_send("fixtures")
-        self.assertEqual(self.terminal.typed[-1], EXPECTED_LINES["fixtures"])
+        self.assertEqual(self.paste("fixtures"), EXPECTED_LINES["fixtures"])
         self.assert_key_hidden()
         self.assertTrue(self.check("fixtures")["ok"])
         self.assertTrue((self.paths.fixtures / "fixture-bad.txt").is_file())
@@ -207,8 +211,7 @@ class WalkAllSteps(EngineCase):
         # readback
         self.assertFalse(self.check("readback")["ok"])
         self.do_readback()
-        self.engine.step_send("readback")
-        self.assertEqual(self.terminal.typed[-1], EXPECTED_LINES["readback"])
+        self.assertEqual(self.paste("readback"), EXPECTED_LINES["readback"])
         self.assertTrue(self.check("readback")["ok"])
         self.assert_key_hidden()
 
@@ -228,8 +231,7 @@ class WalkAllSteps(EngineCase):
         self.do_key()
         cwd = Path(self.terminal.starts[-1]["cwd"])
         self.assertEqual(cwd, self.paths.key_work)
-        self.engine.step_send("key")
-        self.assertEqual(self.terminal.typed[-1], EXPECTED_LINES["key"])
+        self.assertEqual(self.paste("key"), EXPECTED_LINES["key"])
         self.assertTrue(self.data("key")["files"][0]["present"])
         self.assertFalse(self.data("key")["key_held"])
         self.assert_key_hidden()
@@ -267,8 +269,7 @@ class WalkAllSteps(EngineCase):
         self.assertTrue(self.data("fix")["test_cases_changed"])
         self.assertFalse(self.data("fix")["checker_changed_after"])
         self.engine.step_start("fix")
-        self.engine.step_send("fix")
-        self.assertEqual(self.terminal.typed[-1], EXPECTED_LINES["fix"])
+        self.assertEqual(self.paste("fix"), EXPECTED_LINES["fix"])
         self.write_checker(tight_checker())
         self.assertTrue(self.data("fix")["checker_changed_after"])
         self.engine.step_run_checker("fix", "fixtures")
@@ -313,9 +314,12 @@ class Sequence(EngineCase):
         self.assertIsNone(self.state("predict")["step"]["cli"])
         self.assert_code("no_cli", self.engine.step_start, "predict")
 
-    def test_send_needs_a_running_cli(self):
+    def test_send_is_refused_for_every_paste_step(self):
         self.setup_project()
-        self.assert_code("cli_not_running", self.engine.step_send, "generate")
+        self.assert_code("not_supported", self.engine.step_send, "generate")
+        self.engine.step_start("generate")
+        self.assert_code("not_supported", self.engine.step_send, "generate")
+        self.assertEqual(self.terminal.typed, [])
 
     def test_typed_lines_match_the_spec_exactly(self):
         for step, line in EXPECTED_LINES.items():
@@ -344,7 +348,7 @@ class Generate(EngineCase):
     def test_finishing_stops_the_cli_and_pushes_state(self):
         self.setup_project()
         self.engine.step_start("generate")
-        self.engine.step_send("generate")
+        self.paste("generate")
         self.paths.blind_output.write_text("answer", encoding="utf-8")
         self.assertTrue(wait_until(lambda: self.terminal.state_events == 1))
         self.assertFalse(self.terminal.running)
@@ -1234,6 +1238,203 @@ class Corrupt(EngineCase):
                 self.corrupt(text)
                 with self.assertRaises(CorruptStateError):
                     load_progress(self.paths.progress_file)
+
+
+class AutoStart(EngineCase):
+    """A Part 3 AI step opens its AI window by itself, once, and only when nothing would be lost."""
+
+    def starts(self):
+        return len(self.terminal.starts)
+
+    def cli(self, step):
+        return self.state(step)["step"]["cli"]
+
+    def test_fields_for_every_kind_of_step(self):
+        self.setup_project()
+        cli = self.cli("generate")
+        self.assertEqual((cli["mode"], cli["can_auto_start"], cli["has_result"], cli["paste_ready"]),
+                         ("paste", True, False, True))
+        self.assertEqual(cli["line"], EXPECTED_LINES["generate"])
+        self.assertFalse(cli["blocked"])
+        self.assertEqual(self.engine.progress["steps"]["generate"]["auto_started"], False)
+
+    def test_first_visit_starts_one_window_in_the_blind_folder(self):
+        self.setup_project()
+        self.engine.step_auto_start("generate")
+        self.assertEqual(self.starts(), 1)
+        self.assertEqual(self.terminal.starts[-1]["cwd"], str(self.paths.blind))
+        self.assertEqual(self.terminal.starts[-1]["label"], "Collect your answers: run 1 of 5")
+        self.assertTrue(self.engine.progress["steps"]["generate"]["auto_started"])
+        self.assertEqual(self.engine.progress["steps"]["generate"]["models_used"], ["sonnet"])
+        self.assertEqual(self.terminal.typed, [])
+        self.assertFalse(self.cli("generate")["can_auto_start"])
+
+    def test_second_visit_and_stop_then_revisit_start_nothing(self):
+        self.setup_project()
+        self.engine.step_auto_start("generate")
+        self.engine.step_auto_start("generate")
+        self.assertEqual(self.starts(), 1)
+        self.engine.step_stop("generate")
+        self.engine.step_auto_start("generate")
+        self.assertEqual(self.starts(), 1)
+        self.assertFalse(self.cli("generate")["can_auto_start"])
+
+    def test_a_start_by_the_button_also_uses_up_the_automatic_start(self):
+        self.setup_project()
+        self.engine.step_start("generate")
+        self.engine.step_stop("generate")
+        self.engine.step_auto_start("generate")
+        self.assertEqual(self.starts(), 1)
+
+    def test_later_runs_are_only_started_by_the_button(self):
+        self.setup_project()
+        self.engine.step_auto_start("generate")
+        shutil.copy(str(NORTHWIND / "sample-run-1.txt"), str(self.paths.blind_output))
+        self.assertTrue(wait_until(lambda: self.paths.run_file(1).is_file()))
+        self.assertFalse(self.cli("generate")["can_auto_start"])
+        self.assertFalse(self.cli("generate")["has_result"])  # run 1 is saved, so nothing is lost
+        self.engine.step_auto_start("generate")
+        self.assertEqual(self.starts(), 1)
+        self.engine.step_start("generate")
+        self.assertEqual(self.terminal.starts[-1]["label"], "Collect your answers: run 2 of 5")
+
+    def test_reading_ahead_a_locked_step_starts_nothing_and_prepares_nothing(self):
+        self.setup_project()
+        self.assertTrue(self.state("build")["step"]["preview"])
+        self.assertIsNone(self.state("build")["step"]["cli"])
+        self.engine.step_auto_start("build")
+        self.assertEqual(self.starts(), 0)
+        self.assertFalse(self.paths.fixtures_work.exists())
+
+    def test_a_finished_step_starts_nothing(self):
+        self.to_step("build")
+        self.assertEqual(self.state("generate")["step"]["status"], "done")
+        starts = self.starts()
+        self.engine.step_auto_start("generate")
+        self.assertEqual(self.starts(), starts)
+        self.assertFalse(self.cli("generate")["can_auto_start"])
+
+    def test_before_setup_is_a_quiet_no_op(self):
+        self.engine.step_auto_start("generate")  # nothing is configured yet: no error, no window
+        self.assertEqual(self.starts(), 0)
+        self.setup_project()
+        (self.home / "preflight.json").unlink()
+        engine = self.new_engine()
+        engine.step_auto_start("generate")  # the project is open, but setup has not passed
+        self.assertEqual(self.starts(), 0)
+
+    def test_another_window_running_blocks_it(self):
+        self.setup_project()
+        self.terminal.running = True
+        self.assertFalse(self.cli("generate")["can_auto_start"])
+        self.engine.step_auto_start("generate")
+        self.assertEqual(self.starts(), 0)
+
+    def test_a_file_the_ai_made_in_the_blind_folder_blocks_it_and_is_kept(self):
+        self.setup_project()
+        self.paths.blind.mkdir(parents=True)
+        (self.paths.blind / "notes.txt").write_text("keep me", encoding="utf-8")
+        self.assertTrue(self.cli("generate")["has_result"])
+        self.engine.step_auto_start("generate")
+        self.assertEqual(self.starts(), 0)
+        self.assertEqual((self.paths.blind / "notes.txt").read_text(encoding="utf-8"), "keep me")
+
+    def test_fixture_text_in_the_work_folder_blocks_it(self):
+        self.to_step("fixtures")
+        before = self.starts()
+        self.paths.work_fixtures.mkdir(parents=True)
+        (self.paths.work_fixtures / "fixture-bad.txt").write_text("text", encoding="utf-8")
+        self.assertTrue(self.cli("fixtures")["has_result"])
+        self.engine.step_auto_start("fixtures")
+        self.assertEqual(self.starts(), before)
+        self.assertEqual((self.paths.work_fixtures / "fixture-bad.txt").read_text(encoding="utf-8"), "text")
+
+    def test_fixtures_already_in_the_project_block_it(self):
+        self.to_step("fixtures")
+        self.paths.fixtures.mkdir(parents=True, exist_ok=True)
+        (self.paths.fixtures / "fixture-bad.txt").write_text("text", encoding="utf-8")
+        self.assertFalse(self.cli("fixtures")["can_auto_start"])
+        self.assertFalse(self.cli("fixtures")["has_result"])  # a new start would not clear the project's copy
+
+    def test_a_step_that_passes_closes_its_window_so_the_next_step_can_open_its_own(self):
+        self.to_step("fixtures")
+        self.assertFalse(self.terminal.running)
+        self.assertTrue(self.cli("fixtures")["can_auto_start"])
+        before = self.starts()
+        self.engine.step_auto_start("fixtures")
+        self.assertEqual(self.starts(), before + 1)
+        self.assertEqual(Path(self.terminal.starts[-1]["cwd"]), self.paths.fixtures_work)
+
+    def test_the_sealed_key_blocks_the_key_step_and_is_never_opened(self):
+        self.to_step("key")
+        before = self.starts()
+        self.paths.sealed_dir.mkdir(parents=True, exist_ok=True)
+        self.paths.sealed_key.write_text(f"# Key\n{KEY_SENTINEL}\n", encoding="utf-8")
+        opened = []
+        real_has_text, real_read_text = gates.has_text, gates.read_text
+
+        def has_text(path, *args):
+            opened.append(Path(path))
+            return real_has_text(path, *args)
+
+        def read_text(path, *args):
+            opened.append(Path(path))
+            return real_read_text(path, *args)
+
+        with mock.patch.object(gates, "has_text", has_text), mock.patch.object(gates, "read_text", read_text):
+            self.engine.step_auto_start("key")
+            self.assertFalse(self.cli("key")["can_auto_start"])
+        self.assertEqual(self.starts(), before)
+        self.assertNotIn(self.paths.sealed_key, opened)
+
+    def test_a_key_in_the_key_work_folder_blocks_it(self):
+        self.to_step("key")
+        before = self.starts()
+        self.paths.key_work_key.parent.mkdir(parents=True, exist_ok=True)
+        self.write_key()
+        self.assertTrue(self.cli("key")["has_result"])
+        self.engine.step_auto_start("key")
+        self.assertEqual(self.starts(), before)
+
+    def test_project_folder_steps_start_without_extra_conditions(self):
+        self.to_step("build")
+        before = self.starts()
+        self.assertTrue(self.cli("build")["can_auto_start"])
+        self.assertFalse(self.cli("build")["has_result"])
+        self.engine.step_auto_start("build")
+        self.assertEqual(self.starts(), before + 1)
+        self.assertEqual(self.terminal.starts[-1]["cwd"], str(self.project))
+
+    def test_a_failed_start_is_shown_and_the_button_is_the_way_to_retry(self):
+        self.setup_project()
+        with mock.patch.object(self.terminal, "start", side_effect=OSError("no such program")):
+            self.engine.step_auto_start("generate")  # never raises
+        cli = self.cli("generate")
+        self.assertIn("could not be started", cli["blocked"])
+        self.assertFalse(cli["can_auto_start"])
+        self.assertFalse(self.engine.progress["steps"]["generate"]["auto_started"])
+        self.engine.step_auto_start("generate")
+        self.assertEqual(self.starts(), 0)
+        self.engine.step_start("generate")
+        self.assertEqual(self.starts(), 1)
+        self.assertIsNone(self.cli("generate")["blocked"])
+
+    def test_every_start_records_the_model(self):
+        self.setup_project()
+        self.engine.step_auto_start("generate")
+        self.engine.step_start("generate")
+        self.assertEqual(self.engine.progress["steps"]["generate"]["models_used"], ["sonnet"])
+        self.assertEqual(self.engine._model_name(), "sonnet")
+
+    def test_progress_without_the_field_gets_the_default(self):
+        self.setup_project()
+        data = json.loads(self.paths.progress_file.read_text(encoding="utf-8"))
+        for record in data["steps"].values():
+            record.pop("auto_started", None)
+        self.paths.progress_file.write_text(json.dumps(data), encoding="utf-8")
+        engine = self.new_engine()
+        for step in ("generate", "build", "fixtures", "readback", "key", "fix", "baseline"):
+            self.assertIs(engine.progress["steps"][step]["auto_started"], False, step)
 
 
 if __name__ == "__main__":

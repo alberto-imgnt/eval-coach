@@ -146,6 +146,37 @@ def build_plan(home, paths, configuration):
         plan.append((paths.sealed_dir, f"app/{HOME_SEALED}/{paths.sealed_dir.name}"))
     return plan
 
+def build_restart_plan(home, paths, part, steps):
+    """What a step restart moves: (plan, rewrites). `plan` is as in build_plan; `rewrites` are project files a
+    restart puts back changed, as (path, relative name). Only what exists is listed, and every name must be on the
+    reset lists above, so a restart can never move a file the inventory does not know."""
+    owned = [part.restart[s] for s in steps]
+    names, scratch, rewrites = [], [], []
+    for owns in owned:
+        for rel in owns.files + owns.rewrite:
+            if rel not in names:
+                names.append(rel)
+        for rel in owns.rewrite:
+            if rel not in rewrites:
+                rewrites.append(rel)
+        scratch.extend(s for s in owns.scratch if s not in scratch)
+    plan, rewrite_paths = [], []
+    for rel in names:
+        if classify_project_path(rel, True) != "move":
+            raise ValueError(f"{rel} is on no reset list")
+        source = paths.project / Path(*rel.split("/"))
+        if source.is_file():
+            plan.append((source, "project/" + rel))
+            if rel in rewrites and not any(rel in o.files for o in owned):
+                rewrite_paths.append((source, rel))
+    for name in scratch:
+        if classify_home_path(name, True) != "move":
+            raise ValueError(f"{name} is on no reset list")
+        source = Path(home) / Path(*name.split("/"))
+        if source.exists():
+            plan.append((source, "app/" + name))
+    return plan, rewrite_paths
+
 
 # --- moving ------------------------------------------------------------------
 

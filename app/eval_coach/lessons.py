@@ -620,6 +620,11 @@ def load_step_content():
             kind = text.get("kind") if isinstance(text, dict) else None
             if kind is not None and kind not in state.STEP_KINDS:
                 problems.append(f"{part.steps_file}: step {step!r} names the unknown kind {kind!r}")
+        shared = data.get("paste_ui")
+        if isinstance(shared, dict):  # the words every paste-mode step shares; a step's own `ui` wins
+            for text in steps.values():
+                if isinstance(text, dict) and text.get("cli_mode") == "paste":
+                    text["ui"] = {**shared, **text.get("ui", {})}
         if content is None:
             content = data
         else:

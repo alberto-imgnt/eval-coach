@@ -5,14 +5,29 @@
     "bad_settings": "The app's own settings file could not be read, so your last project was not reopened. Enter your project folder again to resume.",
     "unknown_part": "There is no Part with that name. Nothing was changed.",
     "example_fixtures_wrong_step": "The example's fixtures can only be used in the fixtures step. Open that step to use them there.",
-    "example_fixtures_own_project": "These fixtures belong to the Practice task, so they would not test the checker for your own task. Press Start, then Send, and have your AI write fixtures for your own test cases. If they look wrong, tell your AI what your output should look like, then try again.",
+    "example_fixtures_own_project": "These fixtures belong to the Practice task, so they would not test the checker for your own task. Open the fixtures step, paste its line into your AI window, and have your AI write fixtures for your own test cases. If they look wrong, tell your AI what your output should look like, then try again.",
     "example_fixtures_cli_running": "Your AI is still running. Press Stop, then use the example's fixtures.",
     "example_fixtures_confirm_replace": "The fixtures folder already has text in it. Confirm that you want to replace it with the example's two fixtures, then try again.",
     "example_fixtures_write_failed": "The example's fixtures could not be saved: {error}. Close anything that has the fixtures folder open, then try again."
   },
+  "paste_ui": {
+    "ai_note": "Each step opens a new chat, so nothing from an earlier step carries over. Your AI window starts by itself when you open a step that uses it.",
+    "paste_heading": "Text to paste",
+    "paste_note": "Wait until your AI is ready for a message. Copy this line, click in the AI window, paste it with Ctrl+V and press Enter. The app types nothing for you.",
+    "copy": "Copy",
+    "copied": "Copied. Paste it into your AI window and press Enter.",
+    "copy_failed": "Your browser did not allow copying. Select the text above and press Ctrl+C.",
+    "new_chat": "Open a new AI chat",
+    "new_chat_confirm_title": "Open a new AI chat?",
+    "new_chat_confirm_body": "This closes your AI window and opens a new chat. Anything it has not saved is lost, and you will need to paste the text again.",
+    "new_chat_confirm_body_result": "This closes your AI window if it is open, clears this step's AI folder and opens a new chat. Anything your AI has not saved to your project is lost, and you will need to paste the text again.",
+    "new_chat_confirm": "Open a new chat",
+    "ready_hint": "Wait until your AI is ready for a message, then paste the text and press Enter."
+  },
   "steps": {
     "generate": {
       "title": "Collect your answers",
+      "cli_mode": "paste",
       "goal": "Get real answers from your own prompt, saved as files, before you build anything.",
       "why": [
         "One answer proves little, because the model varies from run to run. A baseline is a pass rate across several runs, not one answer.",
@@ -23,29 +38,30 @@
         "This is this course's way of working. Other approaches work too, and scripts, testing-tool configuration files and written test cases are all fine ways to evaluate."
       ],
       "instructions": [
-        "Press Start. Your AI opens in the blind folder, which holds only your prompt.",
+        "Your AI window opens by itself the first time you open this step. It opens in the blind folder, which holds only your prompt. If it did not open, press Open a new AI chat.",
         "The app starts your AI on the model chosen with the Sonnet / Haiku switch above the AI window (Sonnet unless you changed it) and records that model for you. Sonnet is the everyday default and Haiku is the lighter, faster one. The most capable flagship models, such as Opus, are not offered, because this course compares prompts, not models. A change to the switch applies the next time your AI starts.",
-        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, use Start again.",
+        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, press Open a new AI chat.",
         "Depending on its settings, your AI may ask for approvals or may act on its own. Any approval requests appear in the terminal, and you answer them there. The app never answers for you.",
-        "When your AI is ready, press Send. The app types the line for you.",
-        "The app waits for output.txt, saves it as your run file, closes your AI, and moves to the next run.",
-        "Repeat until all five runs are saved. One prompt, one answer, one new chat each time. No second tries and no edits."
+        "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. Do not add anything.",
+        "The app waits for output.txt, saves it as your run file and closes your AI window.",
+        "For each of runs 2 to 5, press Open a new AI chat, wait until it is ready, then copy and paste the line again. One prompt, one answer, one new chat each time. No second tries and no edits."
       ],
       "line": "Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.",
       "folder_label": "Blind folder (only your prompt)",
       "troubleshooting": [
-        {"problem": "Your AI reports a temporary error, such as a busy service or a network problem.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Stop, then Start."},
-        {"problem": "Nothing happens after you press Send.", "fix": "Look at the terminal. If your AI is set to ask for approval, it may be waiting for you. Answer it there."},
-        {"problem": "The run never finishes.", "fix": "The app needs a file called output.txt with text in it. If your AI printed the answer but saved nothing, press Stop, then Start, and send the line again."},
-        {"problem": "Your AI will not start.", "fix": "Open Settings, go to the Setup group and check the command. Type the same command in a normal terminal to confirm that it works."}
+        {"problem": "Your AI reports a temporary error, such as a busy service or a network problem.", "fix": "Wait a moment and ask it again in the AI window. If it keeps failing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."},
+        {"problem": "Nothing happens after you paste the line.", "fix": "Look at the AI window. If your AI is set to ask for approval, it may be waiting for you. Answer it there."},
+        {"problem": "The run never finishes.", "fix": "The app needs a file called output.txt with text in it. If your AI printed the answer but saved nothing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."},
+        {"problem": "Your AI window did not open by itself.", "fix": "Press Open a new AI chat. If it still will not start, open Settings, go to the Setup group and check the command. Type the same command in a normal terminal to confirm that it works."}
       ],
       "gate": {
         "runs": {"label": "Five runs saved", "ok": "All five runs are saved.", "fail": "{count} of 5 runs are saved. Keep going until all five are saved."},
-        "model": {"label": "Model name recorded", "ok": "", "fail": "Start your AI first, so the app can record the model."}
+        "model": {"label": "Model name recorded", "ok": "", "fail": "Open your AI window first, so the app can record the model."}
       }
     },
     "build": {
       "title": "Build the checker",
+      "cli_mode": "paste",
       "ui": {
         "first_look_blurb": "The first look runs your checker on your first saved answer. It shows you that the checker works. It is not your baseline.",
         "first_look_missing": "Your AI needs to write check.py first.",
@@ -65,9 +81,9 @@
             "The config sees only the saved answers. It never sees your prompt or your notes."
           ],
           "instructions": [
-            "Press Start. Your AI opens in your project folder.",
-            "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, use Start again.",
-            "When your AI is ready, press Send. It reads the skill and builds promptfooconfig.yaml, with one test for each of your five runs. If your AI asks for approvals, they appear in the terminal.",
+            "Your AI window opens by itself when you open this step, in your project folder. If it did not open, press Open a new AI chat.",
+            "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, press Open a new AI chat.",
+            "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. It reads the skill and builds promptfooconfig.yaml, with one test for each of your five runs. If your AI asks for approvals, they appear in the terminal.",
             "Read the NOT CHECKED list. Those criteria are not covered. Rewrite a threshold in test-cases.md with a number, a list of terms you choose, or a label, then ask your AI to update the config. Spend at most 3 minutes, or leave it and move on.",
             "Read the Interpretation choices. They are decisions the agent made for you, such as whole word or part of a word. Agree, or change test-cases.md.",
             "Press Run first look. The app runs the whole config with promptfoo, which takes a few seconds, and shows you the result for your first run. You will see PASS, FAIL or NOT CHECKED for each criterion.",
@@ -108,9 +124,9 @@
         "The checker sees only the saved answer. It never sees your prompt or your notes."
       ],
       "instructions": [
-        "Press Start. Your AI opens in your project folder.",
-        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, use Start again.",
-        "When your AI is ready, press Send. It reads the skill and builds check.py. If your AI asks for approvals, they appear in the terminal.",
+        "Your AI window opens by itself when you open this step, in your project folder. If it did not open, press Open a new AI chat.",
+        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, press Open a new AI chat.",
+        "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. It reads the skill and builds check.py. If your AI asks for approvals, they appear in the terminal.",
         "Read the NOT CHECKED list. Those criteria are not covered. Rewrite a threshold in test-cases.md with a number, a list of terms you choose, or a label. Spend at most 3 minutes, or leave it and move on.",
         "Read the Interpretation choices. They are decisions the agent made for you, such as whole word or part of a word. Agree, or change test-cases.md.",
         "Press Run first look. The app runs check.py on your first run. You will see PASS, FAIL or NOT CHECKED for each criterion.",
@@ -143,6 +159,7 @@
     },
     "fixtures": {
       "title": "Make fixtures",
+      "cli_mode": "paste",
       "tracks": {
         "promptfoo": {
           "why": [
@@ -152,9 +169,9 @@
             "The answer key comes later, after you lock your predictions, so nothing can influence them. A prediction is only useful if you commit to it first."
           ],
           "instructions": [
-            "Press Start. A new chat opens in the fixtures folder.",
-            "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, use Start again.",
-            "When your AI is ready, press Send. If your AI asks for approvals, they appear in the terminal.",
+            "Your AI window opens by itself when you open this step. It is a new chat in the fixtures folder. If it did not open, press Open a new AI chat.",
+            "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, press Open a new AI chat.",
+            "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. If your AI asks for approvals, they appear in the terminal.",
             "It writes fixture-bad.txt and fixture-polished-but-wrong.txt. A long approval request may not fit in the terminal, so scroll up to read all of it before you answer.",
             "Press Check my work. The app copies the two fixtures into your project. The next step adds them to your config."
           ]
@@ -168,9 +185,9 @@
         "The answer key comes later, after you lock your predictions, so nothing can influence them. A prediction is only useful if you commit to it first."
       ],
       "instructions": [
-        "Press Start. A new chat opens in the fixtures folder.",
-        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, use Start again.",
-        "When your AI is ready, press Send. If your AI asks for approvals, they appear in the terminal.",
+        "Your AI window opens by itself when you open this step. It is a new chat in the fixtures folder. If it did not open, press Open a new AI chat.",
+        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, press Open a new AI chat.",
+        "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. If your AI asks for approvals, they appear in the terminal.",
         "It writes fixture-bad.txt and fixture-polished-but-wrong.txt. A long approval request may not fit in the terminal, so scroll up to read all of it before you answer.",
         "Press Check my work. The app copies the two fixtures into your project."
       ],
@@ -178,7 +195,7 @@
       "folder_label": "Fixtures folder (test cases, prompt and one skill only)",
       "ui": {
         "example_heading": "If your AI cannot make usable fixtures",
-        "example_blurb": "These two files are the Practice task's own fixtures. They fit its test cases only, which is why this is offered only for the Practice task. Use them if your AI could not write usable fixtures. Then press Check my work as usual. No answer key is written now: it is still written after you lock your predictions. Pressing Start again clears them.",
+        "example_blurb": "These two files are the Practice task's own fixtures. They fit its test cases only, which is why this is offered only for the Practice task. Use them if your AI could not write usable fixtures. Then press Check my work as usual. No answer key is written now: it is still written after you lock your predictions. Opening a new AI chat clears them.",
         "example_button": "Use the example's fixtures",
         "example_confirm_title": "Replace the fixtures?",
         "example_confirm_body": "The fixtures folder already has text in it. This replaces it with the Practice task's two fixtures.",
@@ -186,7 +203,7 @@
       },
       "troubleshooting": [
         {"problem": "The agent cannot read the skill file.", "fix": "Paste the text of SKILL.md into the terminal and add \"Follow these instructions\" before the line."},
-        {"problem": "The fixtures look nothing like your task.", "fix": "Tell your AI what the output should look like, press Stop, then Start, and run this step again."},
+        {"problem": "The fixtures look nothing like your task.", "fix": "Tell your AI what the output should look like, press Open a new AI chat, and paste the line again."},
         {"problem": "You chose the Practice task and the fixtures came out empty or unusable.", "fix": "Press Stop. Then press Use the example's fixtures, under the list of files. It saves the example's own two fixtures in the fixtures folder, and writes no answer key. Press Check my work next. This works only with the Practice task, because those two files fit its test cases only. With My own task, use the entry above instead."},
         {"problem": "A file is missing.", "fix": "Look at the terminal. If your AI is set to ask for approval, it may be waiting for you. Answer it there, then press Check my work again."},
         {"problem": "Your AI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
@@ -200,6 +217,7 @@
     },
     "fixtures-config": {
       "title": "Add the fixtures to the config",
+      "cli_mode": "paste",
       "goal": "Have your AI add your fixtures to the config as tests, so promptfoo can run them.",
       "why": [
         "The fixtures were written in a separate folder, so they could not see your config. Now they join it as two more tests, named fixture-bad and fixture-polished-but-wrong.",
@@ -208,9 +226,9 @@
         "The answer key does not exist yet. It is written after you lock your predictions, so nothing can influence them."
       ],
       "instructions": [
-        "Press Start. Your AI opens in your project folder, where your two fixtures are now saved.",
-        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, use Start again.",
-        "When your AI is ready, press Send. Any approval requests appear in the terminal, and you answer them there.",
+        "Your AI window opens by itself when you open this step, in your project folder, where your two fixtures are now saved. If it did not open, press Open a new AI chat.",
+        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, press Open a new AI chat.",
+        "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. Any approval requests appear in the terminal, and you answer them there.",
         "The page shows whether both test names are now in the config.",
         "Press Check my work."
       ],
@@ -233,7 +251,7 @@
       ],
       "gate": {
         "config": {"label": "promptfooconfig.yaml exists", "ok": "", "fail": "promptfooconfig.yaml was not found in your project folder. Ask your AI to write it, then press Check my work again."},
-        "tests": {"label": "Both fixtures are tests in the config", "ok": "", "fail": "Not in the config yet: {missing}. Press Send so your AI adds them, with exactly those names."},
+        "tests": {"label": "Both fixtures are tests in the config", "ok": "", "fail": "Not in the config yet: {missing}. Press Copy above the AI window, paste the line into your AI window and press Enter, so your AI adds them, with exactly those names."},
         "runs_kept": {"label": "Your five runs are still tests", "ok": "", "fail": "These tests are missing from the config: {missing}. Ask your AI to put them back and change nothing else."},
         "scan": {"label": "Rules only", "ok": "promptfooconfig.yaml uses rules only, with the echo provider.", "fail": "{messages}"},
         "no_key_in_project": {"label": "No answer key in your project", "ok": "", "fail": "An answer-key.md is in your project's fixtures folder. Delete it, then press Check my work again."}
@@ -241,6 +259,7 @@
     },
     "readback": {
       "title": "Read it back",
+      "cli_mode": "paste",
       "tracks": {
         "promptfoo": {
           "goal": "Have a new chat explain, with evidence, what your config really does. Then say Yes or No for each criterion.",
@@ -251,8 +270,8 @@
             "The example files are evidence, not just a description."
           ],
           "instructions": [
-            "Press Start. A new chat opens in your project folder.",
-            "When your AI is ready, press Send. It writes small example files, adds them to the config as examples and runs the config on them.",
+            "Your AI window opens by itself when you open this step, in your project folder. If it did not open, press Open a new AI chat.",
+            "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. It writes small example files, adds them to the config as examples and runs the config on them.",
             "A long approval request may not fit in the terminal. Scroll up to read all of it before you answer.",
             "For each criterion, answer Yes or No: is this what I meant?",
             "Pick one interpretation choice you did not know was a choice, and decide whether you agree. Write it in the note if you like.",
@@ -263,7 +282,7 @@
           "troubleshooting": [
             {"problem": "The agent cannot read the skill file.", "fix": "Paste the text of SKILL.md into the terminal and add \"Follow these instructions\" before the line."},
             {"problem": "The agent changed promptfooconfig.yaml to clear a mismatch.", "fix": "Mismatches are findings. Ask it to undo the change and report the mismatch instead."},
-            {"problem": "No example files appeared.", "fix": "Press Send again. If your AI asks for approvals, answer them in the terminal. The files go in the examples folder."},
+            {"problem": "No example files appeared.", "fix": "Paste the line into your AI window again. If your AI asks for approvals, answer them in the terminal. The files go in the examples folder."},
             {"problem": "The config reports an error when your AI runs it.", "fix": "Paste the error into the terminal and ask your AI to fix it without changing any threshold."},
             {"problem": "A label check fails on an example that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. Tell your AI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\" Then ask it to run the examples again."},
             {"problem": "Your AI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
@@ -278,8 +297,8 @@
         "The example files are evidence, not just a description."
       ],
       "instructions": [
-        "Press Start. A new chat opens in your project folder.",
-        "When your AI is ready, press Send. It writes small example files and runs the checker on them.",
+        "Your AI window opens by itself when you open this step, in your project folder. If it did not open, press Open a new AI chat.",
+        "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. It writes small example files and runs the checker on them.",
         "A long approval request may not fit in the terminal. Scroll up to read all of it before you answer.",
         "For each criterion, answer Yes or No: is this what I meant?",
         "Pick one interpretation choice you did not know was a choice, and decide whether you agree. Write it in the note if you like.",
@@ -293,11 +312,11 @@
         {"problem": "The agent changed check.py to clear a mismatch.", "fix": "Mismatches are findings. Ask it to undo the change and report the mismatch instead."},
         {"problem": "Your AI says python was not found.", "fix": "Ask your AI to run check.py with py instead of python. If neither works, ask it to write the example files anyway, and say what it expects check.py to print for each. The step needs only the files, and the app runs check.py itself in later steps."},
         {"problem": "A label check fails on an example that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. Tell your AI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\" Then ask it to run the examples again."},
-        {"problem": "No example files appeared.", "fix": "Press Send again. If your AI asks for approvals, answer them in the terminal. The files go in the examples folder."},
+        {"problem": "No example files appeared.", "fix": "Paste the line into your AI window again. If your AI asks for approvals, answer them in the terminal. The files go in the examples folder."},
         {"problem": "Your AI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
       ],
       "gate": {
-        "examples": {"label": "Example files written", "ok": "", "fail": "No examples/c*-pass.txt file was found. Press Send and let the agent write them."},
+        "examples": {"label": "Example files written", "ok": "", "fail": "No examples/c*-pass.txt file was found. Paste the line into your AI window and let the agent write them."},
         "answers": {"label": "Yes or No for every criterion", "ok": "", "fail": "Still to answer: {missing}."}
       }
     },
@@ -327,6 +346,7 @@
     },
     "key": {
       "title": "Write the answer key",
+      "cli_mode": "paste",
       "tracks": {
         "promptfoo": {
           "why": [
@@ -343,9 +363,9 @@
         "The key judges each fixture against your requirements, not against what the checker happens to do."
       ],
       "instructions": [
-        "Press Start. A new chat opens in the answer key folder.",
-        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, use Start again.",
-        "When your AI is ready, press Send. If your AI asks for approvals, they appear in the terminal. A long approval request may not fit, so scroll up to read all of it before you answer.",
+        "Your AI window opens by itself when you open this step, in the answer key folder. It is a new chat. If it did not open, press Open a new AI chat.",
+        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No. If your AI exits, press Open a new AI chat.",
+        "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. If your AI asks for approvals, they appear in the terminal. A long approval request may not fit, so scroll up to read all of it before you answer.",
         "Your AI may show the key as it writes it. That is fine now, because your predictions are locked.",
         "Press Check my work. The app seals the key away from your project folder. You will read it in the next step, after the checker has run."
       ],
@@ -353,13 +373,13 @@
       "folder_label": "Answer key folder (test cases, prompt, one skill and the two fixtures only)",
       "troubleshooting": [
         {"problem": "The agent cannot read the skill file.", "fix": "Paste the text of SKILL.md into the terminal and add \"Follow these instructions\" before the line."},
-        {"problem": "The agent changed a fixture.", "fix": "Press Stop, then Start, and send the line again. The app restores both fixtures when you start."},
+        {"problem": "The agent changed a fixture.", "fix": "Press Open a new AI chat, wait until it is ready, then copy and paste the line again. The app restores both fixtures when the window opens."},
         {"problem": "The file is missing.", "fix": "Look at the terminal. If your AI is set to ask for approval, it may be waiting for you. Answer it there, then press Check my work again."},
         {"problem": "Your AI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
       ],
       "gate": {
         "key": {"label": "Answer key written", "ok": "", "fail": "answer-key.md was not found, or it is empty."},
-        "fixtures_unchanged": {"label": "Fixtures unchanged", "ok": "", "fail": "A fixture changed during this step. Press Stop, then Start, and send the line again."},
+        "fixtures_unchanged": {"label": "Fixtures unchanged", "ok": "", "fail": "A fixture changed during this step. Press Open a new AI chat, wait until it is ready, then copy and paste the line again."},
         "no_key_in_project": {"label": "No answer key in your project", "ok": "", "fail": "An answer-key.md is in your project's fixtures folder. Delete it, then press Check my work again."}
       }
     },
@@ -387,7 +407,7 @@
             {"problem": "The exit code is not 0.", "fix": "That is normal. promptfoo exits with a non-zero code whenever any criterion fails or is NOT CHECKED."},
             {"problem": "Every test shows as failed.", "fix": "That is normal while any criterion is NOT CHECKED. That criterion fails on purpose in every test, so promptfoo marks every test as failed. Look at the grid: it shows each criterion on its own, and the other criteria still pass or fail on their merits."},
             {"problem": "The run reports an error.", "fix": "Read the message and the raw output. promptfooconfig.yaml may have an error. Go back to your AI and ask it to fix the error without changing any threshold."},
-            {"problem": "A label check fails on a fixture that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. If it is a surprise, classify it as the config reading your threshold differently than you meant. In the next step, add a short note to that criterion in test-cases.md saying that a Windows line ending after the label is fine. Then press Start and Send, and tell your AI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\""},
+            {"problem": "A label check fails on a fixture that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. If it is a surprise, classify it as the config reading your threshold differently than you meant. In the next step, add a short note to that criterion in test-cases.md             saying that a Windows line ending after the label is fine. Then open that step, paste its line into your AI window, and tell your AI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\""},
             {"problem": "The run takes a long time.", "fix": "Wait. A run normally takes a few seconds. If it takes more than 10 minutes, the app stops it and says so. Then press Run checker again."},
             {"problem": "The polished fixture passed everything.", "fix": "Good: you found a gap. Read the answer key, then fix the threshold that should catch it in the next step."}
           ],
@@ -411,7 +431,7 @@
       "troubleshooting": [
         {"problem": "The exit code is 1.", "fix": "That is normal. It is 1 whenever any criterion fails or is NOT CHECKED."},
         {"problem": "The run reports an error.", "fix": "Read the raw output. check.py may have crashed. Go back to your AI and ask it to fix the error without changing any threshold."},
-        {"problem": "A label check fails on a fixture that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. If it is a surprise, classify it as the script reading your threshold differently than you meant. In the next step, add a short note to that criterion in test-cases.md saying that a Windows line ending after the label is fine. Then press Start and Send, and tell your AI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\""},
+        {"problem": "A label check fails on a fixture that looks right.", "fix": "Files written on Windows end each line with two hidden characters, a carriage return and a line feed (\\r\\n), and a check that looks for a label at the end of a line can miss it. If it is a surprise, classify it as the script reading your threshold differently than you meant. In the next step, add a short note to that criterion in test-cases.md         saying that a Windows line ending after the label is fine. Then open that step, paste its line into your AI window, and tell your AI in the terminal: \"Allow for \\r\\n line endings in the label checks. Do not change any threshold.\""},
         {"problem": "The polished fixture passed everything.", "fix": "Good: you found a gap. Read the answer key, then fix the threshold that should catch it in the next step."}
       ],
       "gate": {
@@ -421,8 +441,9 @@
     },
     "fix": {
       "title": "Fix the spec",
+      "cli_mode": "paste",
       "ui": {
-        "edit_blurb": "Fix the spec, not the checker. Reword the threshold here, save, then press Send to AI so your AI updates check.py to match.",
+        "edit_blurb": "Fix the spec, not the checker. Reword the threshold here, save, then copy the line below and paste it into your AI window so your AI updates check.py to match.",
         "flag_checker": "check.py updated after that change"
       },
       "tracks": {
@@ -436,7 +457,8 @@
           "instructions": [
             "Read the reason on each surprise. If the bad fixture passes something it should fail, the threshold is too loose. If the polished fixture passes everything, tighten the threshold that should catch what it gets wrong.",
             "Edit test-cases.md here and save it. Change the wording of the threshold.",
-            "Press Start. When your AI is ready, press Send. It updates only the assertions whose threshold changed.",
+            "Your AI window opens by itself when you open this step, in your project folder. If it did not open, press Open a new AI chat.",
+            "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. It updates only the assertions whose threshold changed.",
             "A long approval request may not fit in the terminal. Scroll up to read all of it before you answer.",
             "Press Run both fixtures. The bad fixture should fail more than half of its checked criteria.",
             "The polished fixture should fail at least one criterion. If you think it should pass, write why in the box.",
@@ -453,12 +475,12 @@
             {"problem": "Your AI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal."}
           ],
           "gate": {
-            "checker_changed": {"label": "promptfooconfig.yaml updated after that", "fail": "promptfooconfig.yaml has not changed since your last edit to test-cases.md. Press Start, then Send."},
+            "checker_changed": {"label": "promptfooconfig.yaml updated after that", "fail": "promptfooconfig.yaml has not changed             since your last edit to test-cases.md. Open a new AI chat, wait until it is ready, then copy and paste the line."},
             "scan": {"label": "Rules only", "ok": "promptfooconfig.yaml uses rules only, with the echo provider."},
             "nudge_check_only": {"text": "You changed promptfooconfig.yaml, but test-cases.md is the same as when this step began. Fix the spec, not the config. Change the threshold in test-cases.md, then ask your AI to update promptfooconfig.yaml to match."}
           },
           "ui": {
-            "edit_blurb": "Fix the spec, not the config. Reword the threshold here, save, then press Send to AI so your AI updates promptfooconfig.yaml to match.",
+            "edit_blurb": "Fix the spec, not the config. Reword the threshold here, save, then copy the line below and paste it into your AI window so your AI updates promptfooconfig.yaml to match.",
             "flag_checker": "promptfooconfig.yaml updated after that change"
           }
         }
@@ -472,7 +494,8 @@
       "instructions": [
         "Read the reason on each surprise. If the bad fixture passes something it should fail, the threshold is too loose. If the polished fixture passes everything, tighten the threshold that should catch what it gets wrong.",
         "Edit test-cases.md here and save it. Change the wording of the threshold.",
-        "Press Start. When your AI is ready, press Send. It updates only the functions whose threshold changed.",
+        "Your AI window opens by itself when you open this step, in your project folder. If it did not open, press Open a new AI chat.",
+        "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. It updates only the functions whose threshold changed.",
         "A long approval request may not fit in the terminal. Scroll up to read all of it before you answer.",
         "Press Run both fixtures. The bad fixture should fail more than half of its checked criteria.",
         "The polished fixture should fail at least one criterion. If you think it should pass, write why in the box.",
@@ -491,7 +514,7 @@
       ],
       "gate": {
         "spec_changed": {"label": "test-cases.md changed", "ok": "", "fail": "test-cases.md is the same as when this step began. Change a threshold first."},
-        "checker_changed": {"label": "check.py updated after that", "ok": "", "fail": "check.py has not changed since your last edit to test-cases.md. Press Start, then Send."},
+        "checker_changed": {"label": "check.py updated after that", "ok": "", "fail": "check.py has not changed since your last edit to test-cases.md. Open a new AI chat, wait until it is ready, then copy and paste the line."},
         "scan": {"label": "No network or AI calls", "ok": "check.py uses rules only.", "fail": "{messages}"},
         "rerun": {"label": "Both fixtures run again", "ok": "", "fail": "Press Run both fixtures after your last change."},
         "bad_fails": {"label": "Bad fixture fails most criteria", "ok": "", "fail": "The bad fixture should fail more than half of its checked criteria."},
@@ -501,6 +524,7 @@
             },
             "baseline": {
               "title": "Log your baseline",
+              "cli_mode": "paste",
       "ui": {
         "count_blurb": "The app runs your checker on all five runs itself, with no AI. This is the number your log must match.",
         "no_checker": "There is no check.py to run.",
@@ -517,9 +541,9 @@
             "The app runs your config on the five runs itself, with promptfoo and no AI, and compares its numbers with your log. Your AI writes the log. The app only reads it and never changes it."
           ],
           "instructions": [
-            "The line the app types names the model your AI used for your five runs. The app recorded it when it started your AI.",
-            "Press Start my AI. Your AI opens in your project folder. If it asks whether to trust the folder, choose the yes option. The highlighted default may be No.",
-            "When your AI is ready, press Send to AI. It runs your config on your five runs and adds an Iteration 0 entry to iteration-log.md. Any approval requests appear in the terminal, and you answer them there.",
+            "The line you paste names the model your AI used for your five runs. The app recorded it when it started your AI.",
+            "Your AI window opens by itself when you open this step, in your project folder. If it asks whether to trust the folder, choose the yes option. The highlighted default may be No. If it did not open, press Open a new AI chat.",
+            "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. It runs your config on your five runs and adds an Iteration 0 entry to iteration-log.md. Any approval requests appear in the terminal, and you answer them there.",
             "Press Run my checker on the five runs. The app runs your promptfoo config itself and shows the pass rate for each criterion. A non-zero exit code is normal. It only means at least one check failed or is NOT CHECKED.",
             "Compare the app's count with the entry your AI wrote. The numbers should be the same. If your AI logged a different number, say so in the terminal and ask it to correct the entry, or fix the number yourself in iteration-log.md. The app never edits your log.",
             "Press Check my work.",
@@ -528,7 +552,7 @@
           ],
           "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The runs are the tests named run-1 to run-5. The prompt file is prompt-v0.md. The model was {model}.",
           "troubleshooting": [
-            {"problem": "Your AI cannot read the skill file.", "fix": "Open skills\\build-promptfoo-config\\SKILL.md in your project folder and copy all of its text. Paste it into the terminal, add the words Follow these instructions, and press Enter. Then press Send to AI."},
+            {"problem": "Your AI cannot read the skill file.", "fix": "Open skills\\build-promptfoo-config\\SKILL.md in your project folder and copy all of its text.             Paste it into the terminal, add the words Follow these instructions, and press Enter."},
             {"problem": "The app says promptfoo is not downloaded.", "fix": "Open Settings, go to the Setup group, press Install for promptfoo, and choose Check everything again. Then press Run my checker on the five runs."},
             {"problem": "The config has an error.", "fix": "Paste the error into the terminal and ask your AI to fix it without changing any threshold. Then press Run my checker on the five runs again."},
             {"problem": "Your AI wants an llm-rubric check or an API key.", "fix": "Say no. The checks must be rules only, and no API key is needed. The scan will stop the app's own run until the check is gone."},
@@ -539,7 +563,7 @@
             {"problem": "The log has two Iteration 0 entries.", "fix": "Keep one. Open iteration-log.md, delete the older entry, and press Check my work again."},
             {"problem": "Your AI logged a pass rate for a NOT CHECKED criterion.", "fix": "A criterion that was not scored cannot have a rate. Ask your AI to list it under Not checked, and write not checked in its table row."},
             {"problem": "Your AI logged the fixtures or the example files.", "fix": "Only your five runs belong in the baseline. Ask your AI to log only the tests named run-1 to run-5."},
-            {"problem": "Your AI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Stop, then Start my AI, and send the line again."}
+            {"problem": "Your AI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."}
           ],
           "gate": {
             "ran": {"ok": "The app's count matches your current runs and promptfooconfig.yaml."},
@@ -564,9 +588,9 @@
                 "The app runs your checker on the five runs itself, with no AI, and compares its numbers with your log. Your AI writes the log. The app only reads it and never changes it."
               ],
               "instructions": [
-                "The line the app types names the model your AI used for your five runs. The app recorded it when it started your AI.",
-                "Press Start my AI. Your AI opens in your project folder. If it asks whether to trust the folder, choose the yes option. The highlighted default may be No.",
-                "When your AI is ready, press Send to AI. It runs check.py on your five runs and adds an Iteration 0 entry to iteration-log.md. Any approval requests appear in the terminal, and you answer them there.",
+                "The line you paste names the model your AI used for your five runs. The app recorded it when it started your AI.",
+                "Your AI window opens by itself when you open this step, in your project folder. If it asks whether to trust the folder, choose the yes option. The highlighted default may be No. If it did not open, press Open a new AI chat.",
+                "Wait until your AI is ready for a message. Press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. It runs check.py on your five runs and adds an Iteration 0 entry to iteration-log.md. Any approval requests appear in the terminal, and you answer them there.",
                 "Press Run my checker on the five runs. The app runs check.py itself and shows the pass rate for each criterion. Exit code 1 is normal. It only means at least one check failed or is NOT CHECKED.",
                 "Compare the app's count with the entry your AI wrote. The numbers should be the same. If your AI logged a different number, say so in the terminal and ask it to correct the entry, or fix the number yourself in iteration-log.md. The app never edits your log.",
                 "Press Check my work.",
@@ -579,7 +603,7 @@
                 "missing_runs": "These run files are missing or empty: {files}. Your five runs must all be saved in the runs folder before the app can count them."
               },
               "troubleshooting": [
-                {"problem": "Your AI cannot read the skill file.", "fix": "Open skills\\build-eval-script\\SKILL.md in your project folder and copy all of its text. Paste it into the terminal, add the words Follow these instructions, and press Enter. Then press Send to AI."},
+                {"problem": "Your AI cannot read the skill file.", "fix": "Open skills\\build-eval-script\\SKILL.md in your project folder and copy all of its text.                 Paste it into the terminal, add the words Follow these instructions, and press Enter."},
                 {"problem": "Your AI says python was not found.", "fix": "Ask your AI to run the checker with py instead of python. If neither works, you can still write the Iteration 0 entry yourself in iteration-log.md. Copy the format from Mode 3 in skills\\build-eval-script\\SKILL.md and use the numbers from the app's own count."},
                 {"problem": "check.py crashes.", "fix": "Paste the error into the terminal and ask your AI to fix it without changing any threshold. Then press Run my checker on the five runs again."},
                 {"problem": "Your AI wants to call an AI model inside the script.", "fix": "Say no. The script must be rules only. The scan will stop the app's own run until the call is gone."},
@@ -588,10 +612,10 @@
                 {"problem": "You changed a threshold after you logged.", "fix": "The logged numbers used the earlier wording. Ask your AI to update check.py, press Run my checker on the five runs again, then ask your AI to log again and choose to replace Iteration 0, so the log holds one entry that matches."},
                 {"problem": "The log has two Iteration 0 entries.", "fix": "Keep one. Open iteration-log.md, delete the older entry, and press Check my work again."},
                 {"problem": "Your AI logged a pass rate for a NOT CHECKED criterion.", "fix": "A criterion that was not scored cannot have a rate. Ask your AI to list it under Not checked, and write not checked in its table row."},
-                {"problem": "Your AI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Stop, then Start my AI, and send the line again."}
+                {"problem": "Your AI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."}
               ],
               "gate": {
-                "log": {"label": "iteration-log.md exists", "ok": "", "fail": "iteration-log.md was not found in your project folder. Press Start my AI, then Send to AI, so your AI writes it."},
+                "log": {"label": "iteration-log.md exists", "ok": "", "fail": "iteration-log.md was not found in your project folder. Copy the line and paste it into your AI window, so your AI writes it."},
                 "entry": {"label": "Iteration 0 entry found", "ok": "", "fail": "{problem}"},
                 "ran": {"label": "The app counted your five runs", "ok": "The app's count matches your current runs and check.py.", "fail": "{problem}"},
                 "counts": {"label": "Pass counts match the app's count", "ok": "Every pass count and the overall total match.", "fail": "{problem}"},
@@ -599,8 +623,8 @@
                 "runs": {"label": "The log says 5 runs", "ok": "", "fail": "{problem}"},
                 "problems": {
                   "no_log": "There is no log to read yet.",
-                  "unusable": "{error} Press Send to AI again so your AI writes the entry, or fix iteration-log.md yourself.",
-                  "no_entry": "The log has no Iteration 0 entry. Press Send to AI so your AI adds one that starts with the heading Iteration 0: baseline.",
+                  "unusable": "{error} Paste the line into your AI window again so your AI writes the entry, or fix iteration-log.md yourself.",
+                                    "no_entry": "The log has no Iteration 0 entry. Paste the line into your AI window again so your AI adds one that starts with the heading Iteration 0: baseline.",
                   "two_entries": "The log has more than one Iteration 0 entry. Keep one, delete the other in iteration-log.md, then press Check my work.",
                   "not_run": "The app has not counted your runs yet. Press Run my checker on the five runs.",
                   "stale": "check.py or a run file changed after the app counted. Press Run my checker on the five runs again.",
@@ -625,6 +649,7 @@
                             },
                             "live": {
                               "title": "Optional: live mode",
+                              "cli_mode": "paste",
                               "optional": true,
                               "goal": "Optional. Have promptfoo write fresh outputs through your own signed-in AI tool, and score them with the same checks. You can skip this step: the course is complete without it.",
                               "why": [
@@ -636,8 +661,8 @@
                               "instructions": [
                                 "Read the warning below. It says what live mode does to your AI, including which AI tool the helper script puts into auto mode.",
                                 "Tick the box to say you have read it, then choose the AI tool you use. Live mode supports only the AI tools in the list.",
-                                "The line the app types names the model your AI used for your five runs. The app recorded it when it started your AI.",
-                                "Press Start my AI, and when it is ready press Send to AI. Your AI copies agent-provider.js next to your config, writes promptfooconfig.live.yaml with the same checks, and runs it. Any approval requests appear in the terminal, and you answer them there. The app never answers for you.",
+                                "The line you paste names the model your AI used for your five runs. The app recorded it when it started your AI.",
+                                "Press Open a new AI chat. This step never opens your AI window by itself. When your AI is ready for a message, press Copy above the AI window, click in the AI window, paste with Ctrl+V and press Enter. Your AI copies agent-provider.js next to your config, writes promptfooconfig.live.yaml with the same checks, and runs it. Any approval requests appear in the terminal, and you answer them there. The app never answers for you.",
                                 "Do not ask your AI to log these runs. Your baseline stays the one from your saved runs.",
                                 "Press Check my work. The app only reads your files. It does not run the live config.",
                                 "Read the live scores as your AI shows them. They can differ from run to run, and that is expected."
@@ -650,8 +675,8 @@
                                 {"id": "devin", "label": "Devin CLI", "note": "The helper runs Devin CLI with --permission-mode auto. That turns on Devin's auto mode for each live run, so Devin may act without asking you."}
                               ],
                               "messages": {
-                                "not_acknowledged": "Read the warning and tick the box that says you have read it, then press Start my AI.",
-                                "no_cli": "Choose the AI tool you use from the list, then press Start my AI."
+                                "not_acknowledged": "Read the warning and tick the box that says you have read it, then press Open a new AI chat.",
+                                "no_cli": "Choose the AI tool you use from the list, then press Open a new AI chat."
                               },
                               "ui": {
                                 "warning_title": "Read this before you start live mode",
@@ -677,7 +702,7 @@
                               },
                               "troubleshooting": [
                                 {"problem": "The agent cannot read the skill file.", "fix": "Paste the text of SKILL.md into the terminal and add \"Follow these instructions\" before the line."},
-                                {"problem": "Live mode says \"Not logged in\" or \"No agent found\".", "fix": "Choose the AI tool you really use in the list above, and press Send to AI again. The helper starts that AI tool by its short name, so the name must work in a normal terminal. If it says Not logged in, sign in to that AI tool once in a normal terminal, then press Send to AI again."},
+                                {"problem": "Live mode says \"Not logged in\" or \"No agent found\".", "fix": "Choose the AI tool you really use in the list above, and paste the line into your AI window again. The helper starts that AI tool by its short name, so the name must work in a normal terminal. If it says Not logged in, sign in to that AI tool once in a normal terminal, then paste the line again."},
                                 {"problem": "The agent adds an llm-rubric check or asks for an API key.", "fix": "Say no. The checks must be rules only, and live mode needs no API key. The scan will stop you until the check is gone."},
                                 {"problem": "Every test shows as failed.", "fix": "That is normal while any criterion is NOT CHECKED. That criterion fails on purpose in every test, so promptfoo marks every test as failed. The summary shows each criterion on its own."},
                                 {"problem": "The live scores are different each time.", "fix": "That is expected. Every live run is a new answer, so the scores change. They are a sample and never replace your baseline."},
@@ -685,14 +710,14 @@
                                 {"problem": "Your prompt file contains double curly brackets.", "fix": "promptfoo reads {{ and {% as template syntax, so it may change those parts of your prompt before your AI sees them. Ask your AI in the terminal to show you where they are, and keep that in mind when you read the live scores. Your prompt file stays as it is."},
                                 {"problem": "Check my work says promptfooconfig.yaml or iteration-log.md changed.", "fix": "Live mode must not change them. Ask your AI to undo that change, or restore the file yourself, then press Check my work again. Your baseline stays as it was."},
                                 {"problem": "Check my work says agent-provider.js is not the copy that came with the course.", "fix": "Ask your AI to copy agent-provider.js again from skills\\build-promptfoo-config next to your config, without editing it. Then press Check my work again."},
-                                {"problem": "Your AI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Stop, then Start my AI, and send the line again."}
+                                {"problem": "Your AI reports a temporary error.", "fix": "Wait a moment and ask it again in the terminal. If it keeps failing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."}
                               ],
                               "gate": {
                                 "acknowledged": {"label": "Warning read", "ok": "", "fail": "Read the warning and tick the box that says you have read it."},
-                                "config": {"label": "promptfooconfig.live.yaml exists", "ok": "", "fail": "promptfooconfig.live.yaml was not found in your project folder. Press Start my AI, then Send to AI, so your AI writes it."},
+                                "config": {"label": "promptfooconfig.live.yaml exists", "ok": "", "fail": "promptfooconfig.live.yaml was not found in your project folder. Press Copy and paste the line into your AI window, so your AI writes it."},
                                 "scan": {"label": "Only the helper, rules only", "ok": "promptfooconfig.live.yaml uses only the helper, and its checks are rules only.", "fail": "{messages}"},
                                 "provider": {"label": "agent-provider.js is unchanged", "ok": "", "fail": "agent-provider.js is missing from your project folder, or it is not the copy that came with the course. Ask your AI to copy it from skills\\build-promptfoo-config next to your config, without editing it."},
-                                "started": {"label": "Live mode was started here", "ok": "", "fail": "Press Start my AI first, so the app can note your files before live mode runs."},
+                                "started": {"label": "Live mode was started here", "ok": "", "fail": "Press Open a new AI chat first, so the app can note your files before live mode runs."},
                                 "main_unchanged": {"label": "promptfooconfig.yaml is unchanged", "ok": "", "fail": "promptfooconfig.yaml changed since you started live mode. Ask your AI to undo that change, then press Check my work again."},
                                 "log_unchanged": {"label": "iteration-log.md is unchanged", "ok": "", "fail": "iteration-log.md changed since you started live mode. Live mode never changes your baseline. Ask your AI to undo that change, then press Check my work again."}
                               }

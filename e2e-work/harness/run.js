@@ -209,10 +209,84 @@ async function stageSetup() {
   } finally { await browser.close(); }
 }
 
+// How many AI windows the stand-in has been launched as, read from its own event file (a harness-only record).
+function launchCount() {
+  if (!exists(EVENTS_FILE)) return 0;
+  return fs.readFileSync(EVENTS_FILE, 'utf8').split(/\r?\n/).filter(Boolean).filter((l) => { try { return JSON.parse(l).event === 'launch'; } catch { return false; } }).length;
+}
+
+// "Open a new AI chat": the participant's own start, and the only way to open a window after the automatic first one.
 async function startCli(page, label) {
   L.countSession(label);
   const resp = await L.clickAndWait(page, '#cli-start', '/api/step/start');
   if (!resp.ok()) throw new Error(`start failed: ${resp.status()}`);
+}
+
+// A Part 3 step opens its AI window by itself when the page shows it (the page calls /api/step/auto-start once).
+// `base` is launchCount() taken before the page opened. The window is counted as one session.
+async function awaitAutoStart(page, stepId, label, base) {
+  await L.waitFor(async () => { const s = await L.apiState(stepId); return s.terminal.running && s.step && s.step.id === stepId && s.step.cli.started; }, 20000, `${label}: the AI window to open by itself`);
+  await L.waitFor(async () => launchCount() > base, 20000, `${label}: the stand-in to be launched`);
+  await L.sleep(500);
+  L.countSession(label);
+  const s = await L.apiState(stepId);
+  L.assertion(`${label}: the AI window opened by itself, once`, s.terminal.running && launchCount() === base + 1, `launches ${launchCount() - base}`);
+  L.assertion(`${label}: the step no longer offers an automatic start`, s.step.cli.can_auto_start === false && s.step.cli.mode === 'paste');
+  await expectPasteView(page, stepId);
+}
+
+// The paste-mode head: the line to paste with a Copy button, "Open a new AI chat", and no Send or Start again.
+async function expectPasteView(page, stepId) {
+  const cli = (await L.apiState(stepId)).step.cli;
+  await L.waitFor(async () => (await page.locator('#cli-line').count()) === 1 && (await page.locator('#cli-line').innerText()).trim() === cli.line.trim(), 15000, `${stepId}: the line to paste on the page`);
+  L.assertion(`${stepId}: the line is shown in the page for the participant to copy`, (await page.locator('#copy-paste').count()) === 1, cli.line);
+  L.assertion(`${stepId}: no Send to AI and no Start again button`, (await page.locator('#cli-send').count()) === 0 && (await page.locator('#cli-retry').count()) === 0);
+  L.assertion(`${stepId}: the start button is Open a new AI chat`, (await page.locator('#cli-start').innerText()).trim() === 'Open a new AI chat');
+}
+
+// A step whose automatic start may or may not be left: it opens by itself when the page shows it and the step was
+// never started; after that (a restart in between, or an earlier window), "Open a new AI chat" is the participant's way.
+// A window that opened by itself on Continue in the stage before is adopted (it was counted there).
+async function openAi(page, stepId, label, base) {
+  if (state.carry === stepId) {
+    state.carry = null;
+    L.saveState(state);
+    await L.waitFor(async () => { const s = await L.apiState(stepId); return s.terminal.running && s.step.cli.started; }, 10000, `${label}: the AI window opened on Continue`);
+    await expectPasteView(page, stepId);
+    L.assertion(`${label}: the window that opened by itself on Continue is still the only one`, launchCount() === base, String(launchCount() - base));
+    return 'carried';
+  }
+  await L.sleep(800); // the page asks for the automatic start right after it draws the step
+  const s = await L.apiState(stepId);
+  if (s.terminal.running || s.step.cli.can_auto_start) { await awaitAutoStart(page, stepId, label, base); return 'auto'; }
+  await expectPasteView(page, stepId);
+  await startCli(page, label);
+  return 'button';
+}
+
+// Continue into a step that uses the AI: the next step is shown, so its window opens by itself right there.
+async function continueIntoAi(page, nextId, label) {
+  const base = launchCount();
+  await page.locator('#continue').click();
+  await awaitAutoStart(page, nextId, label, base);
+  state.carry = nextId;
+  L.saveState(state);
+}
+
+// What the participant does with Copy: paste the step's line into the AI window and press Enter. The app types nothing.
+async function pasteLine(stepId, label) {
+  const line = (await L.apiState(stepId)).step.cli.line;
+  const r = await postApi('/api/terminal/input', { data: Buffer.from(`${line}\r`).toString('base64') });
+  L.assertion(`${label}: the participant's paste was accepted`, r.status === 200, JSON.stringify(r.body));
+}
+
+// The app no longer types a step's line: Send is refused and an automatic start with a window open does nothing.
+async function expectSendRefused(stepId) {
+  const before = launchCount();
+  const send = await postApi('/api/step/send', { step: stepId });
+  L.assertion(`${stepId}: Send is refused as not supported`, send.status === 400 && send.body.error.code === 'not_supported', JSON.stringify(send.body));
+  const auto = await postApi('/api/step/auto-start', { step: stepId });
+  L.assertion(`${stepId}: asking again for an automatic start is harmless and starts nothing`, auto.status === 200 && launchCount() === before, `${auto.status} ${launchCount() - before}`);
 }
 
 async function waitCliRunningFalse() {
@@ -222,6 +296,7 @@ async function waitCliRunningFalse() {
 async function stageGenerate() {
   const { browser, page } = await L.openBrowser();
   try {
+    const base = launchCount();
     await openApp(page);
     await L.sleep(0);
     L.assertion('on generate step', /collect your answers/i.test(await heading(page)), await heading(page));
@@ -233,31 +308,58 @@ async function stageGenerate() {
     L.note('generate', `resuming at run ${firstRun}`);
     for (let n = firstRun; n <= 5; n += 1) {
       const tag = `generate-${n}`;
-      await page.locator('#cli-start').waitFor();
-      await L.waitFor(async () => (await page.locator('#cli-start').getAttribute('aria-disabled')) !== 'true', 15000, 'start button');
-      await startCli(page, `generate run ${n}`);
+      if (n === 1) {
+        // Run 1 opens by itself when the step is shown.
+        await awaitAutoStart(page, 'generate', 'generate run 1', base);
+      } else {
+        // Runs 2 to 5: nothing opens by itself; the participant opens a new chat.
+        const launches = launchCount();
+        await L.sleep(1500);
+        const idle = await L.apiState('generate');
+        L.assertion(`no window opened by itself before run ${n}`, !idle.terminal.running && launchCount() === launches && idle.step.cli.can_auto_start === false, `launches ${launchCount() - launches}`);
+        await page.locator('#cli-start').waitFor();
+        await L.waitFor(async () => (await page.locator('#cli-start').getAttribute('aria-disabled')) !== 'true', 15000, 'Open a new AI chat button');
+        await expectPasteView(page, 'generate');
+        await startCli(page, `generate run ${n}`);
+      }
       const tree = L.listTree(BLIND);
       L.assertion(`blind folder holds only prompt.md at start of run ${n}`, tree.length === 1 && tree[0] === 'prompt.md', tree.join(','));
       L.assertion('fixtures answer key absent', !exists(L.projectKeyPath()));
       await L.waitReady(page, tag);
 
       if (n === 1) {
-        // Stop, then Start again, before running: start-again-after-stop check.
+        await expectSendRefused('generate');
+        // Open a new AI chat asks first while the window runs; Cancel leaves the window alone.
+        const launches = launchCount();
+        await page.locator('#cli-start').click();
+        await page.locator('dialog.confirm').waitFor({ timeout: 5000 });
+        L.assertion('Open a new AI chat asks first while the AI window runs', /Open a new AI chat\?/.test(await page.locator('dialog.confirm').innerText()));
+        await page.locator('dialog.confirm').getByRole('button', { name: 'Cancel' }).click();
+        await L.sleep(800);
+        L.assertion('Cancel left the AI window alone', (await L.apiState()).terminal.running === true && launchCount() === launches);
+        // Stop, then come back to the step: nothing opens by itself a second time.
         await L.clickAndWait(page, '#cli-stop', '/api/step/stop');
         await waitCliRunningFalse();
-        await L.waitFor(async () => (await page.locator('#cli-retry').getAttribute('aria-disabled')) !== 'true', 10000, 'Start again enabled');
-        L.assertion('Start again is enabled after the CLI was stopped', true);
-        L.countSession('generate run 1 (Start again after stop)');
-        const r2 = await L.clickAndWait(page, '#cli-retry', '/api/step/start');
-        L.assertion('Start again restarts the CLI', r2.ok(), String(r2.status()));
+        await page.reload();
+        await L.enterPart(page);
+        await page.locator('#cli-start').waitFor({ timeout: 15000 });
+        await L.sleep(2000);
+        const revisit = await L.apiState('generate');
+        L.assertion('revisiting the step after Stop starts no second window', !revisit.terminal.running && launchCount() === launches && revisit.step.cli.can_auto_start === false, `launches ${launchCount() - launches}`);
+        await L.waitFor(async () => (await page.locator('#cli-start').getAttribute('aria-disabled')) !== 'true', 10000, 'Open a new AI chat enabled');
+        L.assertion('Open a new AI chat is enabled after the AI window was stopped', true);
+        L.countSession('generate run 1 (Open a new AI chat after stop)');
+        const r2 = await L.clickAndWait(page, '#cli-start', '/api/step/start');
+        L.assertion('Open a new AI chat opens the AI window again', r2.ok(), String(r2.status()));
+        await L.waitFor(async () => launchCount() > launches, 20000, 'the stand-in to be launched again');
+        L.assertion('exactly one more window was opened', launchCount() === launches + 1, String(launchCount() - launches));
         const tree2 = L.listTree(BLIND);
-        L.assertion('blind folder holds only prompt.md after Start again', tree2.length === 1 && tree2[0] === 'prompt.md', tree2.join(','));
+        L.assertion('blind folder holds only prompt.md after Open a new AI chat', tree2.length === 1 && tree2[0] === 'prompt.md', tree2.join(','));
         await L.waitReady(page, `${tag}-retry`);
         await L.shot(page, 'generate-live.png');
       }
 
-      const sendResp = await L.clickAndWait(page, '#cli-send', '/api/step/send');
-      L.assertion(`send ok run ${n}`, sendResp.ok(), String(sendResp.status()));
+      await pasteLine('generate', `generate run ${n}`);
       const runFile = path.join(PROJECT, 'runs', `run-${n}.txt`);
       await L.driveCli(page, tag, async ({ busy, idleMs, screen }) => {
         if (hasText(runFile) && !(await L.apiState()).terminal.running) return true;
@@ -283,8 +385,11 @@ async function stageGenerate() {
 async function stageRestart() {
   const { browser, page } = await L.openBrowser();
   try {
+    // Showing the build step opens its AI window by itself, once; the server's Quit then closes it.
+    const base = launchCount();
     await openApp(page);
     L.assertion('before restart: current step is build', (await L.apiState()).current_step === 'build');
+    await awaitAutoStart(page, 'build', 'restart: build opens its AI window by itself', base);
     await page.locator('#quit').click();
     await page.locator('dialog.confirm').getByRole('button', { name: 'Quit' }).click();
     await page.getByRole('heading', { name: 'eval-coach has stopped' }).waitFor({ timeout: 15000 });
@@ -295,8 +400,11 @@ async function stageRestart() {
   await L.startServer();
   const b2 = await L.openBrowser();
   try {
+    const afterQuit = launchCount();
     await openApp(b2.page);
+    await L.sleep(2000);
     const s = await L.apiState();
+    L.assertion('after restart: the step already started once, so no AI window opens by itself', !s.terminal.running && s.step.cli.can_auto_start === false && launchCount() === afterQuit, `launches ${launchCount() - afterQuit}`);
     L.assertion('after restart: configured and at build', s.configured === true && s.current_step === 'build', JSON.stringify({ c: s.configured, cur: s.current_step }));
     L.assertion('after restart: setup retained', s.setup.cli_command === L.CLI_COMMAND && /(eval|standin)-project/.test(s.setup.project_path), `${s.setup.cli_command} ${s.setup.project_path}`);
     const gen = await L.apiState('generate');
@@ -333,12 +441,14 @@ async function reloadCheck(page, tag) {
 async function stageBuild() {
   const { browser, page } = await L.openBrowser();
   try {
+    const base = launchCount();
     await openApp(page);
     await ensureHeading(page, /build/i);
-    await startCli(page, 'build');
+    await openAi(page, 'build', 'build', base);
     L.assertion('no answer key anywhere yet', !exists(L.projectKeyPath()) && !exists(L.sealedKeyPath()));
     await L.waitReady(page, 'build');
-    await L.clickAndWait(page, '#cli-send', '/api/step/send');
+    await expectSendRefused('build');
+    await pasteLine('build', 'build');
     const checker = path.join(PROJECT, L.PF ? 'promptfooconfig.yaml' : 'check.py');
     let reloaded = false;
     await L.driveCli(page, 'build', async ({ busy, idleMs, elapsedMs, screen }) => {
@@ -352,6 +462,7 @@ async function stageBuild() {
       return false;
     });
     L.assertion('CLI stream reload exercised', reloaded);
+    L.assertion('the reload did not open a second AI window', launchCount() === base + 1, String(launchCount() - base));
     L.assertion(`${path.basename(checker)} written`, exists(checker));
     await L.clickAndWait(page, '#cli-stop', '/api/step/stop');
     await waitCliRunningFalse();
@@ -387,7 +498,7 @@ async function fixturesRecovery(page, wf) {
   const names = ['fixture-bad.txt', 'fixture-polished-but-wrong.txt'];
   fs.writeFileSync(MODE_FILE, 'no-fixtures');
   try {
-    await L.clickAndWait(page, '#cli-send', '/api/step/send');
+    await pasteLine('fixtures', 'fixtures (nothing usable)');
     await L.driveCli(page, 'fixtures (nothing usable)', async ({ screen }) => /STAND-IN: no fixtures could be made/.test(screen));
   } finally { fs.rmSync(MODE_FILE, { force: true }); }
   L.assertion('recovery: the CLI made nothing usable', names.every((n) => !hasText(wf(n))), L.listTree(FIX_WORK).join(','));
@@ -421,20 +532,22 @@ async function stageFixtures() {
   const { browser, page } = await L.openBrowser({ tall: true });
   let stream = null;
   try {
-    await openApp(page);
-    await ensureHeading(page, /fixture/i);
     L.setCliFolder(FIX_WORK);
     stream = L.watchStream();
-    await startCli(page, 'fixtures');
+    const base = launchCount();
+    await openApp(page);
+    await ensureHeading(page, /fixture/i);
+    await openAi(page, 'fixtures', 'fixtures', base);
     const tree = L.listTree(FIX_WORK);
     L.assertion('fixtures-work holds only the 3 allowed files at start', JSON.stringify(tree) === JSON.stringify(['prompt-v0.md', 'skills/make-eval-fixtures/SKILL.md', 'test-cases.md']), tree.join(','));
     L.assertion('project has no fixtures answer key', !exists(L.projectKeyPath()));
     await L.waitReady(page, 'fixtures');
+    await expectSendRefused('fixtures');
     const wf = (n) => path.join(FIX_WORK, 'fixtures', n);
     if (!L.PF) {
       await fixturesRecovery(page, wf);
     } else {
-      await L.clickAndWait(page, '#cli-send', '/api/step/send');
+      await pasteLine('fixtures', 'fixtures');
       await L.driveCli(page, 'fixtures', async ({ busy, idleMs, screen }) => {
         if (hasText(wf('fixture-bad.txt')) && hasText(wf('fixture-polished-but-wrong.txt')) && !busy && idleMs > 8000) return true;
         if (!busy && idleMs > 60000) await L.stopRun(page, 'fixtures stalled', screen);
@@ -450,8 +563,7 @@ async function stageFixtures() {
     await L.waitFor(async () => !(await L.apiState()).terminal.running, 15000, 'CLI stopped after fixtures');
     L.assertion('progress.json holds no key or fixture text', (() => { const r = L.assertProgressClean(); return !r.keyHit && !r.fixtureHit; })());
     stream.check('fixtures session');
-    await page.locator('#continue').click();
-    await L.sleep(800);
+    await continueIntoAi(page, L.PF ? 'fixtures-config' : 'readback', `${L.PF ? 'fixtures-config' : 'readback'} (opens by itself on Continue)`);
   } finally { if (stream) stream.stop(); await browser.close(); }
 }
 
@@ -459,13 +571,15 @@ async function stageReadback() {
   const { browser, page } = await L.openBrowser({ tall: true });
   let stream = null;
   try {
-    await openApp(page);
-    await ensureHeading(page, /read/i);
     L.setCliFolder(PROJECT);
     stream = L.watchStream();
-    await startCli(page, 'readback');
+    const base = launchCount();
+    await openApp(page);
+    await ensureHeading(page, /read/i);
+    await openAi(page, 'readback', 'readback', base);
     await L.waitReady(page, 'readback');
-    await L.clickAndWait(page, '#cli-send', '/api/step/send');
+    await expectSendRefused('readback');
+    await pasteLine('readback', 'readback');
     const hasExample = () => fs.readdirSync(path.join(PROJECT, 'examples')).some((f) => /^c\d+-pass\.txt$/i.test(f));
     await L.driveCli(page, 'readback', async ({ busy, idleMs, screen }) => {
       if (hasExample() && !busy && idleMs > 12000) return true;
@@ -524,25 +638,26 @@ async function stagePredict() {
     await L.sleep(500);
     L.assertion('after lock, before run: API withholds answer key', ((await L.apiState('run')).step.data.answer_key_markdown ?? null) === null);
     await expectPassed(page, 'predict');
-    await page.locator('#continue').click();
-    await L.sleep(800);
+    await continueIntoAi(page, 'key', 'key (opens by itself on Continue)');
   } finally { await browser.close(); }
 }
 
 async function stageKey() {
   const { browser, page } = await L.openBrowser({ tall: true });
   try {
+    L.setCliFolder(KEY_WORK);
+    const base = launchCount();
     await openApp(page);
     await ensureHeading(page, /answer key/i);
     L.assertion('no answer key exists before the key session', L.answerKeyLocations().length === 0, L.answerKeyLocations().join(','));
-    L.setCliFolder(KEY_WORK);
-    await startCli(page, 'key');
+    await openAi(page, 'key', 'key', base);
     const tree = L.listTree(KEY_WORK);
     L.assertion('key-work holds exactly the 5 allowed files', JSON.stringify(tree) === JSON.stringify(['fixtures/fixture-bad.txt', 'fixtures/fixture-polished-but-wrong.txt', 'prompt-v0.md', 'skills/make-eval-fixtures/SKILL.md', 'test-cases.md']), tree.join(','));
-    L.assertion('no answer key exists right before the line is sent', L.answerKeyLocations().length === 0, L.answerKeyLocations().join(','));
+    L.assertion('no answer key exists right before the line is pasted', L.answerKeyLocations().length === 0, L.answerKeyLocations().join(','));
     await L.waitReady(page, 'key');
     L.assertion('key step: API has no key text before the session writes it', (await L.apiState('key')).step.data.key_held === false);
-    await L.clickAndWait(page, '#cli-send', '/api/step/send');
+    await expectSendRefused('key');
+    await pasteLine('key', 'key');
     const workKey = L.keyWorkKeyPath();
     await L.driveCli(page, 'key', async ({ busy, idleMs, screen }) => {
       if (hasText(workKey) && !busy && idleMs > 8000) return true;
@@ -604,8 +719,7 @@ async function stageRun() {
     await expectPassed(page, 'run');
     fs.writeFileSync(path.join(L.WORK, 'polished-before.json'), JSON.stringify(indepPol));
     fs.writeFileSync(path.join(L.WORK, 'key-copy.md'), L.redact(sealed));
-    await page.locator('#continue').click();
-    await L.sleep(800);
+    await continueIntoAi(page, 'fix', 'fix (opens by itself on Continue)');
     L.note('run-grid', JSON.stringify(gridRows));
   } finally { await browser.close(); }
 }
@@ -619,9 +733,12 @@ function applyFixEdit(text) {
 async function stageFix() {
   const { browser, page } = await L.openBrowser({ tall: true });
   try {
+    L.setCliFolder(PROJECT);
+    const base = launchCount();
     await openApp(page);
     await ensureHeading(page, /fix/i);
     L.assertion('fix opens right after the run step, with no lesson between', (await L.apiState()).current_step === 'fix');
+    await openAi(page, 'fix', 'fix', base);
     const checker = path.join(PROJECT, L.PF ? 'promptfooconfig.yaml' : 'check.py');
     const before = sha(checker);
     const tcPath = path.join(PROJECT, 'test-cases.md');
@@ -634,10 +751,9 @@ async function stageFix() {
     await L.clickAndWait(page, '#fix-save', '/api/step/submit');
     await L.waitFor(async () => (await L.apiState('fix')).step.data.test_cases_changed === true, 5000, 'test_cases_changed');
     const specSaved = fs.statSync(tcPath).mtimeMs;
-    L.setCliFolder(PROJECT);
-    await startCli(page, 'fix');
     await L.waitReady(page, 'fix');
-    await L.clickAndWait(page, '#cli-send', '/api/step/send');
+    await expectSendRefused('fix');
+    await pasteLine('fix', 'fix');
     await L.driveCli(page, 'fix', async ({ busy, idleMs, screen }) => {
       if (sha(checker) !== before && !busy && idleMs > 12000) return true;
       if (!busy && idleMs > 60000) await L.stopRun(page, 'fix stalled', screen);

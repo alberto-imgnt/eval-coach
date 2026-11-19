@@ -14,6 +14,7 @@ import shutil
 import sys
 import tempfile
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -86,22 +87,27 @@ class Session:
             if kind == "lesson":
                 engine.lesson_complete(name)
             elif name == "cold":
-                engine.step_submit("cold", {"prompt": COLD_PROMPT, "model_name": "sonnet"})
-                paths.part1_output("cold").parent.mkdir(parents=True, exist_ok=True)
-                paths.part1_output("cold").write_text(answer, encoding="utf-8")
-                engine.step_check("cold")
+                self.run_step("cold", {"prompt": COLD_PROMPT}, answer)
             elif name == "score":
                 engine.step_submit("score", {"answers": marks(2), "gap": "No ask for my lead", "in_prompt": "no"})
                 engine.step_check("score")
             elif name == "rewrite":
-                engine.step_submit("rewrite", {"prompt": LABELLED, "model_name": "sonnet", "framework": "rtcc"})
-                paths.part1_output("rewrite").write_text(second_answer, encoding="utf-8")
-                engine.step_check("rewrite")
+                self.run_step("rewrite", {"prompt": LABELLED, "framework": "rtcc"}, second_answer)
             elif name == "rescore":
                 engine.step_submit("rescore", {"answers": marks(4), "reflections": {"added": "The reader.", "better": "More detail."}})
                 engine.step_check("rescore")
             elif name == "own":
                 return
+
+    def run_step(self, step, body, answer):
+        """The way a participant works a run step: saving the prompt opens the AI window, the AI saves its answer."""
+        self.engine.step_submit(step, body)
+        self.write_output(step, answer)
+        deadline = time.monotonic() + 10
+        while step not in self.engine.progress["parts"]["part-1"]["done"]:
+            if time.monotonic() > deadline:
+                raise RuntimeError(f"{step} did not finish")
+            time.sleep(0.05)
 
     def reach_part_two(self, item):
         """Finish everything in Part 2 before `item` (every item when it is None), the way a participant would."""
@@ -154,6 +160,9 @@ class Control(BaseHTTPRequestHandler):
                        "cold_work": sorted(p.name for p in paths.part1_work("cold").iterdir()) if paths.part1_work("cold").exists() else [],
                        "typed": [line for pty in FakePty.created for line in pty.lines],
                        "launched": [pty.argv for pty in FakePty.created],
+                       "backup": sorted(p.relative_to(session.current.home / "reset-backup").as_posix()
+                                        for p in (session.current.home / "reset-backup").rglob("*") if p.is_file())
+                       if (session.current.home / "reset-backup").exists() else [],
                        "model_preference": session.current.engine.preflight.model_preference}
             self._json(200, listing)
         elif self.path.startswith("/control/read?"):

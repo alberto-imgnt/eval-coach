@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "change": "part-3-ai-flow",
+  "tree": "4e5b9d071f983ddf6a0d2313d26f2fa25a4507b4",
+  "excludes": [
+    "openspec"
+  ],
+  "head": "3407541bcffac9865e4518417ae325573b42cb6b",
+  "checks": [
+    {
+      "name": "backend",
+      "command": "python -m unittest discover -s tests",
+      "exit_code": 0,
+      "tests": 1648,
+      "finished": "2026-11-19T16:14:17Z"
+    },
+    {
+      "name": "backend-embedded",
+      "command": "spikes\\phase0-preflight\\runtime\\python-embed-3.13.17-nopth\\python.exe -m unittest discover -s tests",
+      "exit_code": 0,
+      "tests": 1648,
+      "finished": "2026-11-19T16:22:16Z"
+    },
+    {
+      "name": "interface",
+      "command": "node tests/frontend/.tmp/node_modules/@playwright/test/cli.js test --config tests/frontend/playwright.config.js",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-19T16:32:56Z"
+    },
+    {
+      "name": "build",
+      "command": "python tools\\build_pyz.py --smoke",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-19T16:33:02Z"
+    },
+    {
+      "name": "e2e",
+      "command": "node e2e-work\\harness\\run-all.js --fresh",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-19T16:38:37Z"
+    },
+    {
+      "name": "e2e-promptfoo",
+      "command": "node e2e-work\\harness\\run-all.js --fresh --track promptfoo",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-19T16:44:58Z"
+    }
+  ]
+}

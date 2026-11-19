@@ -295,7 +295,7 @@ class Routes(ServerCase):
         self.assertEqual(detail["id"], "predict")
         self.assertEqual(set(detail), {"id", "title", "status", "track", "goal", "why", "instructions", "cli",
                                        "checklist", "last_check", "question", "troubleshooting", "ui", "data",
-                                       "preview", "held_by"})  # a locked step is a words-only preview
+                                       "preview", "held_by", "restart"})  # a locked step is a words-only preview
 
     def test_unknown_step_in_state(self):
         status, _, _ = self.request("GET", "/api/state?step=bogus")
@@ -374,17 +374,25 @@ class Routes(ServerCase):
 
     def test_step_lifecycle_over_http(self):
         self.setup_project()
-        status, body = self.post("/api/step/start", {"step": "generate"})
+        status, body = self.post("/api/step/auto-start", {"step": "generate"})
         self.assertEqual(status, 200, body)
         self.assertTrue(body["state"]["terminal"]["running"])
         self.assertTrue(body["state"]["step"]["cli"]["started"])
-        status, body = self.post("/api/step/send", {"step": "generate"})
-        self.assertTrue(body["state"]["step"]["cli"]["sent"])
+        self.assertFalse(body["state"]["step"]["cli"]["can_auto_start"])
+        status, body = self.post("/api/step/auto-start", {"step": "generate"})  # asking again is a quiet no-op
+        self.assertEqual(status, 200, body)
+        self.assertEqual(len(FakePty.created), 1)
         pty = FakePty.created[-1]
-        self.assertEqual(pty.lines[-1], body["state"]["step"]["cli"]["line"])
+        status, body = self.post("/api/step/send", {"step": "generate"})
+        self.assertEqual(status, 400)
+        self.assertEqual(body["error"]["code"], "not_supported")
+        self.assertEqual(pty.lines, [])
         status, body = self.post("/api/step/stop", {"step": "generate"})
         self.assertFalse(body["state"]["terminal"]["running"])
         self.assertTrue(pty.closed)
+        status, body = self.post("/api/step/auto-start", {"step": "generate"})  # after Stop, it does not start again
+        self.assertEqual(status, 200, body)
+        self.assertEqual(len(FakePty.created), 1)
 
     def test_only_one_cli_runs(self):
         self.setup_project()
