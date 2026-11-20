@@ -18,7 +18,7 @@ Reset lesson progress SHALL NOT run until the participant confirms in a dialog t
 - **THEN** it lists what is cleared, what is kept, the backup folder and that the previous backup is replaced, in the words defined by the content files
 
 ### Requirement: Reset lesson progress clears progress
-After confirmation, all course progress SHALL be cleared: lessons and activities, placement, step records, the baseline, the review schedule, and saved hook and practice runs. The course SHALL start again at its first item.
+After confirmation, all course progress SHALL be cleared: lessons and activities, placement, step records, the baseline, the review schedule, saved hook and practice runs, and every Part skipped. The course SHALL start again at its first item, and every Part after Part 1 SHALL be locked again until the Parts before it are Done or Skipped.
 
 #### Scenario: Full fresh start
 - **GIVEN** the participant has finished lessons and steps and has a baseline
@@ -26,6 +26,11 @@ After confirmation, all course progress SHALL be cleared: lessons and activities
 - **THEN** every lesson and step shows as not started
 - **AND** no baseline and no review items exist
 - **AND** the current course item is the first one
+
+#### Scenario: Skipped Parts are cleared
+- **GIVEN** the participant skipped Part 1
+- **WHEN** the participant confirms the reset
+- **THEN** no Part shows Skipped, and Parts 2 and 3 are locked
 
 #### Scenario: Track can be chosen again
 - **GIVEN** the track was locked because a step was done

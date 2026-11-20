@@ -71,6 +71,9 @@ _ROUTES = {
     "/api/review/postpone": lambda e, b: e.review_postpone(),
     "/api/reset/progress": lambda e, b: e.reset_progress(b.get("confirm")),
     "/api/reset/configuration": lambda e, b: e.reset_configuration(b.get("confirm")),
+    "/api/part/skip": lambda e, b: e.part_skip(b.get("part"), b.get("confirm")),
+    "/api/demo/unlock": lambda e, b: e.demo_unlock(b.get("password")),
+    "/api/demo/lock": lambda e, b: e.demo_lock(),
 }
 
 _GET_ROUTES = {
@@ -313,7 +316,8 @@ class Handler(BaseHTTPRequestHandler):
     def _safe_state(self, step, part=None):
         """The state sent back after a request: the step's Part, else the Part the page named, else Part 3."""
         engine = self.server.engine
-        for attempt in ((step, part), (None, part), (None, None)):
+        owner = engine.part_id_of(step) if step else None
+        for attempt in ((step, part), (None, owner), (None, part), (None, None)):
             try:
                 return engine.get_state(*attempt)
             except EngineError:

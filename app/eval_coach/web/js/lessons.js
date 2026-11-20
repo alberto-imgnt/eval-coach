@@ -5,7 +5,7 @@ import { aiWindowLink } from './ai-window.js';
 import { isWide } from './chrome.js';
 import { h } from './dom.js';
 import { renderMarkdown } from './markdown.js';
-import { actionButton, modelToggle, resultTables, section } from './ui.js';
+import { actionButton, lockIcon, lockTip, lockTipId, lockedProps, modelToggle, resultTables, section } from './ui.js';
 
 const COURSE_LABEL = 'Course';
 const SAMPLE_LABEL = 'Start from a sample';
@@ -106,10 +106,13 @@ export function renderCourseNav(ctx) {
         'ol',
         { class: 'course-list' },
         entries.flatMap((e, index) => {
+          const locked = e.status === 'locked';
+          const tipId = lockTipId(e.kind, e.id);
           const inner = [
             h('span', { class: 'course-item-mark', 'aria-hidden': 'true' }, String(index + 1)),
             h('span', { class: 'course-item-title' }, e.title),
-            h('span', { class: 'course-item-status' }, statusWord(ctx, e.status)),
+            locked ? lockIcon(ctx) : null,
+            h('span', { class: 'course-item-status', 'aria-hidden': locked ? 'true' : null }, statusWord(ctx, e.status)),
           ];
           const group = groupOf(ctx, e.id);
           const heading =
@@ -125,19 +128,22 @@ export function renderCourseNav(ctx) {
             { key: `${e.kind}-${e.id}`, class: `course-item k-${e.kind} s-${e.status}${e.viewed ? ' is-viewed' : ''}` },
             h(
               'button',
-              {
-                type: 'button',
-                class: 'course-btn',
-                title: e.title,
-                'aria-current': e.viewed ? 'step' : null,
-                onClick: (event) => {
-                  const details = event.currentTarget.closest('details');
-                  if (details && !isWide()) details.open = false;
-                  ctx.actions.openCourseItem(e.kind, e.id);
-                },
-              },
+              locked
+                ? { type: 'button', class: 'course-btn is-locked', ...lockedProps(ctx, tipId) }
+                : {
+                    type: 'button',
+                    class: 'course-btn',
+                    title: e.title,
+                    'aria-current': e.viewed ? 'step' : null,
+                    onClick: (event) => {
+                      const details = event.currentTarget.closest('details');
+                      if (details && !isWide()) details.open = false;
+                      ctx.actions.openCourseItem(e.kind, e.id);
+                    },
+                  },
               inner,
             ),
+            locked ? lockTip(ctx, tipId) : null,
           );
           return heading ? [heading, item] : [item];
         }),
@@ -650,7 +656,7 @@ function renderRuleLab(ctx, lesson, activity, enabled) {
         : null,
     ),
     active ? h('div', { class: 'row', key: 'row' }, submitButton(ctx, activity, { disabled: !complete, onClick: () => ctx.actions.lessonAnswer(lesson.id, activity.id, { cases: predictions }) })) : null,
-    renderRuleOwn(ctx, lesson, activity, lesson.status !== 'locked' && lesson.status !== 'preview'),
+    renderRuleOwn(ctx, lesson, activity, lesson.status !== 'locked' && !lesson.part_skipped),
   );
 }
 
@@ -945,7 +951,9 @@ function renderRelated(ctx, lesson) {
             h(
               'li',
               { key: `rl-${l.id}` },
-              h('button', { type: 'button', class: 'btn btn-quiet', onClick: () => ctx.actions.openCourseItem('lesson', l.id) }, tx(ctx, 'open_lesson', { title: l.title })),
+              l.open === false
+                ? h('span', { class: 'related-locked', id: `related-locked-${l.id}` }, tx(ctx, 'open_lesson', { title: l.title }), ' ', h('span', { class: 'hint' }, `(${ctx.text.status_locked})`))
+                : h('button', { type: 'button', class: 'btn btn-quiet', onClick: () => ctx.actions.openCourseItem('lesson', l.id) }, tx(ctx, 'open_lesson', { title: l.title })),
             ),
           ),
         )
@@ -986,7 +994,7 @@ function renderActivity(ctx, lesson, activity) {
 }
 
 function renderLessonActions(ctx, lesson) {
-  if (lesson.status === 'preview') return null; // reading ahead: nothing to complete or skip
+  if (lesson.part_skipped) return null; // a skipped Part: read-only, with its own note
   if (lesson.status === 'active') {
     return h(
       'div',
@@ -1032,27 +1040,9 @@ function renderLessonProgress(ctx, lesson) {
   );
 }
 
-// Shown on a lesson that is open to read ahead: the exercises are off and nothing is saved. Before setup it points
-// to setup; after setup it names the item still to do and leads back to it.
-function renderPreviewNote(ctx, lesson) {
-  const gate = ctx.state.settings ? ctx.state.settings.text.setup_gate : null;
-  if (!gate) return null;
-  if (!ctx.state.preflight.passed) {
-    return h(
-      'div',
-      { class: 'callout callout-attn', id: 'preview-note', key: 'preview-note', role: 'status' },
-      h('p', null, gate.preview_lesson),
-      h('div', { class: 'row' }, actionButton(ctx, { label: gate.button, id: 'preview-setup', onClick: () => ctx.actions.openSetup() })),
-    );
-  }
-  const held = lesson.held_by;
-  if (!held) return null;
-  return h(
-    'div',
-    { class: 'callout callout-attn', id: 'preview-note', key: 'preview-note', role: 'status' },
-    h('p', null, gate.preview_lesson_after.replace('{title}', held.title)),
-    h('div', { class: 'row' }, actionButton(ctx, { label: gate.preview_back, id: 'preview-back', onClick: () => ctx.actions.openCourseItem(held.kind, held.id) })),
-  );
+// Shown on a lesson of a skipped Part: it is read-only and nothing in it can be done.
+function renderSkippedPartNote(ctx) {
+  return h('div', { class: 'callout callout-attn', id: 'skipped-part-note', key: 'skipped-part-note', role: 'status' }, h('p', null, tx(ctx, 'part_skipped_note')));
 }
 
 export function renderLesson(ctx) {
@@ -1074,7 +1064,7 @@ export function renderLesson(ctx) {
     h('p', { class: 'kicker' }, `${tx(ctx, 'kicker', { n: number, total: lessons.length })} · ${tx(ctx, 'minutes', { minutes: lesson.minutes })}`),
     h('h1', { id: 'step-heading', tabindex: -1 }, lesson.title),
     renderLessonProgress(ctx, lesson),
-    lesson.status === 'preview' ? renderPreviewNote(ctx, lesson) : null,
+    lesson.part_skipped ? renderSkippedPartNote(ctx) : null,
     lesson.id === 'mission'
       ? h('div', { class: 'callout mission-box', key: 'mission' }, h('strong', { class: 'block' }, tx(ctx, 'mission_label')), lesson.mission)
       : null,

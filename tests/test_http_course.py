@@ -46,8 +46,8 @@ class CourseServer(ServerCase):
         self.terminal = TerminalManager(pty_factory=FakePty, argv_parser=lambda c, env=None: c.split(),
                                         command_checker=lambda c, env=None: None)
         helpers.write_passed_preflight(self.tmp / "home")
-        self.engine = Engine(self.tmp / "home", self.terminal, poll_interval=0.01, lessons=self.course,
-                             clock=self.clock)
+        self.engine = helpers.make_engine(self.tmp / "home", self.terminal, poll_interval=0.01, lessons=self.course,
+                                          clock=self.clock)
         self.server = AppServer(self.engine, port=0, heartbeat=0.2)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -211,15 +211,12 @@ class LessonRoute(CourseServer):
 
     def test_errors_use_the_error_contract(self):
         for path, code in (("/api/lesson?id=nope", "unknown_lesson"), ("/api/lesson", "unknown_lesson"),
-                           ("/api/lesson?id=", "unknown_lesson"), ("/api/lesson?id=hook", "preview"),
+                           ("/api/lesson?id=", "unknown_lesson"), ("/api/lesson?id=hook", "lesson_locked"),
                            ("/api/lesson?id=mission&id=several-runs", "active")):
             with self.subTest(path=path):
                 status, body = self.get(path)
                 if code == "active":
                     self.assertEqual(status, 200)
-                    continue
-                if code == "preview":  # a locked lesson is read-only before setup
-                    self.assertEqual((status, body["lesson"]["status"]), (200, "preview"))
                     continue
                 self.assertEqual(status, 400)
                 self.assertEqual(set(body), {"ok", "error", "state"})
@@ -231,7 +228,8 @@ class LessonRoute(CourseServer):
     def test_a_locked_lesson_after_setup(self):
         self.setup_project()
         status, body = self.get("/api/lesson?id=several-runs")
-        self.assertEqual((status, body["lesson"]["status"]), (200, "preview"))
+        self.assertEqual((status, body["error"]["code"]), (400, "lesson_locked"))
+        self.assertNotIn("lesson", body)
         status, body = self.get("/api/lesson?id=mission")
         self.assertEqual(status, 200)
 
@@ -306,7 +304,7 @@ class AnswerRoutes(CourseServer):
                  ({"lesson": "mission", "activity": "nope", "answer": {}}, "unknown_activity"),
                  ({"lesson": ["mission"], "activity": "hook-explain", "answer": {}}, "unknown_lesson"),
                  ({"lesson": "several-runs", "activity": "generate-spot", "answer": {"option": "a"}},
-                  "preflight_incomplete"))
+                  "lesson_locked"))
         self.check_answer_errors(cases)
         self.setup_project()
         self.finish_mission()
@@ -514,7 +512,7 @@ class CliRoutes(CourseServer):
 
     def test_refusals(self):
         status, payload = self.post("/api/lesson/cli/start", {"lesson": "hook", "activity": "hook-compare"})
-        self.assertEqual((status, payload["error"]["code"]), (400, "preflight_incomplete"))
+        self.assertEqual((status, payload["error"]["code"]), (400, "lesson_locked"))
         self.setup_project()
         status, payload = self.post("/api/lesson/cli/start", {"lesson": "hook", "activity": "hook-compare"})
         self.assertEqual((status, payload["error"]["code"]), (400, "lesson_locked"))

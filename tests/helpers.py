@@ -20,6 +20,27 @@ NORTHWIND = KIT / "northwind"
 SOURCE = Path(os.environ.get("EVAL_COACH_SOURCE_MATERIALS") or ROOT / "tests" / ".source-materials-not-set")
 
 
+DEMO_PASSWORD = "throwaway-test-password"  # only ever checked against a hash built in the test run
+_DEMO_RECORD = []
+
+
+def demo_record():
+    """A demo access hash for tests: a fast record of a throwaway password, never the shipped one."""
+    if not _DEMO_RECORD:
+        from eval_coach import demo_access
+        _DEMO_RECORD.append(demo_access.make_record(DEMO_PASSWORD, iterations=1000))
+    return dict(_DEMO_RECORD[0])
+
+
+def make_engine(*args, demo=True, **kwargs):
+    """An Engine with the test hash. With demo=True (the default) every Part is open, as it was before the lock."""
+    from eval_coach.engine import Engine
+    engine = Engine(*args, demo_hash=demo_record(), **kwargs)
+    if demo:
+        engine.demo_unlock(DEMO_PASSWORD)
+    return engine
+
+
 def write_passed_preflight(home, track="script"):
     """Mark items 1-7 passed so step tests start from a machine that is already set up.
 

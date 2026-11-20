@@ -71,9 +71,10 @@ class SettingsContent(unittest.TestCase):
             self.assertTrue(self.data["settings"].get(key), f"settings.{key}")
         for key in ("label", "text", "button"):
             self.assertTrue(self.data["banner"].get(key), f"banner.{key}")
-        for key in ("cli_exercise", "step", "button", "preview_lesson", "preview_step", "preview_lesson_after",
-                    "preview_step_after", "preview_back"):
+        for key in ("cli_exercise", "step", "button"):
             self.assertTrue(self.data["setup_gate"].get(key), f"setup_gate.{key}")
+        for key in ("preview_lesson", "preview_step", "preview_lesson_after", "preview_step_after", "preview_back"):
+            self.assertNotIn(key, self.data["setup_gate"], f"setup_gate.{key} belongs to the removed read-ahead notes")
         self.assertIn("{value}", self.data["settings"]["text_size_value"])
         self.assertIn("{min}", self.data["settings"]["text_size_range"])
 

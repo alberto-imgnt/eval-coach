@@ -98,7 +98,9 @@ export async function openGlossary({ text, load, lessonLink, onOpenLesson, focus
           'dd',
           { key: `${termId(entry.term)}-meaning` },
           entry.meaning,
-          link
+          link && link.locked
+            ? h('span', { class: 'related-locked', id: `glossary-locked-${link.id}` }, ' ', fmt(text.open_lesson, { title: link.title }), ' ', h('span', { class: 'hint' }, `(${text.status_locked})`))
+            : link
             ? h(
                 'button',
                 {

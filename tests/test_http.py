@@ -265,11 +265,12 @@ class Routes(ServerCase):
         state = json.loads(raw)
         self.assertEqual(set(state), {"configured", "setup", "current_step", "steps", "step", "terminal", "preflight",
                                       "course", "optional_steps", "current_item", "review", "course_text",
-                                      "series", "settings", "ai_model"})
+                                      "series", "settings", "ai_model", "demo"})
         self.assertEqual([(i["kind"], i["id"], i["status"]) for i in state["course"]],
-                         [("step", s, "locked") for s in
+                         [("step", s, "active" if s == "generate" else "locked") for s in
                           ("generate", "build", "fixtures", "readback", "predict", "key", "run", "fix", "baseline")])
-        self.assertIsNone(state["current_item"])
+        self.assertEqual(state["current_item"], {"kind": "step", "id": "generate"})  # next to do; hands-on is still refused
+        self.assertIsNone(state["current_step"])
         self.assertEqual(state["review"], {"due": 0, "postponed": False})
         self.assertIn("continue", state["course_text"])
         self.assertFalse(state["configured"])
@@ -290,12 +291,19 @@ class Routes(ServerCase):
 
     def test_state_selects_a_step(self):
         self.setup_project()
-        _, _, raw = self.request("GET", "/api/state?step=predict")
+        _, _, raw = self.request("GET", "/api/state?step=generate")
         detail = json.loads(raw)["step"]
-        self.assertEqual(detail["id"], "predict")
+        self.assertEqual(detail["id"], "generate")
         self.assertEqual(set(detail), {"id", "title", "status", "track", "goal", "why", "instructions", "cli",
                                        "checklist", "last_check", "question", "troubleshooting", "ui", "data",
-                                       "preview", "held_by", "restart"})  # a locked step is a words-only preview
+                                       "restart"})
+
+    def test_a_locked_step_is_refused_with_the_lock_message(self):
+        self.setup_project()
+        status, _, raw = self.request("GET", "/api/state?step=predict")
+        body = json.loads(raw)
+        self.assertEqual((status, body["ok"], body["error"]["code"]), (400, False, "step_locked"))
+        self.assertEqual(body["state"]["step"]["id"], "generate")  # the page gets the current step, not the locked one
 
     def test_unknown_step_in_state(self):
         status, _, _ = self.request("GET", "/api/state?step=bogus")
@@ -337,11 +345,12 @@ class Routes(ServerCase):
         self.assertEqual(status, 200)
         self.assertEqual(body["state"]["step"]["id"], "generate")
 
-    def test_response_keeps_a_locked_step_named_in_the_request(self):
+    def test_response_to_a_locked_step_falls_back_to_the_current_step(self):
         self.setup_project()
         status, body = self.post("/api/step/check", {"step": "predict"})
         self.assertEqual(status, 400)
-        self.assertEqual(body["state"]["step"]["id"], "predict")
+        self.assertEqual(body["error"]["code"], "step_locked")
+        self.assertEqual(body["state"]["step"]["id"], "generate")
 
     def test_resize_with_no_cli_is_remembered_for_the_next_start(self):
         self.setup_project()

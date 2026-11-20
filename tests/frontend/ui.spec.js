@@ -269,7 +269,6 @@ test('preflight project item: prefills defaults, shows warnings, posts the contr
   await expect(page.locator('.step-item')).toHaveCount(9);
   await expect(page.locator('.step-item.s-active')).toContainText('Now');
   await expect(page.locator('.step-item').nth(1)).toContainText('Not started');
-  await expect(page.locator('.step-item').nth(1)).not.toContainText('Locked');
 });
 
 async function openImportScreen(page, request) {
@@ -977,11 +976,11 @@ test('key: held back note after the key is sealed', async ({ page, request }) =>
   await expect(page.getByText('The answer key is sealed away from your project folder.')).toBeVisible();
 });
 
-test('predict is followed by the locked key step, which opens to read', async ({ page, request }) => {
+test('predict is followed by the locked key step, which cannot be opened', async ({ page, request }) => {
   await openApp(page, request, 'predict');
   await expect(page.locator('.step-item').nth(5)).toContainText('Write the answer key');
   await expect(page.locator('.step-item').nth(5)).toContainText('Not started');
-  await expect(page.locator('.step-item').nth(5).getByRole('button')).toHaveCount(1);
+  await expect(page.locator('.step-item').nth(5).getByRole('button')).toHaveAttribute('aria-disabled', 'true');
 });
 
 test('readback: yes/no per criterion and note are saved', async ({ page, request }) => {
@@ -1273,15 +1272,25 @@ test('the terminal starts clear in every section it enters', async ({ page, requ
   await expect.poll(() => termText(page)).toContain('Fake CLI ready');
 });
 
-test('locked steps open as previews, with nothing that starts the CLI', async ({ page, request }) => {
+test('locked steps are greyed with a lock and the tooltip, and nothing opens when one is pressed', async ({ page, request }) => {
   await openApp(page, request, 'build');
   const locked = page.locator('.step-item').nth(3);
+  const button = locked.getByRole('button');
   await expect(locked).toContainText('Not started');
-  await locked.getByRole('button').click();
-  await expect(page.locator('#preview-note')).toContainText('nothing in it can be started');
-  await expect(page.locator('#cli-start')).toBeHidden();
-  await page.locator('#preview-back').click();
+  await expect(locked.getByRole('img', { name: 'Not open yet' })).toBeVisible();
+  await expect(button).toHaveAttribute('aria-disabled', 'true');
+  await expect(button).toHaveAttribute('title', 'Opens when the previous ones are done');
+  await button.click({ force: true });
+  await expect(page.locator('#step-heading')).toHaveText('Build the checker');
   await expect(page.locator('#preview-note')).toHaveCount(0);
+  expect((await postsTo(request, '/api/step/start')).length).toBe(0);
+  // The tooltip text shows on keyboard focus and is the button's description.
+  await button.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#step-heading')).toHaveText('Build the checker');
+  await expect(locked.locator('.lock-tip')).toBeVisible();
+  await expect(locked.locator('.lock-tip')).toHaveText('Opens when the previous ones are done');
+  await expect(button).toHaveAccessibleDescription('Opens when the previous ones are done');
 });
 
 // ---- Part 3 AI steps: the copy-and-paste flow -----------------------------------
@@ -1337,15 +1346,15 @@ test('paste flow: build opens by itself once, and neither a revisit nor Stop the
   expect(await stepStarts(request)).toEqual([{ step: 'build' }]);
 });
 
-test('paste flow: reading ahead at a locked step and looking at a finished step send no automatic start', async ({ page, request }) => {
+test('paste flow: pressing a locked step and looking at a finished step send no automatic start', async ({ page, request }) => {
   await openApp(page, request, 'build');
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   expect(await autoStarts(request)).toEqual([{ step: 'build' }]);
   await page.locator('#cli-stop').click();
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI has stopped (exit code 0).');
 
-  await page.locator('.step-item').nth(3).getByRole('button').click();
-  await expect(page.locator('#preview-note')).toBeVisible();
+  await page.locator('.step-item').nth(3).getByRole('button').click({ force: true });
+  await expect(page.locator('#step-heading')).toHaveText('Build the checker');
   await page.locator('.step-item').nth(0).getByRole('button').click();
   await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
   await expect(page.getByText('You finished this step.')).toBeVisible();
@@ -1849,7 +1858,7 @@ async function postsTo(request, route) {
   return (await mockLog(request)).log.filter((e) => e.method === 'POST' && e.path === route);
 }
 
-test('the course list holds only lessons and steps, and locked items can be read ahead before setup', async ({ page, request }) => {
+test('the course list holds only lessons and steps, and locked items are greyed and cannot be opened', async ({ page, request }) => {
   await openCourse(page, request, 'course');
   await expect(page.locator('#step-heading')).toHaveText('Your mission');
   await lessonReady(page);
@@ -1866,7 +1875,8 @@ test('the course list holds only lessons and steps, and locked items can be read
   await expect(page.locator('.course-item', { hasText: 'Before you begin' })).toHaveCount(0);
   await expect(items.nth(1)).toContainText('One update, three grades');
   await expect(items.nth(1)).toContainText('Not started');
-  await expect(items.nth(1).locator('button')).toHaveCount(1);
+  await expect(items.nth(1).locator('button')).toHaveAttribute('aria-disabled', 'true');
+  await expect(items.nth(1).getByRole('img', { name: 'Not open yet' })).toBeVisible();
   await expect(items.nth(3)).toContainText('Collect your answers');
 });
 
@@ -1963,7 +1973,7 @@ test('sort: Check is off until every item has a bucket, a wrong sort shows a cou
   await expect(box.getByLabel('Applies the threshold')).toBeDisabled();
 });
 
-test('Continue is never held back by a question, then the next lesson opens to read while setup is not done', async ({ page, request }) => {
+test('Continue is never held back by a question, then the next lesson opens even while setup is not done', async ({ page, request }) => {
   await openCourse(page, request, 'course');
   await lessonReady(page);
   const next = page.locator('#lesson-continue');
@@ -1972,13 +1982,14 @@ test('Continue is never held back by a question, then the next lesson opens to r
   await expect(page.locator('.lesson-progress-text')).toHaveText(/^Done so far: 0 of \d+$/);
   await next.click();
   await expect(page.locator('#step-heading')).toHaveText('One update, three grades');
-  await expect(page.locator('#preview-note')).toBeVisible();
+  await expect(page.locator('#preview-note')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toHaveCount(0);
   expect((await postsTo(request, '/api/lesson/complete'))[0].body).toEqual({ lesson: 'mission' });
   expect((await postsTo(request, '/api/lesson/answer')).length).toBe(0);
   await page.locator('.course-summary').click();
   await expect(page.locator('.course-item').nth(0)).toContainText('Done');
-  await expect(page.locator('.course-item')  .nth(1)).toContainText('Not started');
+  await expect(page.locator('.course-item').nth(1)).toContainText('Now');
+  await expect(page.locator('.course-item').nth(2)).toContainText('Not started');
 });
 
 test('an exercise still holds Continue back, and the hint says questions never do', async ({ page, request }) => {
@@ -2886,7 +2897,8 @@ test('after setup no screen asks for setup again while moving through the course
   await openCourse(page, request, 'course-main', ['mission']);
   for (const title of ['Your mission', 'Collect your answers', 'One update, three grades']) {
     const item = page.locator('.course-item', { hasText: title });
-    if (await item.getByRole('button').count()) await item.getByRole('button').click();
+    const open = item.locator('button:not([aria-disabled="true"])');
+    if (await open.count()) await open.click();
     await expect(page.getByRole('heading', { name: 'Before you begin' })).toHaveCount(0);
     await expect(page.locator('#setup-reminder')).toHaveCount(0);
   }
@@ -2896,13 +2908,13 @@ test('before setup a CLI exercise and a step cannot be started, and the server r
   await openApp(page, request, 'course-first-run');
   await page.locator('#pf-skip').click();
   await enterPart(page);
-  await page.locator('.course-item', { hasText: 'One update, three grades' }).getByRole('button').click();
+  await lessonReady(page);
+  await page.locator('#lesson-continue').click();
   await expect(page.locator('#step-heading')).toHaveText('One update, three grades');
-  await expect(page.locator('#preview-note')).toBeVisible();
   await expect(page.locator('#cli-needs-setup')).toContainText('needs setup first');
   await expect(page.locator('#cli-start')).toHaveCount(0);
   await expect(page.locator('.lesson-page input[type="radio"]').first()).toBeDisabled();
-  await expect(page.locator('#lesson-continue')).toHaveCount(0);
+  await expect(page.locator('#lesson-continue')).toHaveAttribute('aria-disabled', 'true');
   await page.locator('#cli-setup-go').click();
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toBeVisible();
   const res = await request.post('/api/lesson/cli/start', {
@@ -2913,63 +2925,54 @@ test('before setup a CLI exercise and a step cannot be started, and the server r
   expect((await res.json()).error.code).toBe('preflight_incomplete');
 });
 
-test('before setup a step opens to read, with its instructions and nothing that starts the CLI', async ({ page, request }) => {
+test('before setup the next step opens to read, with its instructions and nothing that starts the CLI', async ({ page, request }) => {
   await openApp(page, request, 'course-first-run');
   await page.locator('#pf-skip').click();
+  for (const id of ['mission', 'hook', 'several-runs']) await mock(request, 'lesson_status', { id, status: 'done' });
+  await page.reload();
   await enterPart(page);
-  await page.locator('.course-summary').click();
-  await page.locator('.course-item', { hasText: 'Collect your answers' }).getByRole('button').click();
   await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
-  await expect(page.locator('#preview-note')).toContainText('nothing in this step can be started');
+  await expect(page.locator('#preview-note')).toContainText('needs setup first');
   await expect(page.locator('.prose-list li').first()).toBeVisible();
   await expect(page.locator('#cli-start')).toHaveCount(0);
   await expect(page.locator('#check-work')).toHaveCount(0);
   await expect(page.locator('#setup-reminder')).toBeVisible();
+  await page.locator('#preview-setup').click();
+  await expect(page.getByRole('heading', { name: 'Before you begin' })).toBeVisible();
 });
 
-test('after setup a later lesson opens as a preview that names what is still to do and leads back', async ({ page, request }) => {
+test('after setup a later lesson stays locked: greyed, with the tooltip, and pressing it opens nothing', async ({ page, request }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await openCourse(page, request, 'course-main', ['mission']);
   const later = page.locator('.course-item', { hasText: 'From threshold to rule' });
   await expect(later).toContainText('Not started');
-  await later.getByRole('button').click();
-  await expect(page.locator('#step-heading')).toHaveText('From threshold to rule');
-  await expect(page.locator('#preview-note')).toContainText('One update, three grades');
-  await expect(page.locator('#preview-setup')).toHaveCount(0);
-  await expect(page.locator('#cli-start')).toBeHidden();
-  await expect(page.locator('#lesson-continue')).toHaveCount(0);
-  await page.locator('[id^="rule-text-"]').first().fill('Keep it under 100 words.');
-  await expect(page.locator('[id^="rule-run-"]').first()).toHaveAttribute('aria-disabled', 'true');
-  expect((await postsTo(request, '/api/lesson/answer')).length).toBe(0);
-  await page.locator('#preview-back').click();
+  await later.getByRole('button').click({ force: true });
+  await page.keyboard.press('Enter');
   await expect(page.locator('#step-heading')).toHaveText('One update, three grades');
   await expect(page.locator('#preview-note')).toHaveCount(0);
+  expect((await mockLog(request)).log.filter((e) => e.path.startsWith('/api/lesson?id=rules')).length).toBe(0);
 });
 
-test('after setup a later step opens as a preview with nothing that starts the CLI', async ({ page, request }) => {
+test('after setup a later step stays locked and opens nothing', async ({ page, request }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await openCourse(page, request, 'course-main', ['mission']);
-  await page.locator('.course-item', { hasText: 'Collect your answers' }).getByRole('button').click();
-  await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
-  await expect(page.locator('#preview-note')).toContainText('One update, three grades');
-  await expect(page.locator('#preview-note')).toContainText('nothing in it can be started');
-  await expect(page.locator('#cli-start')).toBeHidden();
-  await expect(page.locator('#check-work')).toHaveCount(0);
-  await page.locator('#preview-back').click();
+  const later = page.locator('.course-item', { hasText: 'Collect your answers' });
+  await expect(later.getByRole('button')).toHaveAttribute('aria-disabled', 'true');
+  await later.getByRole('button').click({ force: true });
   await expect(page.locator('#step-heading')).toHaveText('One update, three grades');
+  await expect(page.locator('#check-work')).toHaveCount(0);
+  expect((await postsTo(request, '/api/step/start')).length).toBe(0);
 });
 
-test('after setup a glossary link opens a lesson that is still locked, as a preview', async ({ page, request }) => {
+test('after setup a glossary entry for a lesson that is still locked shows its name as plain text', async ({ page, request }) => {
   await openCourse(page, request, 'course-main', ['mission']);
   await expect(page.locator('#step-heading')).toHaveText('One update, three grades');
   await page.locator('.course-summary').click();
   await page.locator('.course-item', { hasText: 'Your mission' }).getByRole('button').click();
   await page.locator('.related-terms').getByRole('button', { name: 'Checker' }).click();
   const dialog = page.getByRole('dialog', { name: 'Glossary' });
-  await dialog.getByRole('button', { name: 'Open the lesson From threshold to rule' }).first().click();
-  await expect(page.locator('#step-heading')).toHaveText('From threshold to rule');
-  await expect(page.locator('#preview-note')).toBeVisible();
-  await expect(page.locator('#lesson-continue')).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Open the lesson From threshold to rule' })).toHaveCount(0);
+  await expect(dialog.locator('.related-locked', { hasText: 'From threshold to rule' }).first()).toContainText('Not started');
 });
 
 test('banner: on every screen, not on setup, no close control, button opens setup, focus stays put', async ({ page, request }) => {
@@ -2982,7 +2985,7 @@ test('banner: on every screen, not on setup, no close control, button opens setu
   expect(await page.evaluate(() => document.querySelector('#setup-reminder').contains(document.activeElement))).toBe(false);
   await enterPart(page);
   await page.locator('.course-summary').click();
-  await page.locator('.course-item', { hasText: 'Collect your answers' }).getByRole('button').click();
+  await page.locator('.course-item', { hasText: 'Your mission' }).getByRole('button').click();
   await expect(banner).toBeVisible();
   await openSettings(page);
   await expect(banner).toBeVisible();
@@ -2998,7 +3001,7 @@ test('banner: on every screen, not on setup, no close control, button opens setu
   await expect(page.locator('#topbar')).toBeHidden();
   // Closing returns to the screen it was opened from, with the banner again.
   await page.locator('#wizard-close').click();
-  await expect(page.locator('#step-heading')).toHaveText('Collect your answers');
+  await expect(page.locator('#step-heading')).toHaveText('Your mission');
   await expect(banner).toBeVisible();
 });
 
@@ -3716,10 +3719,10 @@ test('Series map: Part 1 is no longer coming soon; its row shows its state, its 
   await expect(page.locator('#series-part-3 .series-count')).not.toHaveText('3 of 9 done');
 });
 
-test('Series map: Parts 1, 2 and 3 start expanded and each lists its own lessons', async ({ page, request }) => {
+test('Series map: only the active Part starts expanded and each lists its own lessons', async ({ page, request }) => {
   await openMap(page, request, 'course-main', ['mission']);
-  await expect(page.locator('#series-toggle-part-1')).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.locator('#series-toggle-part-2')).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#series-toggle-part-1')).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#series-toggle-part-2')).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('#series-toggle-part-3')).toHaveAttribute('aria-expanded', 'true');
   const part1 = page.locator('#series-lessons-part-1 li');
   await expect(part1).toHaveCount(4);
@@ -3729,7 +3732,9 @@ test('Series map: Parts 1, 2 and 3 start expanded and each lists its own lessons
   await expect(page.locator('#series-lessons-part-2 li')).toHaveCount(4);
   await expect(page.locator('#series-lessons-part-3 li')).toHaveCount(7);
   await page.locator('#series-toggle-part-1').click();
-  await expect(page.locator('#series-lessons-part-1')).toBeHidden();
+  await expect(page.locator('#series-lessons-part-1')).toBeVisible();
+  await page.locator('#series-toggle-part-3').click();
+  await expect(page.locator('#series-lessons-part-3')).toBeHidden();
   await expect(page.locator('#step-heading')).toHaveText('Series map');
   expect(await postsLog(request)).toEqual([]);
 });
@@ -3950,5 +3955,6 @@ test('Series map: resetting the app configuration ends on setup first and then o
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toBeVisible();
   await page.locator('#pf-skip').click();
   await expect(page.locator('#step-heading')).toHaveText('Series map');
-  await expect(page.locator('#series-toggle-part-3')).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#series-toggle-part-1')).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#series-toggle-part-3')).toHaveAttribute('aria-expanded', 'false');
 });

@@ -2,7 +2,7 @@
   "ui": {
     "heading": "Before you begin",
     "lede": "This app walks you through running evals on your own AI work. It uses your own AI tool, which runs in an AI window inside this page.",
-    "intro": "Your AI is your choice. It only needs to be able to read files, write files and run commands. Setup checks everything the app needs, one page at a time, and the steps stay locked until every check has passed. Depending on its settings, your AI may ask for approval before it acts, or it may act on its own. Any approval requests appear in the AI window, and you answer them there. The app never answers for you and does not hold any keys.",
+    "intro": "Your AI is your choice. It only needs to be able to read files, write files and run commands. Setup checks everything the app needs, one page at a time, and the steps wait until every check has passed. Depending on its settings, your AI may ask for approval before it acts, or it may act on its own. Any approval requests appear in the AI window, and you answer them there. The app never answers for you and does not hold any keys.",
     "check_all": "Check everything",
     "check_all_again": "Check everything again",
     "skip_button": "Skip for now",

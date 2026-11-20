@@ -481,6 +481,13 @@ async function stageBuild() {
   } finally { await browser.close(); }
 }
 
+// A step that is not open is refused, so the answer key cannot be in its response; an open step must not hold it.
+async function keyWithheld(step) {
+  const s = await L.apiState(step);
+  if (s.error) return s.error.code === 'step_locked' && !JSON.stringify(s).includes('answer_key_markdown":"');
+  return (s.step.data.answer_key_markdown ?? null) === null;
+}
+
 async function postApi(route, body) {
   const res = await fetch(`http://127.0.0.1:${state.port}${route}`, {
     method: 'POST',
@@ -611,7 +618,7 @@ async function stagePredict() {
   try {
     await openApp(page);
     await ensureHeading(page, /predict/i);
-    L.assertion('before lock: API withholds answer key', ((await L.apiState('run')).step.data.answer_key_markdown ?? null) === null);
+    L.assertion('before lock: API withholds answer key', await keyWithheld('run'));
     const polished = await page.locator('.polished-text').innerText();
     L.assertion('polished fixture text is shown', polished.trim().length > 0);
     const criteria = (await L.apiState('predict')).step.data.criteria;
@@ -636,7 +643,7 @@ async function stagePredict() {
     L.assertion('predictions locked', resp.ok(), String(resp.status()));
     L.markPredictLocked();
     await L.sleep(500);
-    L.assertion('after lock, before run: API withholds answer key', ((await L.apiState('run')).step.data.answer_key_markdown ?? null) === null);
+    L.assertion('after lock, before run: API withholds answer key', await keyWithheld('run'));
     await expectPassed(page, 'predict');
     await continueIntoAi(page, 'key', 'key (opens by itself on Continue)');
   } finally { await browser.close(); }
@@ -674,7 +681,7 @@ async function stageKey() {
     L.assertion('project fixtures unchanged by the key step', JSON.stringify(fixturesBefore) === JSON.stringify(['fixture-bad.txt', 'fixture-polished-but-wrong.txt'].map((n) => sha(path.join(PROJECT, 'fixtures', n)))));
     L.assertion('project has no answer key', !exists(L.projectKeyPath()));
     await L.waitFor(async () => !(await L.apiState()).terminal.running, 15000, 'CLI stopped after key');
-    L.assertion('after key: API withholds answer key from the run step', ((await L.apiState('run')).step.data.answer_key_markdown ?? null) === null);
+    L.assertion('after key: API withholds answer key from the run step', await keyWithheld('run'));
     L.assertion('key step reports the key held', (await L.apiState('key')).step.data.key_held === true);
     L.assertion('progress.json holds no key or fixture text', (() => { const r = L.assertProgressClean(); return !r.keyHit && !r.fixtureHit; })());
     await page.locator('#continue').click();

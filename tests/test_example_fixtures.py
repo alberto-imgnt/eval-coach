@@ -277,6 +277,8 @@ class ExampleFixturesPromptfoo(PfCase):
 
     def test_the_troubleshooting_entry_is_on_both_tracks_for_the_fixtures_step(self):
         self.setup_project()
+        self.engine.progress["done"] = ["generate", "build"]
+        self.engine._save()
         text = self.state("fixtures")["step"]["troubleshooting"]
         self.assertTrue([t for t in text if "Practice task" in t["problem"]])
 

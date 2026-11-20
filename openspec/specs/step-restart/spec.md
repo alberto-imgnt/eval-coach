@@ -121,12 +121,12 @@ If the backup cannot be completed or anything cannot be moved or cleared, the ap
 - **THEN** every file already moved is put back, progress is unchanged and a plain message says so
 
 ### Requirement: Later steps lock again until the chosen step is done
-Once a restart finishes, each later step SHALL be locked by its Part's order until the steps before it are done again, as `part-registry` sets out. Lessons stay as they were.
+Once a restart finishes, each later step SHALL be locked by its Part's order until the steps before it are done again, as `part-registry` and `course-locking` set out. Lessons stay as they were.
 
 #### Scenario: Next step locked
 - **GIVEN** `score` was restarted
-- **WHEN** the participant opens `rewrite`
-- **THEN** it opens only as a read-only preview, and the lock message names `score`
+- **WHEN** the participant, or a request, asks for `rewrite`
+- **THEN** it is refused with the lock message, and no step text is shown
 
 ### Requirement: The control and its words are accessible and plain
 The control and its dialog SHALL be reachable by keyboard, follow the design tokens in both themes, announce their outcome to a screen reader, and get every word from `content/*.json` following `participant-vocabulary`. The restart control SHALL NOT share a name with the control that starts a new AI chat. Source: `docs/DESIGN.md`; AGENTS.md rule 10.

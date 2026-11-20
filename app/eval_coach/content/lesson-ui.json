@@ -2,9 +2,8 @@
   "errors": {
     "no_lessons": "The course content is not available.",
     "unknown_lesson": "There is no lesson with that name.",
-    "lesson_locked": "Finish the earlier lessons and steps first.",
-    "preflight_first": "Finish setup first. Use the reminder at the top of the page, or open Settings, to go there.",
     "lesson_finished": "You have already finished this lesson.",
+    "step_skipped": "You skipped this Part, so nothing in it can be done.",
     "lesson_skipped": "You skipped this lesson, so its activities are closed.",
     "unknown_activity": "That activity is not part of this lesson.",
     "bad_answer": "That answer is not in the form this activity expects.",
@@ -33,7 +32,6 @@
     "sample_before_answer": "Make your predictions for the samples first. You can try your own words at any time.",
     "bad_ref": "That file could not be opened.",
     "review_unknown": "That review question is not due right now.",
-    "step_needs_lesson": "Finish the lesson before this step: {lesson}.",
     "no_step_question": "This step has no question.",
     "step_question_locked": "Finish this step before you answer its question."
   },
@@ -92,6 +90,9 @@
     "status_locked": "Not started",
     "status_active": "Now",
     "status_optional": "Optional",
+    "locked_tip": "Opens when the previous ones are done",
+    "locked_icon_label": "Not open yet",
+    "part_skipped_note": "You skipped this Part. It stays here to read, and nothing in it can be done.",
     "optional_live_note": "Optional: you can have promptfoo write fresh outputs through your own signed-in AI tool. It never changes your baseline, and the course is complete without it.",
     "optional_live_button": "Open optional live mode",
     "locked_message": "This lesson or step opens for work after you finish the lessons and steps before it.",

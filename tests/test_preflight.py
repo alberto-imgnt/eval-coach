@@ -1092,7 +1092,9 @@ class Lock(Base):
         self.engine.preflight_cli("fake-cli")
         self.setup_project()
         self.assertFalse(self.state["preflight"]["passed"])
-        self.assertIsNone(self.state["step"])
+        words = self.state["step"]  # the step next to do shows its words only, with nothing to start
+        self.assertTrue(words["preview"])
+        self.assertIsNone(words["cli"])
         self.assertTrue(all(s["status"] == "locked" for s in self.state["steps"]))
         self.assert_code("preflight_incomplete", self.engine.step_start, "generate")
 
@@ -1131,7 +1133,7 @@ class Lock(Base):
         state = engine.get_state()
         self.assertTrue(state["configured"], "the project is still known")
         self.assertFalse(state["preflight"]["passed"], "preflight must run again")
-        self.assertIsNone(state["step"])
+        self.assertTrue(state["step"]["preview"])  # words only until setup passes
         self.assertEqual(self.item("cli")["status"], "not_checked")
         self.assertEqual(state["preflight"]["cli"]["command"], "fake-cli", "the saved command carries over")
         self.assert_code("preflight_incomplete", engine.step_start, "build")

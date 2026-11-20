@@ -3,6 +3,10 @@
   "parts": [
     {"n": 1, "id": "part-1", "title": "Structured prompting", "kind": "course",
      "outcome": "I tell the AI clearly what I need, so it guesses less and gives steadier answers.",
+     "skip": {
+       "teaches": "How to tell your AI clearly what you need, how to name what a first attempt leaves out, and how to rewrite it with a framework.",
+       "matters": "Clear instructions make answers steadier, and steadier answers are the only kind you can check with rules."
+     },
      "ui": {
        "brand_sub": "Part 1 · Structured prompting",
        "map_title": "Part {n}: ",
@@ -18,6 +22,10 @@
      }},
     {"n": 2, "id": "part-2", "title": "Defining evaluation criteria", "kind": "course",
      "outcome": "I turn \"that looks good\" into clear pass or fail rules.",
+     "skip": {
+       "teaches": "How to turn \"that looks good\" into separate criteria, give each one a pass or fail threshold a script could decide, and write them down as test cases.",
+       "matters": "A rule you cannot test cannot be checked. These test cases are what the checker in the next Part is built from."
+     },
      "ui": {
        "brand_sub": "Part 2 · Defining evaluation criteria",
        "map_title": "Part {n}: ",
@@ -32,7 +40,11 @@
        "finished_body": "Your work is saved in your project folder: your worksheet and your test cases in part-2\\test-cases.md. You can now turn what you need from an answer into distinct criteria, give each one a pass or fail threshold a script could decide, and record them as test cases. In Part 3 an AI agent turns a file like this into a checker and runs it on real answers. The Practice task is for practice only and is not something to submit. Reviews will still appear here when they are due."
      }},
     {"n": 3, "id": "part-3", "title": "Running evals and baseline", "kind": "course",
-     "outcome": "I check five AI answers against my rules and record a starting score."},
+     "outcome": "I check five AI answers against my rules and record a starting score.",
+     "skip": {
+       "teaches": "How your AI builds a checker from your test cases, how to check that the checker can be trusted, and how to run it on five answers and record a starting score.",
+       "matters": "Without a checker you can trust and a starting score, you cannot tell whether a change to your prompt made things better or worse."
+     }},
     {"n": 4, "id": "part-4", "title": "Iterating with evaluation-driven development", "kind": "soon",
      "outcome": "I change my prompt, check again with the same rules and see whether the score moved."},
     {"n": 5, "id": "part-5", "title": "Load-bearing audit and packaging", "kind": "soon",
@@ -50,6 +62,16 @@
     "state_not_started": "Not started",
     "state_in_progress": "In progress",
     "state_done": "Done",
+    "state_skipped": "Skipped",
+    "state_locked": "Not started",
+    "skip_button": "Skip this Part",
+    "skip_title": "Skip Part {n}: {title}?",
+    "skip_teaches_label": "What it teaches",
+    "skip_matters_label": "Why it matters",
+    "skip_cost": "If you skip it, you will have no artifact and no evaluator from this Part. You will not be able to undo the skip here. The Parts after it open as if you had finished it.",
+    "skip_cancel": "Keep the Part",
+    "skip_confirm": "Skip the Part",
+    "skipped_note": "You skipped this Part.",
     "count": "{done} of {total} done",
     "start": "Start",
     "continue": "Continue",
@@ -58,5 +80,8 @@
     "expand": "Show the lessons in Part {n}",
     "collapse": "Hide the lessons in Part {n}",
     "lessons_label": "Lessons in Part {n}"
+  },
+  "errors": {
+    "skip_unavailable": "Nothing was changed. This Part cannot be skipped right now."
   }
 }

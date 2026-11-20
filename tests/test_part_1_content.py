@@ -544,7 +544,7 @@ class SeriesRow(unittest.TestCase):
     def test_the_part_one_words_reach_the_page_only_for_part_one(self):
         home = Path(tempfile.mkdtemp(prefix="eval-coach-series-"))
         self.addCleanup(shutil.rmtree, home, True)
-        engine = Engine(home, helpers.FakeTerminal(), lessons=ch.bundled_course())
+        engine = helpers.make_engine(home, helpers.FakeTerminal(), lessons=ch.bundled_course())
         self.addCleanup(engine.shutdown)
         one, three = engine.get_state(part="part-1"), engine.get_state()
         self.assertEqual(one["course_text"]["brand_sub"], "Part 1 \u00b7 Structured prompting")

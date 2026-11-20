@@ -18,13 +18,13 @@ The app SHALL present setup ("Before you begin"), as the setup wizard, as the fi
 #### Scenario: Completing setup
 - **GIVEN** the participant is in the setup wizard on first run
 - **WHEN** every applicable check passes and the project is set up
-- **THEN** the participant gains full access to the course and the Series map is shown
-- **AND** opening Part 3 from the map starts at the mission lesson
+- **THEN** hands-on work is open to the participant and the Series map is shown
+- **AND** opening Part 1 from the map starts at its mission lesson
 
 #### Scenario: Skipping setup
 - **GIVEN** the participant is in the setup wizard on first run
 - **WHEN** the participant skips setup
-- **THEN** the Series map is shown, and Part 3's learning content is available from it
+- **THEN** the Series map is shown, and the mission lesson of Part 1 can be opened from it
 - **AND** the setup reminder banner is shown
 
 #### Scenario: Skip is remembered
@@ -143,23 +143,21 @@ Until setup has passed, the participant SHALL NOT be able to do hands-on work: e
 - **THEN** its instructions can be read
 - **AND** nothing in it starts the CLI
 
-### Requirement: Learning content is always readable
-Every lesson and step SHALL be openable for reading at any time, in any order, whether or not setup has passed, together with the glossary, the reference and the files lessons cite. An item that normal course order keeps locked SHALL open as a read-only preview: its text and exercises are shown, but exercises cannot be answered, steps cannot be started or checked, nothing can be completed, and nothing about it is recorded in progress.
+### Requirement: Open items are readable before setup
+Before setup has passed, the item that is next to do and every item that is done or skipped SHALL be readable, together with the glossary, the reference and the files lessons cite. Which items are open is decided by `course-locking`; setup does not open any other item and does not lock any item that order has opened. Hands-on work SHALL stay refused until setup has passed, and an item that normal order keeps locked SHALL NOT open as a preview, with or without setup.
 
 #### Scenario: Reading ahead
 - **GIVEN** setup has not passed
-- **WHEN** the participant opens a lesson that normal order would still keep locked
-- **THEN** its text is shown
-- **AND** its exercises cannot be answered and nothing is recorded
+- **WHEN** the participant tries to open a lesson that normal order would still keep locked
+- **THEN** it does not open and the lock message is shown, and nothing is recorded
 
 #### Scenario: Reading ahead after setup
 - **GIVEN** setup has passed and the participant is on the third lesson of a Part
-- **WHEN** they open a later lesson or step of that Part from the course list
-- **THEN** it opens as a read-only preview instead of being greyed out or refused
-- **AND** its status still reads "Not started" and nothing is recorded
+- **WHEN** they look at a later lesson or step of that Part in the course list, or a request asks for it
+- **THEN** it is shown as "Not started" with the lock icon and does not open, and the request is refused
 
 #### Scenario: Reading the current lesson
-- **GIVEN** setup has not passed and the mission lesson is the current item
+- **GIVEN** setup has not passed and a mission lesson is the current item
 - **WHEN** the participant opens it
 - **THEN** it works as normal, because it has no hands-on exercise
 
@@ -170,15 +168,15 @@ Every lesson and step SHALL be openable for reading at any time, in any order, w
 - **AND** the lesson cannot be completed while a required CLI exercise is undone
 
 #### Scenario: Previews never do work
-- **GIVEN** a step is shown as a preview
-- **WHEN** the participant looks at it
-- **THEN** it shows only the step's words, with no controls that start the CLI, run the checker or save anything
+- **GIVEN** setup has not passed and a step is the next item to do
+- **WHEN** the participant opens it
+- **THEN** it shows only the step's words, with no controls that start the CLI, run the checker or save anything, and there is a way to open setup
 - **AND** no participant file is read to build it
 
 #### Scenario: The answer key stays sealed
 - **GIVEN** the participant's predictions are not locked
-- **WHEN** they read the `key` step ahead of time
-- **THEN** the preview holds the step's instructions only, and no answer key text is shown
+- **WHEN** a request asks for the `key` step ahead of time
+- **THEN** it is refused and no answer key text is shown
 
 ### Requirement: Setup is not a course item
 The course list SHALL NOT contain a "Before you begin" or other setup entry, and no lesson or step SHALL have its own setup screen. The course progress shown by the app SHALL count only lessons and steps.
@@ -223,42 +221,6 @@ Text in the setup wizard and in the Settings setup group SHALL come from the con
 #### Scenario: Wording change
 - **WHEN** the setup intro text is edited in its content file
 - **THEN** the wizard and Settings show the edited text
-
-### Requirement: A preview says what holds it back
-A preview SHALL carry a plain note saying that the participant is reading ahead and that nothing done there is saved. When setup has not passed, the note SHALL say setup is not finished and offer the way to open setup. When setup has passed, the note SHALL name the earlier lesson or step still to do and offer a button that returns to the participant's current item in the same Part.
-
-#### Scenario: Note before setup
-- **GIVEN** setup has not passed
-- **WHEN** a preview is shown
-- **THEN** the note says setup is not finished and offers to open setup
-
-#### Scenario: Note after setup
-- **GIVEN** setup has passed and the participant's current item is `several-runs`
-- **WHEN** they read the `rules` lesson ahead
-- **THEN** the note names the lesson still to do and offers a button back to `several-runs`
-
-#### Scenario: Back to where I am
-- **GIVEN** a preview is shown after setup
-- **WHEN** the participant presses the button in its note
-- **THEN** their current item opens, and progress is unchanged
-
-### Requirement: Locked items can be reached from every list and link
-The course list, the step list, the glossary and a lesson's related-lessons list SHALL open a locked lesson or step as a preview, with its status shown in words as "Not started" (never "Locked"). They SHALL NOT show it as unavailable text or leave it out. The "Continue" control after finishing an item SHALL still lead to the next item to do.
-
-#### Scenario: Course list after setup
-- **GIVEN** setup has passed
-- **WHEN** the participant looks at the course list
-- **THEN** every item is a control that opens it, and one that is not yet open is labelled "Not started"
-
-#### Scenario: Glossary link to a locked lesson
-- **GIVEN** a glossary entry points to a lesson that is still locked
-- **WHEN** the participant opens the entry
-- **THEN** a link to the lesson is shown and opens it as a preview
-
-#### Scenario: Continue is unchanged
-- **GIVEN** the participant has just finished a step
-- **WHEN** the next item is locked by a lesson that is still to do
-- **THEN** "Continue" does not open the locked item as if it were next to do
 
 ### Requirement: The Track page describes each track by technical level
 The Track page SHALL describe the Script track as needing no technical experience, with your AI building the checker and nothing extra to install, and the promptfoo track as for technical users, needing Node.js and about 1 GB of downloads. Neither track SHALL be called the default, recommended or best, and neither SHALL carry a badge or be preselected. The names stay "Script track" and "promptfoo track". Source: series review item 17, AGENTS.md rule 10.

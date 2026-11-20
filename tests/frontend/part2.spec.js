@@ -179,12 +179,15 @@ test('the Series map shows Part 2 with a state and an open control, Parts 4 and 
   await expect(row.locator('.series-count')).toHaveCount(0);
 });
 
-test('the Part 2 row expands and collapses by mouse and keyboard without opening the Part, and starts expanded', async ({ page, request }) => {
+test('the Part 2 row opens collapsed when Part 1 is the active Part, and expands and collapses by mouse and keyboard without opening the Part', async ({ page, request }) => {
   await control(request, '/control/reset', { scenario: 'ready' });
   await page.goto(`/?t=${TOKEN}`);
   const toggle = page.locator('#series-toggle-part-2');
   const lessons = page.locator('#series-lessons-part-2 li');
-  for (const id of ['part-1', 'part-2', 'part-3']) await expect(page.locator(`#series-toggle-${id}`)).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#series-toggle-part-1')).toHaveAttribute('aria-expanded', 'true');
+  for (const id of ['part-2', 'part-3']) await expect(page.locator(`#series-toggle-${id}`)).toHaveAttribute('aria-expanded', 'false');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(lessons).toHaveCount(4);
   expect(await page.locator('#series-lessons-part-2 .series-lesson-title').allTextContents()).toEqual([
     'Your mission',
@@ -247,24 +250,25 @@ test('selecting the Part 2 row continues at the current item', async ({ page, re
 
 test('no Part 2 step offers Start or Send or a terminal, and none starts a CLI', async ({ page, request }) => {
   await openPart2(page, request, { reach: 'draft' });
-  for (const title of ['Draft your criteria', 'Add a pass or fail rule', 'Write your test cases down', 'Compare with an example']) {
+  for (const title of ['Draft your criteria']) {
     await page.locator('.course-btn', { hasText: title }).click();
     await expect(page.locator('#step-heading')).toHaveText(title);
     for (const id of ['#cli-start', '#cli-send', '#cli-stop', '#cli-retry']) await expect(page.locator(id)).toHaveCount(0);
     await expect(page.locator('#term-host')).toBeHidden();
     await expect(page.locator('#screen-main')).toHaveClass(/no-terminal/);
   }
+  for (const title of ['Add a pass or fail rule', 'Write your test cases down', 'Compare with an example']) {
+    await expect(page.locator('.course-btn', { hasText: title })).toHaveAttribute('aria-disabled', 'true');
+  }
   expect((await filesOf(request, '/control/files2')).started).toBe(0);
 });
 
 test('before setup the draft step can be read, nothing in it can be saved, and the server refuses a save', async ({ page, request }) => {
-  await control(request, '/control/reset', { scenario: 'no-setup' });
+  await control(request, '/control/reset', { scenario: 'no-setup', reach2: 'draft' });
   await page.goto(`/?t=${TOKEN}`);
   await page.locator('#pf-skip').click();
   await expect(page.locator('#step-heading')).toHaveText('Series map');
   await page.locator('#series-open-part-2').click();
-  await expect(page.locator('#step-heading')).toHaveText('Your mission');
-  await page.locator('.course-btn', { hasText: 'Draft your criteria' }).click();
   await expect(page.locator('#step-heading')).toHaveText('Draft your criteria');
   await expect(page.locator('#preview-note')).toBeVisible();
   await expect(page.locator('#preview-setup')).toBeVisible();
@@ -275,17 +279,20 @@ test('before setup the draft step can be read, nothing in it can be saved, and t
   expect(['not_configured', 'preflight_incomplete']).toContain((await refused.json()).error.code);
 });
 
-test('a locked Part 2 step opens as a preview that writes nothing, and the reference stays hidden until the file is done', async ({ page, request }) => {
+test('a locked Part 2 step cannot be opened and writes nothing, and the reference stays hidden until the file is done', async ({ page, request }) => {
   await openPart2(page, request, { reach: 'test-file' });
   await expect(page.locator('#step-heading')).toHaveText('Write your test cases down');
-  await page.locator('.course-btn', { hasText: 'Compare with an example' }).click();
-  await expect(page.locator('#step-heading')).toHaveText('Compare with an example');
-  await expect(page.locator('#preview-note')).toContainText('Write your test cases down');
-  for (const id of ['#ref-C1', '#reference-lists', '#one-good-answer', '#part-save', '#check-work']) await expect(page.locator(id)).toHaveCount(0);
+  const locked = page.locator('.course-btn', { hasText: 'Compare with an example' });
+  await expect(locked).toHaveAttribute('aria-disabled', 'true');
+  await locked.click({ force: true });
+  await expect(page.locator('#step-heading')).toHaveText('Write your test cases down');
+  for (const id of ['#ref-C1', '#reference-lists', '#one-good-answer']) await expect(page.locator(id)).toHaveCount(0);
   expect((await filesOf(request, '/control/files2')).part2).toEqual(['worksheet.json']);
-  const detail = await apiState(request, '?step=reference');
-  expect(detail.step.preview).toBeTruthy();
-  expect(detail.step.data).toEqual({});
+  const res = await request.get('/api/state?step=reference', { headers: { 'X-Eval-Token': TOKEN } });
+  expect(res.status()).toBe(400);
+  const body = await res.json();
+  expect(body.error.code).toBe('step_locked');
+  expect(JSON.stringify(body.state.step || {})).not.toContain('reference');
 });
 
 // ---- the draft step -----------------------------------------------------------------------
@@ -572,9 +579,7 @@ test('Start this step again on a Part 2 step keeps the criteria, empties the thr
   expect(await readRoot(request, 'test-cases.md')).toBe(rootBefore);
   await page.locator('.course-btn', { hasText: 'Draft your criteria' }).click();
   await expect(page.locator('#step-restart')).toBeVisible();
-  await page.locator('.course-btn', { hasText: 'Write your test cases down' }).click();
-  await expect(page.locator('#preview-note')).toBeVisible();
-  await expect(page.locator('#step-restart')).toHaveCount(0);
+  await expect(page.locator('.course-btn', { hasText: 'Write your test cases down' })).toHaveAttribute('aria-disabled', 'true');
 });
 
 // ---- the test-file step ------------------------------------------------------------------

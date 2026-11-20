@@ -1128,6 +1128,49 @@ meter::-moz-meter-bar { background: var(--pass-bright); border-radius: 999px; }
 .series-lesson.s-done .series-lesson-status { color: var(--pass); }
 :root[data-phone] .series-toggle, :root[data-phone] .series-open { min-height: 44px; }
 
+/* ---- locked and skipped items ----------------------------------------------- */
+/* The lock icon is drawn here (a body and a shackle) so it follows the text colour in both themes. */
+.lock-icon {
+  display: inline-block; flex: none; position: relative; box-sizing: content-box;
+  width: 0.62rem; height: 0.44rem; margin-top: 0.3rem; border: 2px solid currentColor; border-radius: 2px; color: var(--ink-faint);
+}
+.lock-icon::before {
+  content: ""; position: absolute; left: 50%; bottom: 100%; box-sizing: content-box;
+  width: 0.28rem; height: 0.24rem; margin-left: -0.16rem; border: 2px solid currentColor; border-bottom: 0; border-radius: 0.3rem 0.3rem 0 0;
+}
+.is-locked { cursor: not-allowed; color: var(--ink-faint); }
+button.course-btn.is-locked:hover, button.step-btn.is-locked:hover, .series-open.is-locked:hover { background: none; color: var(--ink-faint); }
+button.course-btn.is-locked:hover .course-item-mark, button.step-btn.is-locked:hover .step-num { transform: none; }
+/* "Locked" shows as a small word beside the lock, so the state is not told by grey alone. */
+.s-locked .course-item-status, .s-locked .step-status {
+  position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; flex: none;
+  font-family: var(--mono); font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint);
+}
+/* The tooltip sits beside its locked control, shown on hover and on keyboard focus. */
+.lock-tip { display: none; }
+.course-item, .step-item, .series-head { position: relative; }
+.is-locked:hover ~ .lock-tip, .is-locked:focus-visible ~ .lock-tip {
+  display: block; position: absolute; z-index: 40; left: 2.4rem; top: calc(100% - 0.1rem); max-width: 16rem; padding: 0.4rem 0.65rem;
+  border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow-2);
+  font-family: var(--small); font-size: 0.8rem; line-height: 1.4; pointer-events: none;
+}
+.series-row.st-locked { background: var(--surface-2); box-shadow: none; border-color: var(--rule); }
+.series-row.st-locked .series-title, .series-row.st-locked .series-outcome { color: var(--ink-faint); }
+.series-row.st-locked .series-mark { border-style: dashed; border-color: var(--rule); }
+.series-row.st-skipped .series-title { color: var(--ink-soft); }
+.series-open.is-locked .series-state { background: var(--sunken); color: var(--ink-faint); }
+.skip-icon { display: inline-grid; place-items: center; flex: none; width: 1rem; height: 1rem; border-radius: 50%; border: 1.5px solid var(--line-strong); background: var(--nc-tint); color: var(--nc); }
+.skip-icon::after { content: "–"; font-size: 0.8rem; line-height: 1; }
+.series-extras { padding: 0 1.1rem 0.55rem 3.9rem; }
+:root[data-layout="narrow"] .series-extras { padding-left: 1rem; }
+.series-lesson.s-locked .series-lesson-status, .series-lesson.s-skipped .series-lesson-status { color: var(--ink-faint); }
+.related-locked { color: var(--ink-faint); }
+.skip-dialog h3 { margin: 1rem 0 0.25rem; font-size: 0.95rem; }
+.skip-dialog p { margin: 0.25rem 0 0; }
+.settings-version { margin: 1.5rem 0 0; }
+.version-btn { padding: 0.2rem 0; border: 0; background: none; color: var(--ink-faint); font-family: var(--small); font-size: 0.84rem; cursor: default; }
+.demo-form { display: grid; gap: 0.5rem; max-width: 22rem; }
+
 /* ---- responsive ---------------------------------------------------------- */
 
 /* Layouts follow the text size: js/theme.js sets data-layout (wide, mid or narrow) on <html> from the window width
@@ -1189,6 +1232,14 @@ meter::-moz-meter-bar { background: var(--pass-bright); border-radius: 999px; }
 :root[data-layout="narrow"] .step-item:not(.is-open) .step-title { display: none; }
 :root[data-layout="narrow"] .step-title { white-space: nowrap; }
 :root[data-layout="narrow"] .step-item.is-open .step-btn { padding-right: 0.75rem; }
+/* In the narrow top bar a locked step shows only its number: the lock sits on the corner and the word is read, not drawn. */
+:root[data-layout="narrow"] .step-item:not(.is-open) .step-status {
+  position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+:root[data-layout="narrow"] .step-item:not(.is-open) .step-btn.is-locked { position: relative; }
+:root[data-layout="narrow"] .step-item:not(.is-open) .step-btn.is-locked .lock-icon {
+  position: absolute; right: 0.15rem; bottom: 0.3rem; margin: 0; background: var(--side); transform: scale(0.7); transform-origin: right bottom;
+}
 :root[data-layout="narrow"] #screen-main, :root[data-layout="narrow"] #screen-main.no-terminal { display: flex; flex-direction: column; overflow-y: auto; }
 :root[data-layout="narrow"] #read-progress { display: none; }
 :root[data-layout="narrow"] #col-left { flex: none; overflow: visible; padding: 1.25rem 1rem 1.75rem; }

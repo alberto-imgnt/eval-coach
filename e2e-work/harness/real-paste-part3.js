@@ -87,6 +87,8 @@ async function main() {
     const progressFile = path.join(PROJECT, '.learning', 'progress.json');
     const saved = JSON.parse(fs.readFileSync(progressFile, 'utf8'));
     for (const lesson of ['mission', 'hook', 'several-runs', 'rules']) saved.lessons.per_lesson[lesson] = { status: 'done', activities: {} };
+    // Part 3 opens only after Parts 1 and 2 are done or skipped; this throwaway project skips them (no demo password is used).
+    saved.lessons.skipped_parts = ['part-1', 'part-2'];
     fs.writeFileSync(progressFile, JSON.stringify(saved));
     server = await startServer();
     const state = await api('GET', '/api/state');

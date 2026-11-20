@@ -27,6 +27,10 @@ const CLI_TIMEOUT_MS = 240000;
 // stand-in: 13 before the lessons + 4 hook runs (one silent) + 2 practice runs (build-try, fix-try) + 2 baseline sessions (+1 for the promptfoo track's extra step, +1 for its optional live step) + 4 for Part 1 (the cold run and one rewrite run for each of the three label sets). real: 13 used + fixtures, readback, fix + 1 retry (user-approved option A); Part 1 needs two more real sessions only after the user approves them
 const MAX_SESSIONS = STANDIN ? 30 : 17;
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9.-]+/g;
+// Demo access for the stand-in runs: Part 3 is reached directly, so the app starts with a throwaway hash (made here,
+// for a throwaway password) and the harness turns demo access on. The real password and hash are never used here.
+const DEMO_PASSWORD = 'throwaway-harness-password';
+const DEMO_HASH_FILE = path.join(WORK, 'harness-demo-hash.json');
 
 for (const d of [WORK, HOME, LOG_DIR, SHOTS]) fs.mkdirSync(d, { recursive: true });
 
@@ -72,10 +76,28 @@ function filteredEnv() {
   return env;
 }
 
+function demoArgs() {
+  if (!STANDIN) return [];
+  const salt = crypto.randomBytes(16);
+  const iterations = 1000;
+  const hash = crypto.pbkdf2Sync(DEMO_PASSWORD, salt, iterations, 32, 'sha256');
+  fs.writeFileSync(DEMO_HASH_FILE, JSON.stringify({ salt: salt.toString('hex'), hash: hash.toString('hex'), iterations }));
+  return ['--demo-hash-file', DEMO_HASH_FILE];
+}
+
+// The first request after a start: turn demo access on for the stand-in run (a real run is unlocked by hand).
+async function unlockDemo(port, token) {
+  if (!STANDIN) return;
+  const res = await fetch(`http://127.0.0.1:${port}/api/demo/unlock`, {
+    method: 'POST', headers: { 'X-Eval-Token': token, 'Content-Type': 'application/json' }, body: JSON.stringify({ password: DEMO_PASSWORD }),
+  });
+  if (!res.ok) throw new Error(`demo access did not turn on: ${res.status}`);
+}
+
 async function startServer() {
   fs.writeFileSync(SERVER_LOG, '');
   const out = fs.openSync(SERVER_LOG, 'a');
-  const child = spawn(PYTHON, [PYZ, '--no-browser', '--custom-ai', '--home', HOME], {
+  const child = spawn(PYTHON, [PYZ, '--no-browser', '--custom-ai', ...demoArgs(), '--home', HOME], {
     detached: true, stdio: ['ignore', out, out], env: filteredEnv(), windowsHide: true, cwd: WORK,
   });
   child.unref();
@@ -89,6 +111,7 @@ async function startServer() {
       state.port = m[1];
       state.token = m[2];
       saveState(state);
+      await unlockDemo(state.port, state.token);
       note('server', `started pid ${child.pid} port ${state.port}`);
       return;
     }
@@ -885,7 +908,7 @@ function independentRunIn(cwd, args) {
 }
 
 module.exports = {
-  ROOT, WORK, HOME, PROJECT, STATE_FILE, PYTHON, PYZ, CLI_COMMAND, MODEL, STANDIN, TRACK, PF, independentChecker, CLI_TIMEOUT_MS, SHOTS, LOG_DIR, SERVER_LOG,
+  ROOT, WORK, HOME, PROJECT, STATE_FILE, PYTHON, PYZ, CLI_COMMAND, MODEL, STANDIN, TRACK, PF, independentChecker, CLI_TIMEOUT_MS, SHOTS, LOG_DIR, SERVER_LOG, demoArgs, unlockDemo,
   state, saveState, loadState, note, assertion, violation, redact, sleep, StopRun,
   startServer, killServer, pidAlive, filteredEnv,
   openBrowser, enterPart, readScreen, classify, driveCli, waitReady, answerYes, countSession, clickAndWait,

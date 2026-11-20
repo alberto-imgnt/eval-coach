@@ -28,7 +28,7 @@ class NoSetupBase(unittest.TestCase):
         self.engine = self.new_engine()
 
     def new_engine(self):
-        engine = Engine(self.home, self.terminal, poll_interval=0.01, lessons=self.course)
+        engine = helpers.make_engine(self.home, self.terminal, poll_interval=0.01, lessons=self.course)
         self.addCleanup(engine.shutdown)
         return engine
 
@@ -97,32 +97,27 @@ class GateBeforeSetup(NoSetupBase):
         self.assertEqual(self.code_of(self.engine.lesson_cli_start, "hook", "hook-compare"), "preflight_incomplete")
         self.assertEqual(self.terminal.starts, [])
 
-    def test_a_locked_lesson_opens_as_a_preview_that_records_nothing(self):
+    def test_a_locked_lesson_is_refused_before_setup_and_records_nothing(self):
         before = self.progress_bytes()
-        view = self.engine.lesson_view("hook")["lesson"]
-        self.assertEqual(view["status"], "preview")
-        self.assertTrue(view["body"])
-        self.assertEqual([a["id"] for a in view["activities"]], ["hook-compare", "hook-explain"])
-        self.assertFalse(view["can_complete"])
-        self.assertFalse(view["can_skip"])
+        self.assertEqual(self.code_of(self.engine.lesson_view, "hook"), "lesson_locked")
         self.assertEqual(self.progress_bytes(), before)
 
-    def test_every_lesson_can_be_read_in_any_order(self):
+    def test_only_the_open_lesson_can_be_read_before_setup(self):
         before = self.progress_bytes()
         for lesson in self.course.data["lessons"]:
             if lesson["id"] in ("mission", "p1-mission", "p2-mission"):
                 continue
-            self.assertEqual(self.engine.lesson_view(lesson["id"])["lesson"]["status"], "preview", lesson["id"])
+            self.assertEqual(self.code_of(self.engine.lesson_view, lesson["id"]), "lesson_locked", lesson["id"])
         self.assertEqual(self.progress_bytes(), before)
 
-    def test_preview_exercises_cannot_be_answered_or_completed(self):
+    def test_locked_exercises_cannot_be_answered_or_completed(self):
         before = self.progress_bytes()
         self.assertEqual(self.code_of(self.engine.lesson_answer, "several-runs", "generate-spot", {"option": "a"}),
-                         "preflight_incomplete")
-        self.assertEqual(self.code_of(self.engine.lesson_complete, "several-runs"), "preflight_incomplete")
-        self.assertEqual(self.code_of(self.engine.lesson_skip, "several-runs"), "preflight_incomplete")
+                         "lesson_locked")
+        self.assertEqual(self.code_of(self.engine.lesson_complete, "several-runs"), "lesson_locked")
+        self.assertEqual(self.code_of(self.engine.lesson_skip, "several-runs"), "lesson_locked")
         self.assertEqual(self.code_of(self.engine.lesson_rule_run, "rules", "rules-lab", "r", "text"),
-                         "preflight_incomplete")
+                         "lesson_locked")
         self.assertEqual(self.progress_bytes(), before)
 
     def test_the_open_lesson_works_as_normal(self):
@@ -130,16 +125,18 @@ class GateBeforeSetup(NoSetupBase):
         self.assertEqual(view["status"], "active")
         self.assertEqual(self.engine.get_state()["current_item"], {"kind": "lesson", "id": "mission"})
 
-    def test_a_step_can_be_read_but_nothing_in_it_starts(self):
+    def test_the_next_lesson_can_be_read_before_setup_but_its_cli_exercise_is_refused(self):
+        self.engine.lesson_complete("mission")
+        view = self.engine.lesson_view("hook")["lesson"]
+        self.assertEqual(view["status"], "active")
+        self.assertEqual(self.code_of(self.engine.lesson_cli_start, "hook", "hook-compare"), "preflight_incomplete")
+        self.assertEqual(self.terminal.starts, [])
+
+    def test_a_step_that_is_not_next_is_refused_and_nothing_starts(self):
         before = self.progress_bytes()
-        state = self.engine.get_state("build")
-        step = state["step"]
-        self.assertTrue(step["preview"])
-        self.assertEqual((step["id"], step["status"]), ("build", "locked"))
-        self.assertTrue(step["instructions"])
-        self.assertIsNone(step["cli"])
-        self.assertEqual(self.progress_bytes(), before)
+        self.assertEqual(self.code_of(self.engine.get_state, "build"), "step_locked")
         self.assertEqual(self.code_of(self.engine.step_start, "build"), "preflight_incomplete")
+        self.assertEqual(self.progress_bytes(), before)
 
     def test_no_step_detail_unless_one_is_asked_for(self):
         self.assertIsNone(self.engine.get_state()["step"])
@@ -152,22 +149,19 @@ class GateBeforeSetup(NoSetupBase):
         engine.lesson_complete("mission")
         engine.lesson_cli_start("hook", "hook-compare")
         self.assertEqual(len(self.terminal.starts), 1)
-        self.assertEqual(engine.get_state("build")["step"]["status"], "locked")
-        self.assertTrue(engine.get_state("build")["step"]["preview"])  # still read-only: its lesson is not done
+        self.assertEqual(self.code_of(engine.get_state, "build"), "step_locked")
 
 
-class PreviewWithoutAProject(NoSetupBase):
-    def test_reading_ahead_before_a_project_exists_writes_nothing(self):
+class ReadingBeforeAProject(NoSetupBase):
+    def test_a_locked_lesson_or_step_is_refused_before_a_project_exists_and_writes_nothing(self):
         before = sorted(p.name for p in self.home.iterdir())
-        view = self.engine.lesson_view("hook")["lesson"]
-        self.assertEqual(view["status"], "preview")
-        self.assertEqual(self.engine.get_state("generate")["step"]["status"], "locked")
+        self.assertEqual(self.code_of(self.engine.lesson_view, "hook"), "lesson_locked")
+        self.assertEqual(self.code_of(self.engine.get_state, "generate"), "step_locked")
         self.assertEqual(sorted(p.name for p in self.home.iterdir()), before)
         self.assertFalse((self.home / "pending-lessons.json").exists())
 
     def test_the_cli_exercise_is_refused(self):
-        self.assertIn(self.code_of(self.engine.lesson_cli_start, "hook", "hook-compare"),
-                      ("preflight_incomplete", "lesson_locked"))
+        self.assertEqual(self.code_of(self.engine.lesson_cli_start, "hook", "hook-compare"), "lesson_locked")
 
 
 class SetupGateWithPassedSetup(CourseBase):

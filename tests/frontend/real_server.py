@@ -56,7 +56,7 @@ ROWS = [
 class Session:
     """One engine over a throwaway home and project folder."""
 
-    def __init__(self, scenario):
+    def __init__(self, scenario, demo=True):
         self.tmp = Path(tempfile.mkdtemp(prefix="eval-coach-part1-ui-"))
         self.home, self.project = self.tmp / "home", self.tmp / "project"
         if scenario != "no-setup":
@@ -66,7 +66,8 @@ class Session:
         self.terminal = TerminalManager(pty_factory=FakePty, argv_parser=lambda c, env=None: c.split(),
                                         command_checker=lambda c, env=None: None)
         self.course = load_bundled()
-        self.engine = Engine(self.home, self.terminal, poll_interval=0.05, lessons=self.course)
+        # `demo` True opens every Part (the Part 1 and Part 2 tests need no more); False is a participant's own run.
+        self.engine = helpers.make_engine(self.home, self.terminal, poll_interval=0.05, lessons=self.course, demo=demo)
         self.paths = None
         if scenario != "no-setup":
             self.engine.setup({"project_path": str(self.project), "cli_command": "fake-cli", "starter": "northwind"})
@@ -190,7 +191,7 @@ class Control(BaseHTTPRequestHandler):
         holder = self.server.holder
         with holder.lock:
             if self.path == "/control/reset":
-                holder.reset(body.get("scenario", "ready"))
+                holder.reset(body.get("scenario", "ready"), body.get("demo", True) is not False)
                 if body.get("part1_reach"):
                     holder.current.reach(body["part1_reach"])
                 if body.get("reach"):
@@ -219,10 +220,10 @@ class Holder:
         self.lock = threading.Lock()
         self.current = None
 
-    def reset(self, scenario):
+    def reset(self, scenario, demo=True):
         old = self.current
         FakePty.created = []
-        self.current = Session(scenario)
+        self.current = Session(scenario, demo)
         self.app_server.engine = self.current.engine
         if old is not None:
             old.close()
