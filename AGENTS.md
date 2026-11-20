@@ -110,4 +110,4 @@ Notes:
 
 - Four Phase 0 transcripts contain the account email (housekeeping item H2, waiting on the user). Do not copy or quote them, and do not delete them without the user's go-ahead.
 - Never add secrets, tokens or personal data to content, tests or docs.
-- The demo access password is never written anywhere in the repository, specs, tests, docs, logs or the shipped app: only a salted hash is kept (`app/eval_coach/demo_hash.json`, made by `python tools\make_demo_hash.py`, which reads the password at a prompt). Tests and the harness use their own throwaway password and hash. Do not create or commit a real `demo_hash.json`; the user runs the tool.
+- The demo access password is never written anywhere in the repository, specs, tests, docs, logs or the shipped app: only a salted hash is kept (`app/eval_coach/demo_hash.json`, made by `python tools\make_demo_hash.py`, which reads the password at a prompt). Tests and the harness use their own throwaway password and hash. Do not create or replace the real `demo_hash.json` yourself; the user runs the tool. The user's hash is committed (2026-11-20); never write, quote or guess the password.
