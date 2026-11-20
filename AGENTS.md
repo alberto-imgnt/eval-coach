@@ -41,9 +41,9 @@ app/eval_coach/        the app (stdlib only); module roles are listed in SPEC.md
   kit/                 bundled skills/, northwind/, lessons/ files
   web/                 static UI, no build step
 tests/                 unittest suite; tests/frontend holds the Playwright interface tests
-tools/build_pyz.py     builds dist/eval-coach.pyz
+tools/build_pyz.py     builds dist/eval-coach.pyz and dist/eval-coach.cmd (the launcher plus the .pyz, one file)
 tools/verify_receipt.py  records and checks verification receipts for OpenSpec changes
-packaging/setup.cmd    participant entry point
+packaging/launcher.cmd   source of the participant file eval-coach.cmd; plain ASCII and CRLF in its script part, no backward goto or call
 dist/                  build output (generated)
 e2e-work/              stand-in harness and its scratch homes, logs and screenshots (generated, except harness/)
 spikes/                Phase 0 experiments; hold the private Python 3.13 and Node 26 runtimes and npm cache used by tests
@@ -91,7 +91,7 @@ Run from the repo root on Windows.
 
 Notes:
 - Verification receipts: the archive gate records each passed check with `python tools\verify_receipt.py write --change <name> --name <label> -- <command>` (labels `backend`, `backend-embedded`, `interface`, `build`, `e2e`; the lifecycle's Step 8 and `operations.archive.guidance` in `openspec/config.yaml` say which are required for a change). `post-archive-pr` skips its own test run only when `python tools\verify_receipt.py check --change <name> --staged --require <label> ...` (every required label) says `valid`: the staged snapshot, minus `openspec/` and ignored files, is exactly the tree that was tested.
-- Run the two backend suites one after the other, never at the same time: the `setup.cmd` integration test fails when runs overlap.
+- Run the two backend suites one after the other, never at the same time: the launcher integration test (`tests\test_integration_setup.py`) fails when runs overlap.
 - `test_conpty.RealConsole.test_type_line_sends_enter_separately` is timing-sensitive; rerun it once before treating a failure as real.
 - Two tests are skipped by design. `test_promptfoo_real.py` skips when the spike's private Node and npm cache are absent. The tests that compare bundled files with their source (byte-identical skills, reference results) skip unless `EVAL_COACH_SOURCE_MATERIALS` points to the read-only source folder (its location is in `docs/local/SOURCE-MATERIALS.md`); set it when running the suites for an archive gate, so those checks run.
 - Rebuild `dist/eval-coach.pyz` after app changes that affect the shipped archive.

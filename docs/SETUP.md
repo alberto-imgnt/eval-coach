@@ -5,14 +5,16 @@ Read `docs/SPEC.md` first; its non-negotiable rules apply. Setup and preflight a
 Evidence from the early experiments is in `spikes/phase0-preflight/` (`runtime-manifest.json`, `detect-python.cmd`) and `spikes/phase0-wrapper/`.
 
 ## Distribution
-`eval-coach.zip` contains `setup.cmd` and `eval-coach.pyz`. Participants unzip it and run `setup.cmd`.
+One file, `eval-coach.cmd`, is all a participant needs; they double-click it. `python tools\build_pyz.py` builds it as `dist\eval-coach.cmd`: the launcher script `packaging\launcher.cmd`, which ends with the marker line `rem ===== eval-coach.pyz follows =====`, followed by the bytes of `dist\eval-coach.pyz`. cmd runs the script part and stops at its last `exit /b`, never reading the archive; Python ignores the text in front of a zip archive, so the app runs from the same file. `dist\eval-coach.pyz` is still built for the smoke check and the end-to-end harness. Replacing the file with a newer one is the whole update.
 
-## Stage 1: `setup.cmd`
+Rules for the script part: plain ASCII with CRLF line endings, and no backward jump. Once binary data follows, cmd ends a label search silently at it, so a `goto` or `call` to a label defined earlier in the file does nothing (this once made the Python search report "not found" on a computer that has Python). Loops use `for /l` or are unrolled; `tests\test_setup_cmd.py` fails when a backward jump appears. Every path must end in `exit /b`.
+
+## Stage 1: the launcher (`packaging\launcher.cmd`)
 Uses only cmd.exe and `%SystemRoot%\System32` tools, called by full path (`curl.exe`, `tar.exe`, `certutil.exe`), because Git Bash and other tools can shadow them on PATH.
 1. Detect a working Python 3.9 or later using the tested logic in `detect-python.cmd`. Skip anything under `\Microsoft\WindowsApps\` without running it.
 2. If none is found, look for `%USERPROFILE%\.eval-coach\runtime\python\python.exe`.
 3. If still none: show what will be installed, where, and the size (python.org embeddable 3.13.17, about 11 MB download, 22 MB installed, no admin rights, no system changes) and ask Y/N. On Y: download, verify SHA-256 against the value pinned in the script, extract, delete `python313._pth`. Hash mismatch stops with a clear message and deletes the file; it is never bypassed.
-4. Launch `python eval-coach.pyz`, passing the path so the app knows which Python it runs on.
+4. Start the app from the launcher file itself (`python -B eval-coach.cmd --python <path>`, with any arguments the launcher received passed on), so the app knows which Python it runs on.
 Must handle a user profile path containing spaces and `&`, `(`, `)`.
 Pinned values come from `runtime-manifest.json`.
 
@@ -52,7 +54,8 @@ Data, not code, so they can change without a rebuild. Show the exact command beh
 Plain text for each: no network or proxy block, download timed out, hash mismatch, not enough disk, antivirus removed a file, CLI not found after install, CLI not signed in, working test incomplete, npm errors. Each ends with the action to take. For blocked downloads, the action is to install Python or Node from the company's software portal (Company Portal or Software Center) and choose "Check everything again". No "contact" instruction.
 
 ## Tests
-- `setup.cmd` under a scrubbed PATH with a temporary profile: no Python, real Python, stub only, private Python already there, paths with spaces and `&`, hash mismatch (corrupted archive), declined consent.
+- The launcher (`packaging\launcher.cmd` assembled with a stub app) under a scrubbed PATH with a temporary profile: no Python, real Python, stub only, private Python already there, the file alone in a folder, paths with spaces and `&`, hash mismatch (corrupted archive), declined consent. Shape checks: CRLF and ASCII in the script part, a valid archive after the marker, no backward `goto` or `call`.
+- `tests\test_integration_setup.py` runs the built `dist\eval-coach.cmd`, alone in its folder, against the real app.
 - Unit tests for each preflight item with fake runners; real downloads in one end-to-end test against the temporary home, reusing `spikes/phase0-preflight/downloads` only as a comparison.
 - Node version comparison around 22.22.0.
 - CLI working test: passing, wrong file content, missing version file.

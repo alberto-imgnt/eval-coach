@@ -1,8 +1,11 @@
-"""Build dist/eval-coach.pyz with the stdlib zipapp module.
+"""Build dist/eval-coach.pyz and dist/eval-coach.cmd.
+
+dist/eval-coach.cmd is packaging/launcher.cmd followed by the .pyz bytes: one file
+that finds or installs Python, then runs the app from itself.
 
 Usage:
-    python tools/build_pyz.py            build the archive
-    python tools/build_pyz.py --smoke    build it, then start it on the embedded Python
+    python tools/build_pyz.py            build both files
+    python tools/build_pyz.py --smoke    build them, then start each on the embedded Python
                                          and check that static files and the kit load
 """
 from __future__ import annotations
@@ -22,6 +25,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TARGET = ROOT / "dist" / "eval-coach.pyz"
+LAUNCHER_SOURCE = ROOT / "packaging" / "launcher.cmd"
+LAUNCHER_TARGET = ROOT / "dist" / "eval-coach.cmd"
+LAUNCHER_MARKER = b"rem ===== eval-coach.pyz follows =====\r\n"
 EMBEDDED_PYTHON = ROOT / "spikes" / "phase0-preflight" / "runtime" / "python-embed-3.13.17-nopth" / "python.exe"
 
 
@@ -29,10 +35,18 @@ def _include(path):
     return "__pycache__" not in path.parts and path.suffix != ".pyc"
 
 
+def assemble_launcher(script_bytes, pyz_bytes):
+    """The launcher script, which ends with the marker line, followed by the app archive."""
+    if not script_bytes.endswith(LAUNCHER_MARKER):
+        raise ValueError("the launcher script must end with the marker line")
+    return script_bytes + pyz_bytes
+
+
 def build():
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     zipapp.create_archive(str(ROOT / "app"), str(TARGET), main="eval_coach.__main__:main",
                           filter=_include, compressed=True)
+    LAUNCHER_TARGET.write_bytes(assemble_launcher(LAUNCHER_SOURCE.read_bytes(), TARGET.read_bytes()))
     return TARGET
 
 
@@ -52,9 +66,9 @@ def _request(url, method="GET", token=None, body=None):
         return err.code, err.read()
 
 
-def smoke(python):
+def smoke(python, archive=TARGET):
     temp = Path(tempfile.mkdtemp(prefix="eval-coach-smoke-"))
-    proc = subprocess.Popen([str(python), str(TARGET), "--no-browser", "--port", "0",
+    proc = subprocess.Popen([str(python), str(archive), "--no-browser", "--port", "0",
                              "--home", str(temp / "home")],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     found = {}
@@ -121,8 +135,14 @@ def main():
     args = parser.parse_args()
     target = build()
     print("Built", target, target.stat().st_size, "bytes")
+    print("Built", LAUNCHER_TARGET, LAUNCHER_TARGET.stat().st_size, "bytes")
     if args.smoke:
-        return smoke(args.python)
+        for archive in (TARGET, LAUNCHER_TARGET):
+            print("Smoke check:", archive.name)
+            if smoke(args.python, archive) != 0:
+                print("FAIL:", archive.name)
+                return 1
+        print("Smoke checks passed: eval-coach.pyz and eval-coach.cmd")
     return 0
 
 

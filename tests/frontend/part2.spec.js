@@ -70,7 +70,7 @@ async function apiState(request, query) {
 async function openPart2(page, request, opts = {}) {
   await control(request, '/control/reset', { scenario: opts.scenario || 'ready', part1_reach: opts.part1, reach2: opts.reach });
   await page.goto(`/?t=${TOKEN}`);
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await page.locator('#series-open-part-2').click();
   await expect(page.locator('#series-list')).toHaveCount(0);
 }
@@ -151,7 +151,7 @@ const gateText = (page, label) => gateItems(page).filter({ hasText: label });
 test('the Series map shows Part 2 with a state and an open control, Parts 4 and 5 still say Coming soon, and each Part counts its own items', async ({ page, request }) => {
   await control(request, '/control/reset', { scenario: 'ready', part1_reach: 'rewrite' });
   await page.goto(`/?t=${TOKEN}`);
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   const row = page.locator('#series-part-2');
   await expect(row).toHaveClass(/k-course/);
   await expect(row.locator('.series-tag')).toHaveCount(0);
@@ -200,7 +200,7 @@ test('the Part 2 row opens collapsed when Part 1 is the active Part, and expands
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('#series-lessons-part-2')).toBeHidden();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+    await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await toggle.focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('#series-lessons-part-2')).toBeVisible();
@@ -210,7 +210,7 @@ test('the Part 2 row opens collapsed when Part 1 is the active Part, and expands
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await page.keyboard.press('Tab');
   expect(await page.evaluate(() => document.activeElement.id)).toBe('series-open-part-2');
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+    await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
 });
 
 test('opening Part 2 lands on its mission page with its own header, route groups and course list; Back works', async ({ page, request }) => {
@@ -230,7 +230,7 @@ test('opening Part 2 lands on its mission page with its own header, route groups
     'Compare with an example',
   ]);
   await page.locator('#back-to-series').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await page.locator('#series-open-part-3').click();
   await expect(page.locator('.brand-sub')).toHaveText('Part 3 · Running evals and baseline');
 });
@@ -267,7 +267,7 @@ test('before setup the draft step can be read, nothing in it can be saved, and t
   await control(request, '/control/reset', { scenario: 'no-setup', reach2: 'draft' });
   await page.goto(`/?t=${TOKEN}`);
   await page.locator('#pf-skip').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await page.locator('#series-open-part-2').click();
   await expect(page.locator('#step-heading')).toHaveText('Draft your criteria');
   await expect(page.locator('#preview-note')).toBeVisible();

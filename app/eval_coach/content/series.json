@@ -1,5 +1,5 @@
 {
-  "title": "Series map",
+  "title": "Evaluated systems",
   "parts": [
     {"n": 1, "id": "part-1", "title": "Structured prompting", "kind": "course",
      "outcome": "I tell the AI clearly what I need, so it guesses less and gives steadier answers.",
@@ -54,7 +54,7 @@
   ],
   "ui": {
     "brand_sub": "Evaluated Systems (Stage 3)",
-    "intro": "Six Parts, one method. Do each one yourself: copying someone else's prompt or rules gives you their answers, not the skill to check your own.",
+    "intro": "Is it good enough to use? How do you know? An evaluated system answers both: it is asked for clearly, judged against rules you can test, measured so that a better prompt is a fact and not an opinion, and kept to what earns its place. Below is where you learn to do each of these, ending with a task of your own.",
     "list_label": "The six Parts",
     "part_label": "Part {n}",
     "soon": "Coming soon",

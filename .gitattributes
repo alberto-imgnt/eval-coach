@@ -1,3 +1,3 @@
 # Keep every file byte-for-byte as written: bundled skills must stay identical
-# to their sources and packaging\setup.cmd must keep CRLF line endings.
+# to their sources and packaging\launcher.cmd must keep CRLF line endings.
 * -text

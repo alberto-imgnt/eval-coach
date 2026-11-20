@@ -42,11 +42,24 @@ class SeriesContent(unittest.TestCase):
         self.assertEqual([p["kind"] for p in parts], ["course", "course", "course", "soon", "soon", "live"])
         self.assertEqual(len({p["id"] for p in parts}), 6)
 
-    def test_the_intro_is_about_doing_the_work_yourself(self):
+    def test_the_page_is_titled_evaluated_systems(self):
+        self.assertEqual(series()["title"], "Evaluated systems")
+
+    def test_the_intro_opens_with_the_questions_and_gives_the_four_principles_in_order(self):
         intro = series()["ui"]["intro"]
-        self.assertTrue(intro.startswith("Six Parts, one method."))
-        self.assertIn("Do each one yourself", intro)
-        self.assertNotRegex(intro, r"(?i)look ahead|stage 3")
+        self.assertTrue(intro.startswith("Is it good enough to use? How do you know?"))
+        positions = [intro.find(p) for p in ("asked for clearly", "judged against rules you can test",
+                                             "a better prompt is a fact and not an opinion",
+                                             "kept to what earns its place")]
+        self.assertNotIn(-1, positions)
+        self.assertEqual(positions, sorted(positions))
+        self.assertTrue(intro.rstrip(".").endswith("a task of your own"))
+
+    def test_the_intro_is_not_procedural_and_is_short(self):
+        intro = series()["ui"]["intro"]
+        self.assertIsNone(re.search(r"(?i)\b(six|part|parts|step|steps|first|then|look ahead|stage 3)\b", intro))
+        self.assertLessEqual(len(re.findall(r"[.?!](?:\s|$)", intro)), 4)
+        self.assertLessEqual(len(intro.split()), 80)
 
     def test_no_mission_lists_the_parts(self):
         for lesson_id, file in MISSIONS:

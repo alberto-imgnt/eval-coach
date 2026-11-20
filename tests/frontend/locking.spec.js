@@ -46,7 +46,7 @@ async function api(request, method, path, data) {
 async function openMap(page, request, extra) {
   await control(request, '/control/reset', { scenario: 'ready', demo: false, ...(extra || {}) });
   await page.goto(`/?t=${TOKEN}`);
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
 }
 
 test('the map opens on the active Part only, and the later Parts are locked and do nothing', async ({ page, request }) => {
@@ -63,21 +63,21 @@ test('the map opens on the active Part only, and the later Parts are locked and 
     await expect(row.locator('.series-count')).toHaveCount(0);
     await expect(open).toHaveAttribute('aria-disabled', 'true');
     await open.click({ force: true });
-    await expect(page.locator('#step-heading')).toHaveText('Series map');
+    await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
     await open.focus();
     await expect(row.locator('.lock-tip')).toBeVisible();
     await expect(row.locator('.lock-tip')).toHaveText(TIP);
     await expect(open).toHaveAccessibleDescription(TIP);
     await page.keyboard.press('Enter');
     await page.keyboard.press('Space');
-    await expect(page.locator('#step-heading')).toHaveText('Series map');
+    await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   }
   await expect(page.locator('#series-open-part-1')).not.toHaveAttribute('aria-disabled', 'true');
   await expect(page.locator('#series-part-1 .series-action')).toHaveText('Start');
   // A locked Part still expands, and shows its lessons as Locked.
   await page.locator('#series-toggle-part-3').click();
   await expect(page.locator('#series-lessons-part-3 li').first()).toContainText('Not started');
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+    await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
 });
 
 test('"Skip this Part" is on the open Part only, and its confirm says what is given up', async ({ page, request }) => {

@@ -1,10 +1,18 @@
 @echo off
-rem setup.cmd: first-run launcher for eval-coach on Windows.
+rem launcher.cmd: the launcher for eval-coach on Windows.
 rem Finds Python 3.9 or later, or installs a private copy after asking, then
-rem starts eval-coach.pyz from this script's own folder.
+rem starts the app. tools\build_pyz.py ships this script as dist\eval-coach.cmd
+rem with the app archive appended after the marker line at the end, so the app
+rem runs from this file itself.
 rem
 rem Rules for editing this file:
-rem  - This file must keep CRLF line endings and be plain ASCII.
+rem  - The script part (everything above the marker line) must keep CRLF line
+rem    endings and be plain ASCII.
+rem  - Never jump backward. Once the archive follows the script, a goto or call
+rem    to a label defined earlier in the file silently fails, because cmd stops
+rem    searching at the binary data. Write loops as "for /l" or unroll them.
+rem  - Every path through the script must end in exit /b, so cmd never reads
+rem    the archive.
 rem  - Call Windows tools by full path. Other programs (Git Bash, for example)
 rem    can shadow them on PATH.
 rem  - Delayed expansion stays off, so paths with ampersands, parentheses or
@@ -25,7 +33,7 @@ rem It changes where the file comes from, never the hash it must match.
 if defined EVAL_COACH_PYTHON_URL set "EC_PY_URL=%EVAL_COACH_PYTHON_URL%"
 
 set "EC_SYS=%SystemRoot%\System32"
-set "EC_PYZ=%~dp0eval-coach.pyz"
+set "EC_PYZ=%~f0"
 set "EC_HOME=%USERPROFILE%\.eval-coach"
 set "EC_RUNTIME=%EC_HOME%\runtime"
 set "EC_PRIVATE=%EC_RUNTIME%\python\python.exe"
@@ -34,9 +42,6 @@ set "EC_PROBE_TIMEOUT=10"
 set "EC_PY="
 set "EC_BROKEN="
 set "EC_WORK="
-
-rem A double-click inside a zip file runs this script without its sibling file.
-if not exist "%EC_PYZ%" goto fail_no_pyz
 
 set "EC_WORK=%TEMP%\ec-setup-%RANDOM%%RANDOM%"
 mkdir "%EC_WORK%" >nul 2>&1
@@ -111,16 +116,10 @@ echo(
 if defined EC_FREE_MB if %EC_FREE_MB% lss 50 goto fail_disk
 
 set "EC_TRIES=0"
-:ask
-set /a EC_TRIES+=1
-set "EC_ANSWER="
-set /p "EC_ANSWER=Install it now? Type Y or N, then press Enter: "
-call :read_answer
+set "EC_REPLY=other"
+for /l %%I in (1,1,3) do call :ask_once
 if "%EC_REPLY%"=="yes" goto download
-if "%EC_REPLY%"=="no" goto declined
-if %EC_TRIES% geq 3 goto declined
-echo Please type Y for yes or N for no.
-goto ask
+goto declined
 
 :download
 if not exist "%EC_RUNTIME%\" mkdir "%EC_RUNTIME%" >nul 2>&1
@@ -168,16 +167,8 @@ if not defined EC_PY goto fail_removed
 set "EC_PY="
 if exist "python\" rmdir /s /q "python" >nul 2>&1
 if exist "python\" goto fail_replace
-set /a EC_TRY=0
-:rename_runtime
-ren "python.new" "python" >nul 2>&1
-if exist "%EC_PRIVATE%" goto renamed_runtime
-rem Security software can hold the new files for a moment after the probe ran them.
-set /a EC_TRY+=1
-if %EC_TRY% geq 15 goto fail_removed
-"%EC_SYS%\ping.exe" -n 2 127.0.0.1 >nul
-goto rename_runtime
-:renamed_runtime
+for /l %%I in (1,1,15) do call :rename_try
+if not exist "%EC_PRIVATE%" goto fail_removed
 del /f /q "%EC_ZIP%" >nul 2>&1
 popd
 
@@ -192,7 +183,7 @@ if defined EC_WORK rmdir /s /q "%EC_WORK%" >nul 2>&1
 echo(
 echo Starting eval-coach. Keep this window open while you use it.
 echo(
-"%EC_PY%" "%EC_PYZ%" --python "%EC_PY%"
+"%EC_PY%" -B "%EC_PYZ%" --python "%EC_PY%" %*
 set "EC_RC=%errorlevel%"
 if "%EC_RC%"=="0" exit /b 0
 
@@ -200,9 +191,7 @@ echo(
 echo eval-coach stopped because of a problem (code %EC_RC%).
 echo The lines above this message say what went wrong.
 echo(
-echo What to do next: close this window and run setup.cmd again. If the same
-echo problem comes back, unzip eval-coach.zip into a new folder and run
-echo setup.cmd from there.
+echo What to do next: close this window and start eval-coach again.
 call :hold
 exit /b %EC_RC%
 
@@ -215,9 +204,9 @@ echo(
 echo Nothing was installed and nothing on this computer changed.
 echo(
 echo eval-coach cannot start without Python. What to do next, either:
-echo   - run setup.cmd again and answer Y to install the private copy, or
+echo   - start eval-coach again and answer Y to install the private copy, or
 echo   - install Python 3.9 or later from your company's software portal
-echo     (Company Portal or Software Center), then run setup.cmd again.
+echo     (Company Portal or Software Center), then start eval-coach again.
 call :hold
 exit /b 0
 
@@ -237,10 +226,10 @@ echo This computer is probably offline, or the company network or a proxy is
 echo blocking python.org. Nothing was installed.
 echo(
 echo What to do next:
-echo   1. Check your internet connection, then run setup.cmd again.
+echo   1. Check your internet connection, then start eval-coach again.
 echo   2. If it still fails, the network is blocking the download. Install
 echo      Python 3.9 or later from your company's software portal
-echo      (Company Portal or Software Center), then run setup.cmd again.
+echo      (Company Portal or Software Center), then start eval-coach again.
 goto stop
 
 :fail_timeout
@@ -248,25 +237,25 @@ echo(
 echo The Python download took too long and timed out. Nothing was installed.
 echo(
 echo What to do next:
-echo   1. Run setup.cmd again, ideally on a faster or more stable connection.
+echo   1. Start eval-coach again, ideally on a faster or more stable connection.
 echo   2. If it times out again, install Python 3.9 or later from your
 echo      company's software portal (Company Portal or Software Center), then
-echo      run setup.cmd again.
+echo      start eval-coach again.
 goto stop
 
 :fail_hash
 del /f /q "%EC_ZIP%" >nul 2>&1
 echo(
 echo The downloaded Python file failed its safety check.
-echo Its SHA-256 fingerprint does not match the value built into setup.cmd, so
+echo Its SHA-256 fingerprint does not match the value built into eval-coach, so
 echo the file is damaged or was changed on the way. It has been deleted and
 echo nothing was installed. This check cannot be turned off.
 echo(
 echo What to do next:
-echo   1. Run setup.cmd again to download a fresh copy.
+echo   1. Start eval-coach again to download a fresh copy.
 echo   2. If it fails again, the network is altering the download. Install
 echo      Python 3.9 or later from your company's software portal
-echo      (Company Portal or Software Center), then run setup.cmd again.
+echo      (Company Portal or Software Center), then start eval-coach again.
 goto stop
 
 :fail_cannot_verify
@@ -276,10 +265,10 @@ echo The downloaded Python file could not be checked, so it was deleted and
 echo nothing was installed. Unchecked files are never used.
 echo(
 echo What to do next:
-echo   1. Run setup.cmd again.
+echo   1. Start eval-coach again.
 echo   2. If it fails again, install Python 3.9 or later from your company's
-echo      software portal (Company Portal or Software Center), then run
-echo      setup.cmd again.
+echo      software portal (Company Portal or Software Center), then start
+echo      eval-coach again.
 goto stop
 
 :fail_extract
@@ -290,10 +279,10 @@ echo The Python files could not be unpacked. The drive may be full, or
 echo security software may be blocking the files. Nothing was installed.
 echo(
 echo What to do next:
-echo   1. Free up at least 50 MB on this drive, then run setup.cmd again.
+echo   1. Free up at least 50 MB on this drive, then start eval-coach again.
 echo   2. If it fails again, install Python 3.9 or later from your company's
-echo      software portal (Company Portal or Software Center), then run
-echo      setup.cmd again.
+echo      software portal (Company Portal or Software Center), then start
+echo      eval-coach again.
 goto stop
 
 :fail_removed
@@ -305,10 +294,10 @@ echo Antivirus or other security software on this computer most likely removed
 echo or blocked it. Python was not installed.
 echo(
 echo What to do next:
-echo   1. Run setup.cmd again.
+echo   1. Start eval-coach again.
 echo   2. If it fails again, install Python 3.9 or later from your company's
-echo      software portal (Company Portal or Software Center), then run
-echo      setup.cmd again.
+echo      software portal (Company Portal or Software Center), then start
+echo      eval-coach again.
 goto stop
 
 :fail_replace
@@ -319,7 +308,7 @@ echo The old private copy of Python could not be replaced because something is
 echo still using it. It is in this folder:
 call :say EC_RUNTIME
 echo(
-echo What to do next: close every eval-coach window, then run setup.cmd again.
+echo What to do next: close every eval-coach window, then start eval-coach again.
 goto stop
 
 :fail_disk_write
@@ -327,16 +316,16 @@ echo(
 echo The Python download could not be saved. The drive is probably full.
 echo Nothing was installed.
 echo(
-echo What to do next: free up at least 50 MB on this drive, then run setup.cmd
-echo again.
+echo What to do next: free up at least 50 MB on this drive, then start
+echo eval-coach again.
 goto stop
 
 :fail_disk
 echo Not enough free disk space. Python needs about 34 MB in total and this
 echo drive has only %EC_FREE_MB% MB free. Nothing was installed.
 echo(
-echo What to do next: free up at least 50 MB on this drive, then run setup.cmd
-echo again.
+echo What to do next: free up at least 50 MB on this drive, then start
+echo eval-coach again.
 goto stop
 
 :fail_folder
@@ -344,41 +333,29 @@ echo(
 echo This folder could not be created, so Python could not be installed:
 call :say EC_RUNTIME
 echo(
-echo What to do next: check that the drive is not full, then run setup.cmd
+echo What to do next: check that the drive is not full, then start eval-coach
 echo again. If it still fails, install Python 3.9 or later from your company's
-echo software portal (Company Portal or Software Center), then run setup.cmd
-echo again.
+echo software portal (Company Portal or Software Center), then start
+echo eval-coach again.
 goto stop
 
 :fail_temp
 echo(
-echo setup.cmd could not create a temporary folder here:
+echo eval-coach could not create a temporary folder here:
 call :say TEMP
 echo(
-echo What to do next: free up some space on this drive, then run setup.cmd
+echo What to do next: free up some space on this drive, then start eval-coach
 echo again.
 goto stop
 
 :fail_tools
 echo(
-echo This version of Windows does not include the download tools setup.cmd
+echo This version of Windows does not include the download tools eval-coach
 echo needs (curl, tar and certutil). Nothing was installed.
 echo(
 echo What to do next: install Python 3.9 or later from your company's software
-echo portal (Company Portal or Software Center), then run setup.cmd again.
+echo portal (Company Portal or Software Center), then start eval-coach again.
 goto stop
-
-:fail_no_pyz
-echo(
-echo setup.cmd cannot find eval-coach.pyz in its own folder:
-call :say EC_PYZ
-echo(
-echo This usually means setup.cmd was opened from inside the zip file.
-echo(
-echo What to do next: close this window, right-click eval-coach.zip, choose
-echo Extract All, then double-click setup.cmd in the extracted folder.
-goto stop
-
 :stop
 if defined EC_WORK rmdir /s /q "%EC_WORK%" >nul 2>&1
 call :hold
@@ -400,6 +377,24 @@ rem Prints the variable named in %1 safely, whatever characters it contains.
 setlocal EnableDelayedExpansion
 echo(         !%~1!
 endlocal
+exit /b 0
+
+:ask_once
+rem One try at the install question. Does nothing once a clear answer is in.
+if not "%EC_REPLY%"=="other" exit /b 0
+set /a EC_TRIES+=1
+set "EC_ANSWER="
+set /p "EC_ANSWER=Install it now? Type Y or N, then press Enter: "
+call :read_answer
+if not "%EC_REPLY%"=="other" exit /b 0
+if %EC_TRIES% lss 3 echo Please type Y for yes or N for no.
+exit /b 0
+
+:rename_try
+rem Security software can hold the new files for a moment after the probe ran them.
+if exist "%EC_PRIVATE%" exit /b 0
+ren "python.new" "python" >nul 2>&1
+if not exist "%EC_PRIVATE%" "%EC_SYS%\ping.exe" -n 2 127.0.0.1 >nul
 exit /b 0
 
 :read_answer
@@ -452,13 +447,9 @@ rem ampersands and parentheses in a path stay inert. The trailing rem carries th
 rem token so a hung probe can be found and stopped.
 start "" /b /d "%EC_WORK%" "%SystemRoot%\System32\cmd.exe" /d /v:on /c ^""!EC_CAND!" !EC_ARGS! -c "!EC_CODE!" ^<nul ^>"!EC_OUT!" 2^>nul ^& echo done^>"!EC_DONE!" ^& rem %EC_TOKEN%^"
 
-set /a EC_T=0
-:probe_wait
+for /l %%I in (1,1,%EC_PROBE_TIMEOUT%) do if not exist "%EC_DONE%" "%EC_SYS%\ping.exe" -n 2 127.0.0.1 >nul
 if exist "%EC_DONE%" goto probe_finished
-if %EC_T% geq %EC_PROBE_TIMEOUT% goto probe_hung
-"%EC_SYS%\ping.exe" -n 2 127.0.0.1 >nul
-set /a EC_T+=1
-goto probe_wait
+goto probe_hung
 
 :probe_hung
 "%EC_SYS%\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -Command "Get-CimInstance Win32_Process -Filter \"Name='cmd.exe' AND CommandLine LIKE '%%%EC_TOKEN%%%'\" | ForEach-Object { %SystemRoot%\System32\taskkill.exe /T /F /PID $_.ProcessId | Out-Null }" >nul 2>&1
@@ -486,3 +477,4 @@ if defined EC_EXISTS (
   if /i not "%EC_KIND%"=="py" set "EC_PY=%EC_CAND%"
 )
 exit /b 0
+rem ===== eval-coach.pyz follows =====
