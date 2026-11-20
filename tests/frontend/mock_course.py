@@ -283,7 +283,7 @@ class CourseState:
                 if stored in ("done", "skipped"):
                     out.append(("lesson", lid, stored))
                     continue
-                allowed = passed or lid == "mission"
+                allowed = True  # the lesson that is next to do opens, with or without setup
                 out.append(("lesson", lid, "active" if allowed and not blocked else "locked"))
                 blocked = True
                 continue
@@ -294,7 +294,7 @@ class CourseState:
                 if status == "done":
                     out.append(("step", step, "done"))
                     continue
-                out.append(("step", step, "active" if passed and not blocked and status == "active" else "locked"))
+                out.append(("step", step, "active" if not blocked and status == "active" else "locked"))
                 blocked = True
         return out
 
@@ -392,12 +392,13 @@ class CourseState:
                         identical=(runs[0] == runs[1]) if len(runs) == 2 else None)
         return view
 
-    def view(self, lid, passed, step_status, held_by=None):
+    def view(self, lid, passed, step_status):
+        if lid not in LESSONS:
+            raise MockError("unknown_lesson", ERRORS["unknown_lesson"])
         lesson = LESSONS[lid]
         status = self.lesson_status(lid, passed, step_status)
-        reading_ahead = status == "locked"
-        if reading_ahead:
-            status = "preview"  # reading ahead: the text and the exercises, nothing recorded
+        if status == "locked":
+            raise MockError("lesson_locked", UI["locked_tip"])  # a locked lesson is refused: no text is returned
         placement_done = {p["lesson"] for p in PLACEMENT if self.placement_passed(p["id"])}
         related = lesson.get("related") or {"lessons": [], "glossary": []}
         result = {
@@ -405,12 +406,13 @@ class CourseState:
             "skippable": lesson["skippable"], "status": status, "mission": "Leave with a checker you can trust.",
             "body": lesson["body"], "activities": [self.activity_view(lid, a) for a in lesson["activities"]],
             "sources": copy.deepcopy(lesson["sources"]), "primary_source": copy.deepcopy(lesson["primary_source"]),
-            "related": {"lessons": [{"id": i, "title": LESSONS[i]["title"]} for i in related["lessons"]], "glossary": list(related["glossary"])},
+            "related": {"lessons": [{"id": i, "title": LESSONS[i]["title"],
+                                     "open": self.lesson_status(i, passed, step_status) != "locked"} for i in related["lessons"]],
+                        "glossary": list(related["glossary"])},
             "can_complete": status == "active" and self.all_passed(lid),
             "can_skip": status == "active" and lesson["skippable"] and lid in placement_done,
+            "part_skipped": False,
         }
-        if reading_ahead:
-            result["held_by"] = held_by
         if lid == "mission":
             result["placement"] = self.placement_view()
         return result
@@ -436,7 +438,7 @@ class CourseState:
             raise MockError("unknown_lesson", ERRORS["unknown_lesson"])
         status = self.lesson_status(lid, passed, step_status)
         if status == "locked":
-            raise MockError("lesson_locked", ERRORS["lesson_locked"])
+            raise MockError("lesson_locked", UI["locked_tip"])
         if status in ("done", "skipped"):
             raise MockError("lesson_done", ERRORS["lesson_finished"])
         return LESSONS[lid]
@@ -523,7 +525,7 @@ class CourseState:
         if lid not in LESSONS:
             raise MockError("unknown_lesson", ERRORS["unknown_lesson"])
         if self.lesson_status(lid, passed, step_status) == "locked":
-            raise MockError("lesson_locked", ERRORS["lesson_locked"])
+            raise MockError("lesson_locked", UI["locked_tip"])
         activity = next(a for a in LESSONS[lid]["activities"] if a["id"] == aid)
         if not isinstance(text, str) or not text.strip():
             raise MockError("bad_answer", ERRORS["bad_rule_text"])

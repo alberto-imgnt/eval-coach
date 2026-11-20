@@ -422,6 +422,9 @@ class World:
             self.auto_started = set()  # the steps whose AI window has already been opened once
             self.part1 = {"done": 0, "statuses": {}}
             self.part2 = {"done": 0, "statuses": {}}
+            self.skipped = set()  # Parts the participant skipped
+            self.strict = False  # the Part gate; off until a test turns it on
+            self.demo = {"available": True, "on": False}
             self.live_done = False
             if self.course_mode or scenario in ("setup", "preflight", "generate"):                self.current_index = 0
             else:
@@ -484,24 +487,54 @@ class World:
         }
 
     def series_state(self, course):
-        """The Series map, built by the engine's rules: Part 3 comes from the course list, Part 1 from its own record, the rest from series.json."""
+        """The Series map, built by the engine's rules: Part 3 comes from the course list, Part 1 from its own record, the rest from series.json.
+
+        A Part is locked until every earlier Part is done or skipped, unless demo access is on. The mock keeps that rule
+        off until a test turns on `strict`, so the older tests can still start any Part directly.
+        """
         if not self.course_mode:
             return None
         counted = [x for x in course if x["status"] in ("done", "skipped")]
         done, total = len(counted), len(course)
-        parts = []
+        raw = {}
         for part in SERIES["parts"]:
-            entry = {k: part[k] for k in ("n", "id", "title", "kind", "outcome")}
-            if part["kind"] == "course" and part["id"] == "part-1":
+            if part["kind"] != "course":
+                continue
+            entry = {}
+            if part["id"] == "part-1":
                 entry.update(self.own_part_row(self.part1, PART1_LESSONS, PART1_ITEMS))
-            elif part["kind"] == "course" and part["id"] == "part-2":
+            elif part["id"] == "part-2":
                 entry.update(self.own_part_row(self.part2, PART2_LESSONS, PART2_ITEMS))
-            elif part["kind"] == "course":
+            else:
                 entry["state"] = "done" if done == total else "in_progress" if done else "not_started"
                 entry["done"], entry["total"] = done, total
                 entry["lessons"] = [{"id": x["id"], "title": x["title"], "status": x["status"]} for x in course if x["kind"] == "lesson"]
+            raw[part["id"]] = entry
+        parts, finished_before = [], True
+        for part in SERIES["parts"]:
+            entry = {k: part[k] for k in ("n", "id", "title", "kind", "outcome")}
+            if part["kind"] == "course":
+                entry.update(copy.deepcopy(raw[part["id"]]))
+                skipped = part["id"] in self.skipped
+                gate_open = (not self.strict) or self.demo["on"] or finished_before
+                if skipped:
+                    entry["state"] = "skipped"
+                elif not gate_open:
+                    entry["state"] = "locked"
+                for lesson in entry["lessons"]:
+                    if skipped:
+                        lesson["status"] = "skipped"
+                    elif not gate_open:
+                        lesson["status"] = "locked"
+                if entry["state"] in ("locked", "skipped"):
+                    entry["done"] = entry["total"] = None
+                entry["can_skip"] = entry["state"] in ("not_started", "in_progress")
+                entry["skip"] = copy.deepcopy(part.get("skip"))
+                finished_before = finished_before and (skipped or raw[part["id"]]["state"] == "done")
             parts.append(entry)
-        return {"title": SERIES["title"], "ui": copy.deepcopy(SERIES["ui"]), "parts": parts}
+        states = [(p["id"], p["state"]) for p in parts if "state" in p]
+        active = next((i for i, s in states if s == "in_progress"), None) or next((i for i, s in states if s == "not_started"), None)
+        return {"title": SERIES["title"], "ui": copy.deepcopy(SERIES["ui"]), "parts": parts, "active_part": active}
 
     def own_part_row(self, record, lesson_list, total):
         """A Part with its own course (Part 1 or Part 2): `total` items, of which `record["done"]` are done; lesson statuses come from `record["statuses"]`."""
@@ -533,7 +566,7 @@ class World:
                 else:
                     step["status"] = next(s["status"] for s in steps if s["id"] == sid)
                 if step["status"] == "locked" and sid != "live":
-                    step = self.step_preview(sid)  # reading ahead: the words only, never the step's data
+                    raise MockError("step_locked", mock_course.UI["locked_tip"])  # a locked step is refused, not previewed
                 elif self.course_mode and step["status"] == "done" and sid in STEP_ORDER:
                     step["question"] = self.course.step_question_view(sid)
                 cli = step.get("cli")
@@ -541,8 +574,14 @@ class World:
                     # The server's start rule, as far as the page can tell: an open step, nothing running, not tried yet.
                     cli["can_auto_start"] = (step["status"] == "active" and sid != "live"
                                              and not self.terminal["running"] and sid not in self.auto_started)
-        elif self.course_mode and not self.preflight["passed"] and step_id in STEP_ORDER:
-            step = self.step_preview(step_id)
+        elif self.course_mode and not self.preflight["passed"]:
+            # Before setup a step that is next to do opens as its words only; any other step is refused.
+            sid = step_id or (extra["current_item"]["id"] if extra["current_item"] and extra["current_item"]["kind"] == "step" else None)
+            if sid in STEP_ORDER:
+                status = next((s for k, i, s in self.walk() if k == "step" and i == sid), "locked")
+                if status == "locked":
+                    raise MockError("step_locked", mock_course.UI["locked_tip"])
+                step = self.step_preview(sid, status)
         locked = self.configured and self.current_index > 0 and not self.course_mode
         preflight = copy.deepcopy(self.preflight)
         preflight["track_locked"] = bool(locked)
@@ -568,24 +607,16 @@ class World:
             "review": self.course.review_summary(),
             "course_text": copy.deepcopy(mock_course.UI),
             "series": self.series_state(extra["course"]),
-            "settings": {"text": copy.deepcopy(SETTINGS_TEXT), "backup_folder": BACKUP_FOLDER, "has_project": self.configured},
+            "settings": {"text": copy.deepcopy(SETTINGS_TEXT), "backup_folder": BACKUP_FOLDER, "has_project": self.configured,
+                         "version": "0.1.0"},
+            "demo": dict(self.demo),
         }
 
-    def held_by(self):
-        """The item still to do, which a preview names once setup has passed; None before setup."""
-        if not self.preflight["passed"]:
-            return None
-        if self.course_mode:
-            titles = {**TITLES, **{lid: mock_course.LESSONS[lid]["title"] for lid in mock_course.LESSONS}}
-            return next(({"kind": k, "id": i, "title": titles[i]} for k, i, s in self.walk() if s == "active"), None)
-        current = self.current_id()
-        return {"kind": "step", "id": current, "title": title_of(current)} if self.configured and current else None
-
-    def step_preview(self, sid):
-        """A locked step read ahead: its words only, like the real engine."""
+    def step_preview(self, sid, status="active"):
+        """A step shown as its words only, like the real engine: before setup the step that is next to do."""
         detail = copy.deepcopy(self.details[sid])
-        return {"id": sid, "title": detail["title"], "status": "locked", "preview": True, "track": TRACK["name"],
-                "held_by": self.held_by(),
+        return {"id": sid, "title": detail["title"], "status": status, "preview": True, "track": TRACK["name"],
+                "part_skipped": False,
                 "goal": detail["goal"], "why": detail["why"], "instructions": detail["instructions"], "cli": None,
                 "checklist": [], "last_check": None, "question": None, "troubleshooting": detail["troubleshooting"],
                 "ui": detail.get("ui", {}), "data": {}}
@@ -673,14 +704,17 @@ class Handler(BaseHTTPRequestHandler):
                 query = parse_qs(parts.query)
                 step = query.get("step", [None])[0]
                 with world.lock:
-                    self._json(200, world.state(step))
+                    try:
+                        self._json(200, world.state(step))
+                    except MockError as exc:
+                        self._json(400, {"ok": False, "error": {"code": exc.code, "message": str(exc)}, "state": world.state()})
                 return
             if parts.path in ("/api/lesson", "/api/kit", "/api/review"):
                 query = parse_qs(parts.query)
                 with world.lock:
                     try:
                         if parts.path == "/api/lesson":
-                            body = {"lesson": world.course.view(query.get("id", [""])[0], world.preflight["passed"], world.step_status, world.held_by())}
+                            body = {"lesson": world.course.view(query.get("id", [""])[0], world.preflight["passed"], world.step_status)}
                         elif parts.path == "/api/kit":
                             body = world.course.kit(query.get("ref", [""])[0])
                         else:
@@ -742,7 +776,7 @@ class Handler(BaseHTTPRequestHandler):
             return course.placement_answer(body["id"], body.get("option"), body.get("accept_skip"), passed, steps)
         elif path == "/api/lesson/cli/start":
             if not passed:
-                raise MockError("preflight_incomplete", mock_course.ERRORS["preflight_first"])
+                raise MockError("preflight_incomplete", PREFLIGHT_TEXT["errors"]["preflight_incomplete"])
             course.require_active(body["lesson"], passed, steps)
             if body["activity"] == "hook-compare" and all(course.hook_runs[n].strip() for n in course.hook_runs):
                 raise MockError("runs_complete", mock_course.ERRORS["runs_complete"])
@@ -793,6 +827,7 @@ class Handler(BaseHTTPRequestHandler):
             kind = path.rsplit("/", 1)[1]
             world.log.append({"method": "RESET", "path": path, "kind": kind})
             world.course = CourseState()
+            world.skipped = set()
             world.current_index = 0
             world.terminal.update(running=False, exit_code=None)
             if kind == "configuration":
@@ -801,6 +836,20 @@ class Handler(BaseHTTPRequestHandler):
                 world.setup.update({"project_path": "", "cli_command": "", "starter": "northwind"})
             return {"kind": kind, "backup_folder": BACKUP_FOLDER,
                     "message": SETTINGS_FULL["reset"][kind]["done"].format(folder=BACKUP_FOLDER)}
+        elif path == "/api/part/skip":
+            if body.get("confirm") is not True:
+                raise MockError("confirm_required", SETTINGS_FULL["errors"]["confirm_required"])
+            row = next((p for p in (world.series_state(world.course_state()["course"]) or {"parts": []})["parts"]
+                        if p["id"] == body.get("part")), None)
+            if row is None or not row.get("can_skip"):
+                raise MockError("skip_unavailable", SERIES["errors"]["skip_unavailable"])
+            world.skipped.add(body["part"])
+        elif path == "/api/demo/unlock":
+            if body.get("password") != "mock-demo-password":
+                raise MockError("demo_refused", SETTINGS_FULL["errors"]["demo_refused"])
+            world.demo["on"] = True
+        elif path == "/api/demo/lock":
+            world.demo["on"] = False
         elif path == "/api/preflight/check":
             world.preflight["ran_once"] = True
         elif path == "/api/preflight/install":
@@ -1167,6 +1216,9 @@ class Handler(BaseHTTPRequestHandler):
             elif parts.path == "/__mock/part2":
                 world.part2["done"] = int(body.get("done", 0))
                 world.part2["statuses"] = dict(body.get("statuses", {}))
+            elif parts.path == "/__mock/strict":
+                world.strict = bool(body.get("on", True))
+                world.demo["available"] = bool(body.get("demo_available", True))
             elif parts.path == "/__mock/lesson_status":
                 world.course.status[body["id"]] = body["status"]
             elif parts.path == "/__mock/emit_state":

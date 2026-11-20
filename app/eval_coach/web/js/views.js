@@ -6,10 +6,8 @@ import { h } from './dom.js';
 import { hasLessons, renderCourseNav, renderStepQuestion, tx } from './lessons.js';
 import { PANELS } from './panels.js';
 import { renderSeriesNav } from './series.js';
-import { actionButton, modelToggle, optionalLive, section } from './ui.js';
+import { actionButton, lockIcon, lockTip, lockTipId, lockedProps, modelToggle, optionalLive, section } from './ui.js';
 import { copyPasteText } from './part-steps.js';
-
-const STATUS_WORD = { locked: 'Not started', active: 'Now', done: 'Done', optional: 'Optional' };
 
 // Steps are grouped into phases in the top bar. Any step not listed here (an optional extra) is "extra".
 const PHASE_OF = {
@@ -161,10 +159,13 @@ export function renderTopbar(ctx) {
               const open = viewed || (!anyViewed && s.status === 'active');
               const phase = PHASE_OF[s.id] || 'extra';
               const prevPhase = i > 0 ? PHASE_OF[steps[i - 1].id] || 'extra' : null;
+              const locked = s.status === 'locked';
+              const tipId = lockTipId('step', s.id);
               const inner = [
                 h('span', { class: 'step-num', 'aria-hidden': 'true' }, String(i + 1)),
                 h('span', { class: 'step-title' }, s.title),
-                h('span', { class: 'step-status' }, STATUS_WORD[s.status] || ''),
+                locked ? lockIcon(ctx) : null,
+                h('span', { class: 'step-status', 'aria-hidden': locked ? 'true' : null }, ctx.text[`status_${s.status}`] || ''),
               ];
               return h(
                 'li',
@@ -174,9 +175,12 @@ export function renderTopbar(ctx) {
                 },
                 h(
                   'button',
-                  { type: 'button', class: 'step-btn', title: s.title, 'aria-current': viewed ? 'step' : null, onClick: () => ctx.actions.navigate(s.id) },
+                  locked
+                    ? { type: 'button', class: 'step-btn is-locked', ...lockedProps(ctx, tipId) }
+                    : { type: 'button', class: 'step-btn', title: s.title, 'aria-current': viewed ? 'step' : null, onClick: () => ctx.actions.navigate(s.id) },
                   inner,
                 ),
+                locked ? lockTip(ctx, tipId) : null,
               );
             }),
           ),
@@ -393,25 +397,19 @@ function renderTroubleshooting(step) {
   );
 }
 
-// A step read ahead: its words only. Nothing in it can be started, and nothing is saved.
+// A step shown as its words only: before setup it says hands-on work needs setup, and in a skipped Part it says the
+// Part was skipped. Nothing in it can be started, and nothing is saved.
 function renderStepPreviewNote(ctx, step) {
-  const gate = ctx.state.settings ? ctx.state.settings.text.setup_gate : null;
-  if (!gate) return null;
-  if (!ctx.state.preflight.passed) {
-    return h(
-      'div',
-      { class: 'callout callout-attn', id: 'preview-note', key: 'preview-note', role: 'status' },
-      h('p', null, gate.preview_step),
-      h('div', { class: 'row' }, actionButton(ctx, { label: gate.button, id: 'preview-setup', onClick: () => ctx.actions.openSetup() })),
-    );
+  if (step.part_skipped) {
+    return h('div', { class: 'callout callout-attn', id: 'skipped-part-note', key: 'skipped-part-note', role: 'status' }, h('p', null, ctx.text.part_skipped_note));
   }
-  const held = step.held_by;
-  if (!held) return null;
+  const gate = ctx.state.settings ? ctx.state.settings.text.setup_gate : null;
+  if (!gate || ctx.state.preflight.passed) return null;
   return h(
     'div',
     { class: 'callout callout-attn', id: 'preview-note', key: 'preview-note', role: 'status' },
-    h('p', null, gate.preview_step_after.replace('{title}', held.title)),
-    h('div', { class: 'row' }, actionButton(ctx, { label: gate.preview_back, id: 'preview-back', onClick: () => ctx.actions.openCourseItem(held.kind, held.id) })),
+    h('p', null, gate.step),
+    h('div', { class: 'row' }, actionButton(ctx, { label: gate.button, id: 'preview-setup', onClick: () => ctx.actions.openSetup() })),
   );
 }
 

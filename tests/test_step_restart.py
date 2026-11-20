@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 import course_helpers as ch
+import helpers
 from helpers import FakeTerminal
 from test_part_1_steps import PartOneBase
 from test_part_2_steps import CHOICES, ROWS, PartTwoBase
@@ -63,10 +64,10 @@ class PartOneRestart(PartOneBase):
     def test_an_unfinished_a_locked_and_a_part_three_step_offer_no_restart_and_refuse_it(self):
         self.reach("rewrite")
         self.assertEqual(self.detail("rewrite")["restart"], {"available": False})
-        self.assertEqual(self.detail("own")["restart"], {"available": False})  # a locked preview
+        self.assert_code("step_locked", self.engine.get_state, step="own")  # a locked step is refused
         before = self.paths.progress_file.read_bytes()
         self.assert_code("restart_not_done", self.engine.step_restart, "rewrite", True)
-        self.assert_code("restart_not_done", self.engine.step_restart, "own", True)
+        self.assert_code("step_locked", self.engine.step_restart, "own", True)
         self.assert_code("restart_unavailable", self.engine.step_restart, "generate", True)
         self.assert_code("unknown_step", self.engine.step_restart, "no-such-step", True)
         self.assert_code("confirm_required", self.engine.step_restart, "cold", None)
@@ -112,9 +113,8 @@ class PartOneRestart(PartOneBase):
         self.assertEqual(self.data("score")["answered"], 0)
         self.assertEqual(self.data("score")["gap"], "")
         self.assertEqual(self.status("score"), "active")
-        preview = self.detail("rewrite")
-        self.assertTrue(preview["preview"])  # later steps lock again, and the preview names where the participant is
-        self.assertEqual(preview["held_by"]["id"], "score")
+        self.assert_code("step_locked", self.engine.get_state, step="rewrite")  # later steps lock again
+        self.assertEqual(self.status("rewrite"), "locked")
 
     def test_restarting_rescore_and_own_move_only_what_they_made(self):
         self.finish_part()
@@ -215,7 +215,7 @@ class PartOneRestart(PartOneBase):
         self.assertFalse((self.home / reset.BACKUP_NAME).exists())
 
     def test_a_restart_before_setup_is_refused(self):
-        engine = Engine(self.tmp / "other-home", FakeTerminal(), lessons=self.course)
+        engine = helpers.make_engine(self.tmp / "other-home", FakeTerminal(), lessons=self.course)
         self.addCleanup(engine.shutdown)
         self.assert_code("not_configured", engine.step_restart, "cold", True)
 
@@ -316,8 +316,8 @@ class PartTwoRestart(PartTwoBase):
     def test_later_steps_lock_again_and_the_view_of_a_cleared_step_is_a_fresh_record(self):
         self.finish_part()
         self.restart("thresholds")
-        self.assertTrue(self.detail("test-file")["preview"])
-        self.assertEqual(self.detail("test-file")["held_by"]["id"], "thresholds")
+        self.assert_code("step_locked", self.engine.get_state, step="test-file")
+        self.assertEqual(self.status("test-file"), "locked")
         self.assertEqual(self.detail("draft")["restart"]["steps"][0], "Draft your criteria")
         self.assertEqual(self.detail("thresholds")["restart"], {"available": False})
         self.assertFalse(project.Paths(self.home, self.project).part2_file("test_cases").exists())

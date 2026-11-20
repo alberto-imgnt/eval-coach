@@ -80,7 +80,12 @@ class EngineCase(unittest.TestCase):
     def assert_key_hidden(self):
         """The key text appears in no state response, for any selected step."""
         for step in (None, "generate", "build", "fixtures", "readback", "predict", "key", "run", "fix", "baseline"):
-            self.assertNotIn(KEY_SENTINEL, json.dumps(self.state(step)))
+            try:
+                shown = json.dumps(self.state(step))
+            except EngineError as exc:  # a locked step is refused, so there is nothing to show
+                self.assertEqual(exc.code, "step_locked")
+                continue
+            self.assertNotIn(KEY_SENTINEL, shown)
         self.assertFalse(self.paths.project_key.exists())
 
     # --- walking the steps ---
@@ -302,7 +307,9 @@ class Sequence(EngineCase):
     def test_needs_setup_first(self):
         self.assert_code("not_configured", self.engine.step_start, "generate")
         self.assertFalse(self.state()["configured"])
-        self.assertIsNone(self.state()["step"])
+        words = self.state()["step"]  # the step that is next to do shows its words only before setup
+        self.assertTrue(words["preview"])
+        self.assertEqual((words["id"], words["status"], words["cli"], words["data"]), ("generate", "active", None, {}))
 
     def test_done_steps_stay_viewable(self):
         self.to_step("build")
@@ -843,8 +850,9 @@ class RunStep(EngineCase):
         self.write_checker()
         self.do_run()
         self.assertIn(KEY_SENTINEL, self.data("run")["answer_key_markdown"])
-        for step in ("generate", "build", "fixtures", "readback", "predict", "fix"):
+        for step in ("generate", "build", "fixtures", "readback", "predict"):
             self.assertNotIn(KEY_SENTINEL, json.dumps(self.state(step)["step"]))
+        self.assert_code("step_locked", self.state, "fix")
 
     def test_classification_values_are_validated(self):
         self.to_step("run")
@@ -1298,10 +1306,9 @@ class AutoStart(EngineCase):
         self.engine.step_start("generate")
         self.assertEqual(self.terminal.starts[-1]["label"], "Collect your answers: run 2 of 5")
 
-    def test_reading_ahead_a_locked_step_starts_nothing_and_prepares_nothing(self):
+    def test_asking_for_a_locked_step_is_refused_and_starts_nothing_and_prepares_nothing(self):
         self.setup_project()
-        self.assertTrue(self.state("build")["step"]["preview"])
-        self.assertIsNone(self.state("build")["step"]["cli"])
+        self.assert_code("step_locked", self.state, "build")
         self.engine.step_auto_start("build")
         self.assertEqual(self.starts(), 0)
         self.assertFalse(self.paths.fixtures_work.exists())

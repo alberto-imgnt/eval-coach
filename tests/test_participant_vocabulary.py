@@ -207,6 +207,74 @@ class Categories(unittest.TestCase):
                 self.assertNotRegex(text, r"\bCRISP\b")
 
 
+class LockWords(unittest.TestCase):
+    """The lock, the skip and the demo group: plain words, one tooltip, and no early mention of demo access."""
+
+    SERIES = json.loads((CONTENT / "series.json").read_text(encoding="utf-8"))
+    NOT_ALLOWED = re.compile(r"(?i)stage 3|office hours|AIR discussion|\b(presenters?|facilitators?|rooms?|handouts?)\b|contact |reach out")
+
+    def test_the_lock_words_are_plain_and_the_tooltip_is_one_text(self):
+        ui = json.loads((CONTENT / "lesson-ui.json").read_text(encoding="utf-8"))["ui"]
+        self.assertEqual(ui["status_locked"], "Not started")
+        self.assertEqual(ui["locked_tip"], "Opens when the previous ones are done")
+        self.assertEqual(ui["locked_icon_label"], "Not open yet")
+        copies = [(name, path) for name, path, text in content_strings() if "previous ones are done" in text.lower()]
+        self.assertEqual(copies, [("lesson-ui.json", "ui/locked_tip")])
+        for key in ("locked_tip", "locked_icon_label", "part_skipped_note"):
+            self.assertFalse(BARE_CLI.search(without_allowed(ui[key])), key)
+
+    def test_every_course_part_has_skip_words_that_say_what_it_teaches_and_why(self):
+        courses = [p for p in self.SERIES["parts"] if p["kind"] == "course"]
+        self.assertEqual(len(courses), 3)
+        for part in courses:
+            with self.subTest(part=part["id"]):
+                for key in ("teaches", "matters"):
+                    self.assertGreater(len(part["skip"][key].split()), 8)
+                    self.assertIsNone(self.NOT_ALLOWED.search(part["skip"][key]))
+                    self.assertFalse(BARE_CLI.search(without_allowed(part["skip"][key])))
+        for part in self.SERIES["parts"]:
+            if part["kind"] != "course":
+                self.assertNotIn("skip", part)
+
+    def test_the_skip_confirm_says_there_is_no_artifact_and_no_evaluator(self):
+        ui = self.SERIES["ui"]
+        self.assertIn("no artifact and no evaluator", ui["skip_cost"])
+        for key in ("skip_button", "skip_title", "skip_cancel", "skip_confirm", "state_skipped", "state_locked", "skipped_note"):
+            with self.subTest(key=key):
+                self.assertTrue(ui[key].strip())
+                self.assertIsNone(self.NOT_ALLOWED.search(ui[key]))
+        self.assertEqual(ui["state_locked"], "Not started")
+        self.assertEqual(ui["state_skipped"], "Skipped")
+
+    def test_the_word_locked_is_not_used_for_a_lock_in_participant_text(self):
+        # The lock is shown as "Not started" with a lock icon and the tooltip. (Locking predictions is a different thing.)
+        offenders = []
+        for name, path, text in content_strings():
+            if re.search(r"(?i)\blocked\b", text) and not re.search(r"(?i)prediction|OneDrive|lock (it|in)|grid", text):
+                offenders.append(f"{name} {path}: {text[:80]}")
+        self.assertEqual(offenders, [])
+        for name, text in web_strings():
+            self.assertNotRegex(text, r"\bLocked\b", name)
+
+    def test_demo_access_is_named_only_in_its_own_group(self):
+        offenders = []
+        for name, path, text in content_strings():
+            if "demo access" in text.lower() and not (name == "settings.json" and path.startswith("demo/")):
+                offenders.append(f"{name} {path}")
+        self.assertEqual(offenders, [])
+        for name, text in web_strings():
+            self.assertNotIn("demo access", text.lower(), name)
+
+    def test_the_demo_group_and_its_refusal_are_plain(self):
+        settings = json.loads((CONTENT / "settings.json").read_text(encoding="utf-8"))
+        for key in ("heading", "intro", "password_label", "unlock", "turn_off", "notice"):
+            self.assertTrue(settings["demo"][key].strip(), key)
+        self.assertEqual(settings["errors"]["demo_refused"], "That password was not accepted.")
+        for key in ("notice",):
+            self.assertIn("saved", settings["demo"][key])
+        self.assertNotRegex(settings["errors"]["demo_refused"].lower(), r"hash|exist|wrong|hint")
+
+
 class ModelChoiceWords(unittest.TestCase):
     """The app picks and records the model, so no step text sends the participant to /model or asks for a name."""
 

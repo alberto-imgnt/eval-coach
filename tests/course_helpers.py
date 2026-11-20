@@ -176,9 +176,9 @@ class CourseBase(unittest.TestCase):
     def build_course(self):
         return bundled_course()
 
-    def new_engine(self, lessons=True):
-        engine = Engine(self.home, self.terminal, poll_interval=0.01,
-                        lessons=self.course if lessons else None, clock=self.clock)
+    def new_engine(self, lessons=True, demo=True):
+        engine = helpers.make_engine(self.home, self.terminal, poll_interval=0.01,
+                                     lessons=self.course if lessons else None, clock=self.clock, demo=demo)
         self.addCleanup(engine.shutdown)
         return engine
 

@@ -556,23 +556,25 @@ test('restarting a step clears it and the later steps, keeps the earlier ones, b
   expect(after.backup).toEqual(expect.arrayContaining(['project/part-1/prompt-framework.md', 'project/part-1/output-framework.txt']));
   expect(after.backup.some((name) => name.startsWith('project/part-1/prompt-cold'))).toBe(false);
   // The next step is locked again until this one is done, and the earlier step stays a finished record.
-  await page.locator('.course-btn', { hasText: 'Try a framework' }).click();
-  await expect(page.locator('#preview-note')).toContainText('Score what you got');
+  const locked = page.locator('.course-btn', { hasText: 'Try a framework' });
+  await expect(locked).toHaveAttribute('aria-disabled', 'true');
+  await expect(locked).toContainText('Not started');
   await page.locator('.course-btn', { hasText: 'Write it your way' }).click();
   await expect(page.locator('#run-output')).toContainText('Update for Friday.');
   await expect(page.locator('#step-restart')).toBeVisible();
 });
 
-test('Start this step again is not offered on a step that is not finished or is only previewed', async ({ page, request }) => {
+test('Start this step again is not offered on a step that is not finished, and a later step cannot be opened', async ({ page, request }) => {
   await openPart1(page, request, { reach: 'cold' });
   await expect(page.locator('#step-heading')).toHaveText('Write it your way');
   await expect(page.locator('#step-restart')).toHaveCount(0);
-  await page.locator('.course-btn', { hasText: 'Score what you got' }).click();
-  await expect(page.locator('#preview-note')).toBeVisible();
+  await expect(page.locator('.course-btn', { hasText: 'Score what you got' })).toHaveAttribute('aria-disabled', 'true');
+  await page.locator('.course-btn', { hasText: 'Score what you got' }).click({ force: true });
+  await expect(page.locator('#step-heading')).toHaveText('Write it your way');
   await expect(page.locator('#step-restart')).toHaveCount(0);
 });
 
-test('before setup the steps can be read, and nothing in them can be saved or started', async ({ page, request }) => {
+test('before setup the next step can be read, and nothing in it can be saved or started', async ({ page, request }) => {
   await control(request, '/control/reset', { scenario: 'no-setup' });
   await page.goto(`/?t=${TOKEN}`);
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toBeVisible();
@@ -581,31 +583,24 @@ test('before setup the steps can be read, and nothing in them can be saved or st
   await page.locator('#series-open-part-1').click();
   await expect(page.locator('#step-heading')).toHaveText('Your mission');
   await page.locator('#lesson-continue').click();
-  await page.locator('.course-btn', { hasText: 'Write it your way' }).click();
   await expect(page.locator('#step-heading')).toHaveText('Write it your way');
   await expect(page.locator('#preview-note')).toBeVisible();
   await expect(page.locator('#preview-setup')).toBeVisible();
   for (const id of ['#part-save', '#prompt-editor', '#cli-start', '#cli-send', '#check-work']) await expect(page.locator(id)).toHaveCount(0);
   await expect(page.locator('.step-page')).toContainText('Write a prompt in your own words');
-  await page.locator('.course-btn', { hasText: 'Score what you got' }).click();
-  await expect(page.locator('#preview-note')).toBeVisible();
-  await expect(page.locator('#score-row-r1')).toHaveCount(0);
+  await expect(page.locator('.course-btn', { hasText: 'Score what you got' })).toHaveAttribute('aria-disabled', 'true');
 });
 
-test('after setup a locked Part 1 lesson and step open as previews that name where the participant is', async ({ page, request }) => {
+test('after setup a later Part 1 lesson and step are locked and cannot be opened', async ({ page, request }) => {
   await openPart1(page, request);
   await expect(page.locator('#step-heading')).toHaveText('Your mission');
-  await page.locator('.course-btn', { hasText: 'Score what you got' }).click();
-  await expect(page.locator('#step-heading')).toHaveText('Score what you got');
-  await expect(page.locator('#preview-note')).toContainText('Your mission');
-  await expect(page.locator('#preview-setup')).toHaveCount(0);
-  for (const id of ['#part-save', '#cli-send', '#check-work', '#score-row-r1']) await expect(page.locator(id)).toHaveCount(0);
-  await page.locator('.course-btn', { hasText: 'What your first prompt left out' }).click();
-  await expect(page.locator('#step-heading')).toHaveText('What your first prompt left out');
-  await expect(page.locator('#preview-note')).toContainText('Your mission');
-  await expect(page.locator('#lesson-continue')).toHaveCount(0);
-  await page.locator('#preview-back').click();
-  await expect(page.locator('#step-heading')).toHaveText('Your mission');
+  for (const title of ['Score what you got', 'What your first prompt left out']) {
+    const button = page.locator('.course-btn', { hasText: title });
+    await expect(button).toHaveAttribute('aria-disabled', 'true');
+    await expect(button).toContainText('Not started');
+    await button.click({ force: true });
+    await expect(page.locator('#step-heading')).toHaveText('Your mission');
+  }
   await expect(page.locator('#preview-note')).toHaveCount(0);
 });
 

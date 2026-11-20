@@ -131,23 +131,20 @@ class CourseOrderAndLocking(PartOneBase):
         self.finish("p1-gaps")
         self.assertEqual(self.status("rewrite"), "locked")
         error = self.assert_code("step_locked", self.engine.step_start, "rewrite")
-        self.assertIn(self.course.get("p1-frameworks")["title"], error.message)
+        self.assertEqual(error.message, self.engine.lesson_text["ui"]["locked_tip"])
         self.finish("p1-frameworks")
         self.assertEqual(self.status("rewrite"), "active")
 
-    def test_a_locked_step_of_another_part_is_a_preview_and_changes_nothing(self):
+    def test_a_locked_step_or_lesson_is_refused_and_changes_nothing(self):
         before = self.paths.progress_file.read_bytes()
-        preview = self.detail("score")
-        self.assertTrue(preview["preview"])
-        self.assertEqual((preview["status"], preview["cli"], preview["data"]), ("locked", None, {}))
-        self.assertEqual(preview["held_by"]["id"], "p1-mission")
-        self.assertEqual(self.engine.lesson_view("p1-gaps")["lesson"]["status"], "preview")
+        self.assert_code("step_locked", self.engine.get_state, step="score")
+        self.assert_code("lesson_locked", self.engine.lesson_view, "p1-gaps")
         self.assertEqual(self.paths.progress_file.read_bytes(), before)
         self.assertFalse(self.paths.part1_root.exists())
 
     def test_the_first_step_waits_for_the_mission_and_each_step_for_the_one_before(self):
         error = self.assert_code("step_locked", self.engine.step_submit, "cold", {"model_name": "x"})
-        self.assertIn(self.course.get("p1-mission")["title"], error.message)
+        self.assertEqual(error.message, self.engine.lesson_text["ui"]["locked_tip"])
         self.finish("p1-mission")
         self.assertEqual(self.status("cold"), "active")
         self.assertEqual(self.status("score"), "locked")
@@ -190,7 +187,7 @@ class BeforeSetup(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.home, self.project = self.tmp / "home", self.tmp / "project"
         self.terminal = FakeTerminal()
-        self.engine = Engine(self.home, self.terminal, poll_interval=0.01, lessons=ch.bundled_course())
+        self.engine = helpers.make_engine(self.home, self.terminal, poll_interval=0.01, lessons=ch.bundled_course())
         self.addCleanup(self.engine.shutdown)
         self.engine.setup({"project_path": str(self.project), "cli_command": "mycli", "starter": "northwind"})
         self.paths = project.Paths(self.home, self.project)
@@ -200,19 +197,22 @@ class BeforeSetup(unittest.TestCase):
             fn(*args)
         return ctx.exception.code
 
-    def test_the_mission_opens_before_setup_and_the_steps_are_previews(self):
+    def test_the_mission_opens_before_setup_and_the_first_step_is_words_only_once_it_is_done(self):
         view = self.engine.get_state(part="part-1")
         self.assertEqual(view["course"][0]["status"], "active")
         self.assertEqual(self.engine.lesson_view("p1-mission")["lesson"]["status"], "active")
         before = self.paths.progress_file.read_bytes()
         for step in state.PART_1.step_ids:
-            preview = self.engine.get_state(step=step)["step"]
             with self.subTest(step=step):
-                self.assertTrue(preview["preview"])
-                self.assertEqual(preview["status"], "locked")
-                self.assertIsNone(preview["cli"])
-                self.assertTrue(preview["instructions"])
+                self.assertEqual(self.code_of(self.engine.get_state, step), "step_locked")
         self.assertEqual(self.paths.progress_file.read_bytes(), before)
+        self.engine.lesson_complete("p1-mission")
+        words = self.engine.get_state(step="cold")["step"]
+        self.assertTrue(words["preview"])
+        self.assertEqual(words["status"], "active")
+        self.assertIsNone(words["cli"])
+        self.assertTrue(words["instructions"])
+        self.assertEqual(self.code_of(self.engine.get_state, "score"), "step_locked")
 
     def test_save_start_check_and_the_question_are_refused_and_nothing_is_written(self):
         before = self.paths.progress_file.read_bytes()
@@ -363,6 +363,8 @@ class WriteAndRunCold(PartOneBase):
         self.assertEqual(len(result["nudges"]), 1)
 
     def test_the_step_cannot_run_before_the_one_before_it_is_done_and_score_steps_have_no_cli(self):
+        self.assert_code("step_locked", self.engine.step_start, "score")
+        self.do_cold()
         self.assert_code("not_supported", self.engine.step_start, "score")
 
     def test_the_output_is_plain_text_in_the_view(self):
@@ -673,6 +675,7 @@ class StateForThePage(PartOneBase):
         self.assertEqual(self.engine.get_state(part="part-1")["course_text"]["brand_sub"], "Part 1 \u00b7 Structured prompting")
         self.assertEqual(self.engine.get_state()["course_text"]["brand_sub"], "Part 3 \u00b7 Running evals and baseline")
         self.assert_code("unknown_part", self.engine.get_state, None, "part-77")
+        self.finish("p1-mission")
         self.assertEqual(self.engine.get_state(step="cold")["steps"][0]["id"], "cold")
 
 

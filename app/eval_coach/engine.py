@@ -13,11 +13,12 @@ import threading
 import time
 from pathlib import Path
 
-from . import baseline, criteria_steps, gates, import_checks, models, parsers, part_steps, project, promptfoo, resources, runner, scan
+from . import baseline, criteria_steps, demo_access, gates, import_checks, models, parsers, part_steps, project, promptfoo, resources, runner, scan
 from . import lessons as lesson_lib
 from . import reset as reset_lib
 from . import review as review_lib
 from . import state as store
+from . import __version__
 from .preflight import Preflight, PreflightError
 from .state import CorruptStateError
 
@@ -66,7 +67,7 @@ def _preflight_errors(method):
 
 class Engine:
     def __init__(self, home, terminal, poll_interval=1.0, preflight_runner=None, registry_paths=None,
-                 lessons=None, clock=None, custom_ai=False):
+                 lessons=None, clock=None, custom_ai=False, demo_hash=None):
         self.home = Path(home)
         self.home.mkdir(parents=True, exist_ok=True)
         self.terminal = terminal
@@ -77,6 +78,8 @@ class Engine:
         self.settings_text = json.loads(resources.read_text("content/settings.json"))
         self.series_text = json.loads(resources.read_text("content/series.json"))
         self.lessons = lessons  # a lessons.Course, or None for an engine with no course
+        self._demo_record = demo_hash if demo_hash is not None else demo_access.load_record()
+        self._demo_on = False  # demo access is held in memory only, never saved
         self._clock = clock if clock is not None else time.time
         self._pending_block = None  # course progress from before a project exists
         self._review_sitting = None
@@ -199,10 +202,13 @@ class Engine:
         if status == "done":
             raise EngineError("step_done", "This step is already done.")
         if status == "locked":
-            lesson = self._lesson_blocking(step)
-            if lesson is not None:
-                raise EngineError("step_locked", self._err("step_needs_lesson", lesson=self.lessons.get(lesson)["title"]))
-            raise EngineError("step_locked", "Finish the earlier steps first.")
+            raise EngineError("step_locked", self._lock_message())
+        if status == "skipped":
+            raise EngineError("step_skipped", self._err("step_skipped"))
+
+    def _lock_message(self):
+        """The one plain message every refusal of a locked lesson, step or Part gives."""
+        return self.lesson_text["ui"]["locked_tip"]
 
     def _step(self, step):
         part = self._part_of(step)
@@ -230,6 +236,11 @@ class Engine:
 
     def _track_locked(self):
         return self.progress is not None and bool(self.progress["done"])
+
+    def part_id_of(self, step):
+        """The id of the Part that owns a step or lesson id, or None."""
+        owner = store.part_of(step) if isinstance(step, str) else None
+        return owner.id if owner is not None else None
 
     def _part_of(self, item_id):
         """The Part an id belongs to. An id no Part owns is treated as Part 3's, as before."""
@@ -260,10 +271,22 @@ class Engine:
         return part.course_for(self._track())
 
     def _kind_call(self, step, action, *args):
-        """Run a step's registered kind handler for `action`. Returns NOT_KIND when the step has no kind (the Part 3 path)."""
+        """Run a step's registered kind handler for `action`. Returns NOT_KIND when the step has no kind (the Part 3 path).
+
+        A step that is locked or in a skipped Part is refused here for every action but `detail`, whether or not the
+        kind offers the action, so the refusal never depends on which kind the step has.
+        """
         kind = self.content["steps"].get(step, {}).get("kind")
         if kind is None:
             return NOT_KIND
+        if action != "detail":
+            self._require_configured()
+            self._require_preflight()
+            status = self._status(step)
+            if status == "locked":
+                raise EngineError("step_locked", self._lock_message())
+            if status == "skipped":
+                raise EngineError("step_skipped", self._err("step_skipped"))
         method = getattr(store.STEP_KINDS[kind], action, None)
         if method is None:
             raise EngineError("not_supported", "This step does not do that.")
@@ -345,6 +368,8 @@ class Engine:
             if step is not None:
                 self._require_known(step)
                 chosen = self._part_of(step)  # a step names its own Part
+                if step != LIVE and self._status(step) == "locked":
+                    raise EngineError("step_locked", self._lock_message())
             p = self.progress
             warnings = list(self._warnings)
             if p is not None:
@@ -358,6 +383,9 @@ class Engine:
             if p is not None and passed and current_item is not None and current_item["kind"] == "step":
                 current = current_item["id"]
             selected = step if step is not None else current
+            # Before setup the page still shows the next step's words, so the participant can see what comes next.
+            shown = step if step is not None else (
+                current_item["id"] if current_item is not None and current_item["kind"] == "step" else None)
             steps = [{"id": s, "title": self._text(s)["title"],
                       "status": self._status(s) if p and passed else "locked"} for s in self._steps(chosen)]
             # Optional extras sit outside `steps` and `course`, so those two keep meaning "the required work".
@@ -383,7 +411,7 @@ class Engine:
                 },
                 "current_step": current,
                 "steps": steps,
-                "step": self._step_view(p, passed, selected, step),
+                "step": self._step_view(p, passed, selected, shown),
                 "terminal": self.terminal.status(),
                 "ai_model": self._ai_model_view(),
                 "preflight": self._preflight_view(),
@@ -394,11 +422,23 @@ class Engine:
                 "course_text": course_text,
                 "series": self._series_view(passed),
                 "settings": self._settings_view(),
+                "demo": {"available": self._demo_record is not None, "on": self._demo_on},
             }
 
     def _course_list(self, part, passed):
         return [{"kind": k, "id": i, "title": self._item_title(k, i), "status": s}
                 for k, i, s in self._walk(passed, part)]
+
+    def _part_state(self, part, course):
+        """locked, skipped, not_started, in_progress or done, from the Part's gate and its course list."""
+        if part.id in self._lessons_block()["skipped_parts"]:
+            return "skipped"
+        if not self._part_open(part):
+            return "locked"
+        counted = [x for x in course if x["status"] in ("done", "skipped")]
+        if course and len(counted) == len(course):
+            return "done"
+        return "in_progress" if counted else "not_started"
 
     def _series_view(self, passed):
         """The Series map: every Part from series.json, with the course list folded into the Part that has content."""
@@ -410,38 +450,37 @@ class Engine:
             registered = store.part_by_id(part["id"]) if part["kind"] == "course" else None
             if registered is not None:
                 course = self._course_list(registered, passed)
-                counted = [x for x in course if x["status"] in ("done", "skipped")]
-                done, total = len(counted), len(course)
-                entry["state"] = "done" if total and done == total else ("in_progress" if done else "not_started")
-                entry["done"], entry["total"] = done, total
+                state = self._part_state(registered, course)
+                entry["state"] = state
+                counts = state in ("not_started", "in_progress", "done")
+                entry["done"] = len([x for x in course if x["status"] in ("done", "skipped")]) if counts else None
+                entry["total"] = len(course) if counts else None
+                entry["can_skip"] = state in ("not_started", "in_progress")
+                if "skip" in part:
+                    entry["skip"] = part["skip"]
                 entry["lessons"] = [{"id": x["id"], "title": x["title"], "status": x["status"]}
                                     for x in course if x["kind"] == "lesson"]
             parts.append(entry)
-        return {"title": self.series_text["title"], "ui": self.series_text["ui"], "parts": parts}
+        states = [(p["id"], p["state"]) for p in parts if "state" in p]
+        active = next((i for i, s in states if s == "in_progress"), None) \
+            or next((i for i, s in states if s == "not_started"), None)
+        return {"title": self.series_text["title"], "ui": self.series_text["ui"], "parts": parts,
+                "active_part": active}
 
     def _step_view(self, progress, passed, selected, requested):
         if progress is not None and passed and selected:
-            if selected != LIVE and self._status(selected) == "locked":
-                return self._step_preview(selected)  # reading ahead: the words only, never the step's data
+            if selected != LIVE and self._status(selected) == "skipped":
+                return self._step_words(selected, "skipped")  # a skipped Part: the words only, never the step's data
             return self._detail(selected)
         if requested is not None and not passed:
-            return self._step_preview(requested)  # reading ahead before setup
+            return self._step_words(requested, self._status(requested))  # before setup: the words only
         return None
 
-    def _held_by(self, item_id):
-        """The item of this Part that is still to do, shown in a preview once setup has passed; None before setup."""
-        if not self.preflight.is_passed(self.paths):
-            return None
-        for kind, item, status in self._walk(True, self._part_of(item_id)):
-            if status == "active":
-                return {"kind": kind, "id": item, "title": self._item_title(kind, item)}
-        return None
-
-    def _step_preview(self, step):
-        """A step's words with nothing to do in them: shown for any locked step, never starts the CLI, records nothing."""
+    def _step_words(self, step, status):
+        """A step's words with nothing to do in them: never starts the CLI, reads no participant file, records nothing."""
         text = self._text(step)
-        return {"id": step, "title": text["title"], "status": "locked", "preview": True, "track": self._track(),
-                "held_by": self._held_by(step),
+        return {"id": step, "title": text["title"], "status": status, "preview": True, "track": self._track(),
+                "part_skipped": status == "skipped",
                 "goal": text["goal"], "why": text["why"], "instructions": text["instructions"], "cli": None,
                 "checklist": [], "last_check": None, "question": None, "troubleshooting": text["troubleshooting"],
                 "ui": text.get("ui", {}), "data": {}, "restart": {"available": False}}
@@ -450,7 +489,7 @@ class Engine:
         """What the Settings panel needs: its words and where a reset would put the backup."""
         text = {key: value for key, value in self.settings_text.items() if key != "errors"}
         return {"text": text, "backup_folder": str(self.home / reset_lib.BACKUP_NAME),
-                "has_project": self.paths is not None}
+                "has_project": self.paths is not None, "version": __version__}
 
     def _preflight_view(self):
         view = self.preflight.view(self.paths, self._preflight_session())
@@ -914,6 +953,46 @@ class Engine:
             if self._cli_step in PF_SESSIONS:
                 self._stop_cli()
 
+    # --- skipping a Part and demo access --------------------------------------
+
+    def _cli_part(self):
+        """The Part that the running AI window belongs to, or None for setup's own windows."""
+        if self._cli_step is None or self._cli_step in PF_SESSIONS:
+            return None
+        if self._cli_step.startswith("lesson:"):
+            return store.part_of(self._cli_step.split(":")[1])
+        return store.part_of(self._cli_step)
+
+    def part_skip(self, part_id, confirm):
+        """POST /api/part/skip: skip a whole Part on purpose. Moves, deletes and changes no participant file."""
+        errors = self.series_text["errors"]
+        if confirm is not True:
+            raise EngineError("confirm_required", self.settings_text["errors"]["confirm_required"])
+        with self._lock:
+            self._require_course()
+            part = store.part_by_id(part_id) if isinstance(part_id, str) else None
+            if part is None:
+                raise EngineError("unknown_part", self.content["messages"]["unknown_part"])
+            passed = self.preflight.is_passed(self.paths)
+            if self._part_state(part, self._course_list(part, passed)) not in ("not_started", "in_progress"):
+                raise EngineError("skip_unavailable", errors["skip_unavailable"])
+            if self._cli_part() is part:
+                self._stop_cli()
+            self._lessons_block()["skipped_parts"].append(part.id)
+            self._save_lessons()
+
+    def demo_unlock(self, password):
+        """POST /api/demo/unlock: turn demo access on for this run when the password is right."""
+        with self._lock:
+            if self._demo_record is None or not demo_access.verify(password, self._demo_record):
+                raise EngineError("demo_refused", self.settings_text["errors"]["demo_refused"])
+            self._demo_on = True
+
+    def demo_lock(self):
+        """POST /api/demo/lock: turn demo access off."""
+        with self._lock:
+            self._demo_on = False
+
     # --- resets --------------------------------------------------------------
 
     def reset_progress(self, confirm):
@@ -1004,7 +1083,12 @@ class Engine:
             part = self._part_of(step)
             if part.restart is None or step not in part.restart:
                 raise EngineError("restart_unavailable", errors["restart_unavailable"])
-            if self._status(step) != "done":
+            status = self._status(step)
+            if status == "locked":
+                raise EngineError("step_locked", self._lock_message())
+            if status == "skipped":
+                raise EngineError("step_skipped", self._err("step_skipped"))
+            if status != "done":
                 raise EngineError("restart_not_done", errors["restart_not_done"])
             if self.preflight.job_running():
                 raise EngineError("job_busy", errors["job_busy"])
@@ -1787,6 +1871,9 @@ class Engine:
                 block["records"].append(record)
         for key, entry in pending["review"]["items"].items():
             block["review"]["items"].setdefault(key, entry)
+        for part_id in pending["skipped_parts"]:
+            if part_id not in block["skipped_parts"]:
+                block["skipped_parts"].append(part_id)
 
     def _item_title(self, kind, item):
         if kind == "lesson":
@@ -1796,46 +1883,69 @@ class Engine:
     def _lesson_entry(self, lesson_id):
         return self._lessons_block()["per_lesson"].setdefault(lesson_id, {"status": None, "activities": {}})
 
+    def _part_finished(self, part):
+        """True when every item of the Part is done or skipped by its saved status, or the Part was skipped.
+
+        Reads stored status only (never `_walk`), so the Part gate cannot loop back into itself.
+        """
+        if part.id in self._lessons_block()["skipped_parts"]:
+            return True
+        per_lesson = self._lessons_block()["per_lesson"]
+        done = self._done_of(part)
+        for kind, item in self._course(part):
+            if kind == "lesson":
+                if self.lessons is None or item not in self.lessons:
+                    continue
+                if per_lesson.get(item, {}).get("status") not in ("done", "skipped"):
+                    return False
+            elif item not in done:
+                return False
+        return True
+
+    def _part_open(self, part):
+        """True when the Part may be worked in: every earlier Part is done or skipped, or demo access is on.
+
+        An engine with no course (a test-only setup) has no series, so nothing is gated.
+        """
+        if self.lessons is None or self._demo_on:
+            return True
+        return all(self._part_finished(p) for p in store.PARTS if p.n < part.n)
+
     def _walk(self, passed, part=None):
-        """Every item of a Part's course (Part 3 by default) in teaching order, as (kind, id, status)."""
+        """Every item of a Part's course (Part 3 by default) in teaching order, as (kind, id, status).
+
+        A Part that is not open has every item locked; a skipped Part has every item skipped.
+        """
         part = part or store.PART_3
         block = self._lessons_block()
         done = list(self._done_of(part))
         steps, course = self._steps(part), self._course(part)
-        next_step = steps[len(done)] if self.progress is not None and len(done) < len(steps) else None
+        next_step = steps[len(done)] if len(done) < len(steps) else None
+        skipped_part = part.id in block["skipped_parts"]
+        closed = not skipped_part and not self._part_open(part)
         out, blocked = [], False
         for kind, item in course:
-            if kind == "lesson":
-                if self.lessons is None or item not in self.lessons:
-                    continue
+            if kind == "lesson" and (self.lessons is None or item not in self.lessons):
+                continue
+            if skipped_part:
+                out.append((kind, item, "skipped"))
+            elif closed:
+                out.append((kind, item, "locked"))
+            elif kind == "lesson":
                 stored = block["per_lesson"].get(item, {}).get("status")
                 if stored in ("done", "skipped"):
                     out.append((kind, item, stored))
                     continue
-                allowed = passed or item == part.mission
-                out.append((kind, item, "active" if allowed and not blocked else "locked"))
+                out.append((kind, item, "locked" if blocked else "active"))
                 blocked = True
             else:
                 if item in done:
                     out.append((kind, item, "done"))
                     continue
-                allowed = passed and not blocked and item == next_step
+                allowed = not blocked and item == next_step
                 out.append((kind, item, "active" if allowed else "locked"))
                 blocked = True
         return out
-
-    def _lesson_blocking(self, step):
-        """The lesson holding this step back, if a lesson is the reason it is locked."""
-        if self.lessons is None:
-            return None
-        for kind, item, status in self._walk(True, self._part_of(step)):
-            if kind == "step" and item == step:
-                return None
-            if kind == "lesson" and status == "active":
-                return item
-            if status == "locked":
-                return None
-        return None
 
     def _require_course(self):
         if self.lessons is None:
@@ -1860,9 +1970,7 @@ class Engine:
         lesson = self._require_lesson(lesson_id)
         status = self._lesson_status(lesson_id)
         if status == "locked":
-            if lesson_id != self._part_of(lesson_id).mission and not self.preflight.is_passed(self.paths):
-                raise EngineError("preflight_incomplete", self._err("preflight_first"))
-            raise EngineError("lesson_locked", self._err("lesson_locked"))
+            raise EngineError("lesson_locked", self._lock_message())
         return lesson, status
 
     def _require_lesson_active(self, lesson_id):
@@ -1891,18 +1999,15 @@ class Engine:
 
     def lesson_view(self, lesson_id):
         with self._lock:
-            lesson = self._require_lesson(lesson_id)
-            status = self._lesson_status(lesson_id)
-            if status == "locked":
-                # Reading ahead: the text and the exercises are shown, and nothing is recorded.
-                view = self._lesson_public(lesson, "preview", record_seed=False)
-                view["held_by"] = self._held_by(lesson_id)
-                return {"lesson": view}
-            return {"lesson": self._lesson_public(lesson, status)}
+            self._require_lesson_open(lesson_id)
+            lesson = self.lessons.get(lesson_id)
+            return {"lesson": self._lesson_public(lesson, self._lesson_status(lesson_id))}
 
     def _lesson_public(self, lesson, status, record_seed=True):
-        preview = status == "preview"
-        seed = self._seed() if record_seed else (self._lessons_block()["seed"] or "preview")
+        part = self._part_of(lesson["id"])
+        part_skipped = part.id in self._lessons_block()["skipped_parts"]
+        preview = part_skipped  # a skipped Part opens read-only: no participant file is read, nothing is recorded
+        seed = self._seed() if record_seed and not part_skipped else (self._lessons_block()["seed"] or "preview")
         reasons = self.lesson_text["rule_reasons"]
         entries = self._lessons_block()["per_lesson"].get(lesson["id"], {}).get("activities", {})
         views = []
@@ -1931,13 +2036,14 @@ class Engine:
             "activities": views,
             "sources": [{"label": s["label"], "ref": s["ref"]} for s in lesson["sources"]],
             "primary_source": {k: lesson["primary_source"][k] for k in ("label", "ref", "why")},
-            "related": {"lessons": [{"id": i, "title": self.lessons.get(i)["title"]}
+            "related": {"lessons": [{"id": i, "title": self.lessons.get(i)["title"],
+                                     "open": self._lesson_status(i) != "locked"}
                                     for i in related.get("lessons", []) if i in self.lessons],
                         "glossary": list(related.get("glossary", []))},
             "can_complete": status == "active" and self._all_passed(lesson),
             "can_skip": status == "active" and lesson["skippable"] and lesson["id"] in placement_done,
+            "part_skipped": part_skipped,
         }
-        part = self._part_of(lesson["id"])
         if lesson["id"] == part.mission:
             result["placement"] = self._placement_public(seed, part)
         return result
@@ -2095,7 +2201,7 @@ class Engine:
                 self._checker_running = False
         with self._lock:
             if self.paths is not paths:
-                raise EngineError("checker_stale", self._err("lesson_locked"))
+                raise EngineError("checker_stale", self._lock_message())
             self._save_result("demo-1", first)
             self._save_result("demo-2", second)
             entry = self._activity_entry(lesson_id, activity_id)
@@ -2222,6 +2328,7 @@ class Engine:
             if item is None:
                 raise EngineError("unknown_placement", self._err("unknown_placement"))
             mission = self._part_of(item["lesson"]).mission
+            self._require_lesson_open(mission)
             if self._lesson_status(mission) != "active":
                 raise EngineError("placement_closed", self._err("placement_closed"))
             lesson = self.lessons.get(item["lesson"])

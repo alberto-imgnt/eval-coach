@@ -164,10 +164,65 @@ function renderSetupGroup(ctx) {
   );
 }
 
+// ---- demo access ---------------------------------------------------------------
+
+// The notice that shows on every screen but the setup wizard while demo access is on. It reuses the banner slot.
+export function renderDemoNotice(ctx) {
+  const { state } = ctx;
+  if (!state || !state.demo || !state.demo.on || ctx.view === 'wizard') return [];
+  const d = words(ctx).demo;
+  return [
+    h('section', { class: 'setup-banner demo-notice', id: 'demo-notice', key: 'demo-notice', role: 'status', 'aria-label': d.notice_label }, h('p', null, d.notice)),
+  ];
+}
+
+// The hidden group: a password box while demo access is off, and the way to turn it off while it is on.
+function renderDemoGroup(ctx) {
+  const d = words(ctx).demo;
+  const on = ctx.state.demo.on;
+  const error = ctx.local('demo-error');
+  return h(
+    'section',
+    { class: 'settings-group', id: 'settings-demo', key: 'demo', 'aria-labelledby': 'settings-demo-title' },
+    h('h2', { id: 'settings-demo-title' }, d.heading),
+    h('p', null, d.intro),
+    on
+      ? h('div', { class: 'row' }, h('p', { class: 'ok-text', id: 'demo-on-text' }, d.on_text), actionButton(ctx, { label: d.turn_off, id: 'demo-lock', busyKey: 'demo-lock', busyLabel: '…', onClick: () => ctx.actions.demoLock() }))
+      : h(
+          'form',
+          {
+            class: 'demo-form',
+            onSubmit: (event) => {
+              event.preventDefault();
+              const box = event.currentTarget.querySelector('#demo-password');
+              ctx.actions.demoUnlock(box ? box.value : '');
+            },
+          },
+          h('label', { for: 'demo-password', class: 'field-label' }, d.password_label),
+          h('input', { type: 'password', id: 'demo-password', class: 'input', autocomplete: 'off', 'aria-describedby': error ? 'demo-error' : null }),
+          error ? h('p', { class: 'bad-text', id: 'demo-error', role: 'alert' }, error) : null,
+          h('div', { class: 'row' }, h('button', { type: 'submit', class: 'btn btn-primary', id: 'demo-unlock' }, d.unlock)),
+        ),
+  );
+}
+
+// The app version. It is a button styled as text: the fifth selection in a row reveals the demo group (only when the
+// build has a demo hash). Nothing is announced before then.
+function renderVersion(ctx) {
+  const s = words(ctx).settings;
+  const version = ctx.state.settings.version;
+  return h(
+    'p',
+    { class: 'settings-version', key: 'version' },
+    h('button', { type: 'button', class: 'version-btn', id: 'settings-version', onClick: () => ctx.actions.versionTap() }, fmt(s.version, { version })),
+  );
+}
+
 // ---- the panel ----------------------------------------------------------------
 
 export function renderSettings(ctx) {
   const s = words(ctx).settings;
+  const showDemo = ctx.state.demo.available && (ctx.state.demo.on || ctx.demoRevealed);
   return h(
     'article',
     { class: 'settings-page', key: 'settings' },
@@ -177,5 +232,7 @@ export function renderSettings(ctx) {
     renderTextSize(ctx),
     renderSetupGroup(ctx),
     renderReset(ctx),
+    renderVersion(ctx),
+    showDemo ? renderDemoGroup(ctx) : null,
   );
 }

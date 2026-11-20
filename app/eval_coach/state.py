@@ -266,7 +266,8 @@ def read_json(path):
 
 def new_lessons_block():
     """Course progress. It holds only what the participant did, never course answers."""
-    return {"seed": None, "per_lesson": {}, "placement": {}, "records": [], "review": {"items": {}}, "step_checks": {}}
+    return {"seed": None, "per_lesson": {}, "placement": {}, "records": [], "review": {"items": {}}, "step_checks": {},
+            "skipped_parts": []}
 
 
 def default_step_entry(step):
@@ -382,6 +383,9 @@ def prune_lessons_block(block):
         kept = [r for r in records if not isinstance(r, dict) or r.get("lesson") in known]
         dropped = dropped or len(kept) != len(records)
         block["records"] = kept
+    skipped = block.get("skipped_parts")
+    if isinstance(skipped, list):
+        block["skipped_parts"] = [p for p in skipped if part_by_id(p) is not None]
     items = block.get("review", {}).get("items") if isinstance(block.get("review"), dict) else None
     if isinstance(items, dict):
         for key in [k for k, v in items.items() if isinstance(v, dict) and v.get("lesson") not in known]:

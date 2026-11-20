@@ -15,6 +15,34 @@ export function verdictTag(v) {
   return h('span', { class: `verdict v-${v}` }, label);
 }
 
+// ---- locked items ---------------------------------------------------------
+// A locked lesson, step or Part is greyed, shows a lock icon and the word "Locked", and cannot be opened. The control
+// stays focusable (aria-disabled), so the tooltip text can be read on keyboard focus as well as on hover.
+
+export function lockTipId(kind, id) {
+  return `lock-tip-${kind}-${id}`;
+}
+
+// The lock icon: drawn by the stylesheet, with its own accessible name.
+export function lockIcon(ctx) {
+  return h('span', { class: 'lock-icon', role: 'img', 'aria-label': ctx.text.locked_icon_label });
+}
+
+// The tooltip text, a sibling of the locked control. Shown on hover and keyboard focus by the stylesheet.
+export function lockTip(ctx, tipId) {
+  return h('span', { class: 'lock-tip', id: tipId, role: 'tooltip' }, ctx.text.locked_tip);
+}
+
+// The props that make a button a locked one: not activatable, still focusable, described by the tooltip.
+export function lockedProps(ctx, tipId) {
+  return {
+    'aria-disabled': 'true',
+    'aria-describedby': tipId,
+    title: ctx.text.locked_tip,
+    onClick: (event) => event.preventDefault(),
+  };
+}
+
 // A button that stays focusable while busy or unavailable (aria-disabled), so
 // keyboard users do not lose their place when its state changes.
 export function actionButton(ctx, { label, busyKey, busyLabel, onClick, kind, disabled, id }) {

@@ -141,7 +141,7 @@ class SavedProgress(unittest.TestCase):
         store.write_json_atomic(home / "app.json", {"last_project": str(project_dir)})
         before = paths.progress_file.read_bytes()
         with ph.synthetic_part():
-            engine = Engine(home, helpers.FakeTerminal(), lessons=ch.bundled_course())
+            engine = helpers.make_engine(home, helpers.FakeTerminal(), lessons=ch.bundled_course())
             self.addCleanup(engine.shutdown)
             self.assertIsNone(engine.progress)
             self.assertIn(engine.content["messages"]["corrupt_progress"].format(path=str(paths.progress_file)),
@@ -294,8 +294,8 @@ class Walk(TwoParts):
     def test_the_first_lesson_of_a_part_opens_before_setup_and_nothing_else_does(self):
         self.assertEqual(self.statuses(), [(ph.INTRO, "active"), (ph.CHOICE, "locked"), (ph.STEP, "locked")])
         self.assertEqual(self.engine.lesson_view(ph.INTRO)["lesson"]["status"], "active")
-        self.assertEqual(self.engine.lesson_view(ph.CHOICE)["lesson"]["status"], "preview")
-        self.assert_code("preflight_incomplete", self.engine.lesson_complete, ph.CHOICE)
+        self.assert_code("lesson_locked", self.engine.lesson_view, ph.CHOICE)
+        self.assert_code("lesson_locked", self.engine.lesson_complete, ph.CHOICE)
 
     def test_a_step_is_refused_before_setup_the_way_a_part_three_step_is(self):
         self.assert_code("not_configured", self.engine.step_check, "generate")
@@ -314,7 +314,7 @@ class Walk(TwoParts):
         self.setup_project()
         self.finish(ph.INTRO)
         error = self.assert_code("step_locked", self.engine.step_check, ph.STEP)
-        self.assertIn(self.lesson(ph.CHOICE)["title"], error.message)
+        self.assertEqual(error.message, self.engine.lesson_text["ui"]["locked_tip"])
         self.finish(ph.CHOICE)
         self.assertEqual(self.statuses()[-1], (ph.STEP, "active"))
 
@@ -366,6 +366,8 @@ class Kinds(TwoParts):
 
     def test_an_action_the_kind_does_not_offer_is_refused_plainly(self):
         self.setup_project()
+        self.assert_code("step_locked", self.engine.step_start, ph.STEP)  # a locked step gets the lock message first
+        self.finish_lessons_of_part()
         self.assert_code("not_supported", self.engine.step_start, ph.STEP)
         self.assert_code("not_supported", self.engine.step_submit, ph.STEP, {})
         self.assert_code("not_supported", self.engine.step_skip, ph.STEP)
@@ -397,6 +399,7 @@ class StateOfAPart(TwoParts):
 
     def test_a_step_implies_its_part(self):
         self.setup_project()
+        self.finish_lessons_of_part()
         state = self.engine.get_state(step=ph.STEP)
         self.assertEqual([i["id"] for i in state["course"]], [ph.INTRO, ph.CHOICE, ph.STEP])
         self.assertEqual(self.engine.get_state(step=ph.STEP, part="part-3")["steps"], state["steps"])

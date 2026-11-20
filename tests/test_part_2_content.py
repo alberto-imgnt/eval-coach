@@ -583,7 +583,7 @@ class SeriesRow(unittest.TestCase):
         home = Path(tempfile.mkdtemp(prefix="eval-coach-series-"))
         self.addCleanup(shutil.rmtree, home, True)
         import course_helpers as ch
-        engine = Engine(home, helpers.FakeTerminal(), lessons=ch.bundled_course())
+        engine = helpers.make_engine(home, helpers.FakeTerminal(), lessons=ch.bundled_course())
         self.addCleanup(engine.shutdown)
         two, three = engine.get_state(part="part-2"), engine.get_state()
         self.assertEqual(two["course_text"]["brand_sub"], "Part 2 \u00b7 Defining evaluation criteria")

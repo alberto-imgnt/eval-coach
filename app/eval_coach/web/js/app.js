@@ -5,15 +5,15 @@ import { openAiWindowLesson } from './ai-window.js';
 import { celebrate, initChrome, resetDisplayChoices, syncCourseNav, updateReadProgress } from './chrome.js';
 import { confirmDialog } from './dialog.js';
 import { morph } from './dom.js';
-import { hasLessons, lessonCliActivity, renderLesson, renderLessonTermHead, renderReviewBanner } from './lessons.js';
+import { fmt, hasLessons, lessonCliActivity, renderLesson, renderLessonTermHead, renderReviewBanner } from './lessons.js';
 import { openFileViewer, openGlossary, openReview } from './overlays.js';
 import { PANELS } from './panels.js';
 import { unsavedCriteria } from './criteria-steps.js';
 import { unsavedTexts } from './part-steps.js';
 import { setMapText } from './markdown.js';
 import { aiTesting, firstWizardItem, nextWizardPage, renderPreflightTermFoot, renderPreflightTermHead, renderWizard, wizardIndex, wizardPageId, wizardPages, wizardUsesTerminal } from './preflight.js';
-import { renderSeries } from './series.js';
-import { renderSettings, renderSetupBanner, resetDialogBody, restartDialogBody } from './settings.js';
+import { renderSeries, skipDialogBody } from './series.js';
+import { renderDemoNotice, renderSettings, renderSetupBanner, resetDialogBody, restartDialogBody } from './settings.js';
 import { createTerminal } from './terminal.js';
 import { renderFinished, renderNotices, renderStep, renderTermFoot, renderTermHead, renderTopbar } from './views.js';
 
@@ -21,7 +21,7 @@ const $ = (id) => document.getElementById(id);
 const SAVE_DELAY_MS = 600;
 const TEST_POLL_MS = 3000; // how often the working test page quietly re-reads the test folder after Send
 const DEFAULT_PART = 'part-3'; // the Part the server describes when a request names none
-const DEFAULT_OPEN_PARTS = ['part-1', 'part-2', 'part-3']; // the Parts with content start expanded on the Series map
+const DEMO_TAPS = 5; // selecting the version line this many times in a row reveals the demo access group
 
 const app = {
   state: null,
@@ -29,7 +29,10 @@ const app = {
   viewStep: null, // null means "follow the current step"
   viewLesson: null, // a lesson the participant opened by hand; null follows the current item
   screen: 'series', // 'series' (the Series map, the home screen), 'settings' or 'setup' while one of those is open; null shows the course
-  seriesOpen: new Set(DEFAULT_OPEN_PARTS), // Part rows expanded on the Series map; in memory only
+  seriesOpen: new Set(), // Part rows expanded on the Series map; in memory only, seeded from the active Part
+  seriesSeeded: false, // the map's expansion was set from state.series.active_part (once per launch, reload or reset)
+  versionTaps: 0, // selections of the version line in Settings, in a row
+  demoRevealed: false, // the demo access group was revealed in this visit to Settings
   settingsFrom: null, // the screen Settings was opened from ('series' or null for the course), to return to on close
   setupFrom: null, // the screen the setup wizard was opened from ('settings', 'series' or null for the course), to return to on close
   wizardItem: null, // the setup wizard's current page (a preflight item id); in memory only
@@ -173,11 +176,6 @@ function viewedLessonIdInCourse(state) {
   if (app.viewStep) return null;
   const item = state.current_item;
   if (item && item.kind === 'lesson') return item.id;
-  if (!item && !state.preflight.passed) {
-    // Setup is not done and the open lessons are finished: show the next lesson to read ahead.
-    const next = state.course.find((entry) => entry.kind === 'lesson' && entry.status === 'locked');
-    return next ? next.id : null;
-  }
   return null;
 }
 
@@ -221,6 +219,11 @@ function applyState(state) {
   // last page instead of closing before the participant has seen Your AI window.
   const firstRunWizardWas = Boolean(app.state && currentView(app.state) === 'wizard' && app.screen !== 'setup');
   app.state = state;
+  if (!app.seriesSeeded && state.series) {
+    // The map opens on the Part the participant is in; their own expanding after this sticks.
+    app.seriesOpen = new Set(state.series.active_part ? [state.series.active_part] : []);
+    app.seriesSeeded = true;
+  }
   if (firstRunWizardWas && state.preflight.passed && !state.preflight.skipped && !app.setupDismissed) {
     app.wizardFinishing = true;
   }
@@ -275,7 +278,12 @@ async function refresh() {
     if (generation === postGeneration && wantedStep === app.viewStep) applyState(state);
     else fetchAgain = true;
   } catch (err) {
-    reportError(err);
+    if (err.code === 'step_locked' && wantedStep && wantedStep === app.viewStep) {
+      app.viewStep = null; // the step is not open (any more): fall back to where the participant is
+      fetchAgain = true;
+    } else {
+      reportError(err);
+    }
   } finally {
     fetching = false;
     if (fetchAgain) {
@@ -289,7 +297,7 @@ function mutate(path, body) {
   const run = async () => {
     try {
       // The server describes the Part named here in the state it returns, so the page stays in its own Part.
-      const res = await apiPost(path, app.part === DEFAULT_PART ? body : { ...body, part: app.part });
+      const res = await apiPost(path, app.part === DEFAULT_PART ? body : { part: app.part, ...body });
       handleServerState(res.state);
       return res;
     } catch (err) {
@@ -357,14 +365,57 @@ const actions = {
 
   openPart(id) {
     const part = app.state && app.state.series ? app.state.series.parts.find((p) => p.id === id) : null;
-    if (!part || part.kind !== 'course') return;
+    if (!part || part.kind !== 'course' || part.state === 'locked') return;
     saver.flush();
     app.part = id;
     app.screen = null;
-    app.viewLesson = null;
+    // A skipped Part opens read-only at its first lesson; every other Part opens at its current item.
+    app.viewLesson = part.state === 'skipped' && part.lessons.length ? part.lessons[0].id : null;
     app.viewStep = null;
     app.focusHeading = true;
     refresh();
+  },
+
+  // "Skip this Part": a confirm that says what it teaches, why it matters and what is given up.
+  skipPart(part) {
+    return act(`skip-${part.id}`, async () => {
+      const words = app.state.series.ui;
+      const ok = await confirmDialog({
+        title: fmt(words.skip_title, { n: part.n, title: part.title }),
+        body: skipDialogBody(words, part),
+        confirmLabel: words.skip_confirm,
+        cancelLabel: words.skip_cancel,
+      });
+      if (!ok) return;
+      await saver.flush();
+      await mutate('/api/part/skip', { part: part.id, confirm: true });
+      await refresh();
+    });
+  },
+
+  // Selecting the version line five times in a row reveals the demo access group, when this build has a hash.
+  versionTap() {
+    if (!app.state || !app.state.demo || !app.state.demo.available) return;
+    app.versionTaps += 1;
+    if (app.versionTaps >= DEMO_TAPS) app.demoRevealed = true;
+    scheduleRender();
+  },
+
+  demoUnlock(password) {
+    return act('demo-unlock', async () => {
+      try {
+        await mutate('/api/demo/unlock', { password });
+        app.local.delete('demo-error');
+      } catch (err) {
+        app.local.set('demo-error', err.message);
+      }
+    });
+  },
+
+  demoLock() {
+    return act('demo-lock', async () => {
+      await mutate('/api/demo/lock', {});
+    });
   },
 
   backToSeries() {
@@ -387,6 +438,9 @@ const actions = {
     saver.flush();
     if (app.screen !== 'settings') app.settingsFrom = app.screen;
     app.screen = 'settings';
+    app.versionTaps = 0;
+    app.demoRevealed = false;
+    app.local.delete('demo-error');
     app.focusHeading = true;
     scheduleRender();
   },
@@ -394,6 +448,9 @@ const actions = {
   closeSettings() {
     app.screen = app.settingsFrom;
     app.settingsFrom = null;
+    app.versionTaps = 0;
+    app.demoRevealed = false;
+    app.local.delete('demo-error');
     app.local.delete('reset-result');
     app.focusHeading = true;
     refresh();
@@ -495,7 +552,8 @@ const actions = {
         resetDisplayChoices();
         app.screen = 'series';
         app.part = DEFAULT_PART;
-        app.seriesOpen = new Set(DEFAULT_OPEN_PARTS);
+        app.seriesOpen = new Set();
+        app.seriesSeeded = false;
         app.settingsFrom = null;
         app.setupFrom = null;
         app.wizardItem = null;
@@ -629,7 +687,11 @@ const actions = {
   openGlossary(term) {
     const lessonLink = (lessonId) => {
       const entry = (app.state.course || []).find((i) => i.kind === 'lesson' && i.id === lessonId);
-      return entry ? { id: entry.id, title: entry.title } : null;
+      if (entry) return { id: entry.id, title: entry.title, locked: entry.status === 'locked' };
+      // A lesson of another Part: shown as plain text while it is locked, and not linked otherwise.
+      const parts = app.state.series ? app.state.series.parts : [];
+      const other = parts.flatMap((p) => p.lessons || []).find((l) => l.id === lessonId);
+      return other && other.status === 'locked' ? { id: other.id, title: other.title, locked: true } : null;
     };
     return openGlossary({
       text: app.state.course_text,
@@ -1170,6 +1232,7 @@ function buildContext() {
     },
     text: (state && state.course_text) || {},
     seriesOpen: app.seriesOpen,
+    demoRevealed: app.demoRevealed,
     // The sidebar shows the Series map's form on the map and on Settings opened from it.
     mapNav: Boolean(rawState && rawState.series && (view === 'series' || (view === 'settings' && app.settingsFrom === 'series'))),
     lessonId,
@@ -1308,7 +1371,7 @@ function render() {
     syncCourseNav();
     window.requestAnimationFrame(updateReadProgress);
     morph($('notices'), ...renderNotices(ctx));
-    morph($('setup-banner'), ...renderSetupBanner(ctx));
+    morph($('setup-banner'), ...renderSetupBanner(ctx), ...renderDemoNotice(ctx));
     morph($('review-banner'), ...(ctx.view === 'wizard' ? [] : renderReviewBanner(ctx)));
     if (!ctx.state) return;
     showScreen('main');

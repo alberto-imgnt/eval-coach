@@ -398,14 +398,15 @@ async function expectIncomplete(lessonId) {
   check(`${lessonId}: can_complete is false until the CLI exercise has run`, view.can_complete === false);
 }
 
+const LOCK_MESSAGE = 'Opens when the previous ones are done';
+
 async function expectStepLocked(stepId, lessonId, note) {
   const s = await getState();
   const stepStatus = s.course.find((c) => c.kind === 'step' && c.id === stepId).status;
   check(`${note || stepId}: step is locked in the course`, stepStatus === 'locked', stepStatus);
   check(`${note || stepId}: steps list shows it locked and current_step is not it`, s.steps.find((x) => x.id === stepId).status === 'locked' && s.current_step !== stepId, String(s.current_step));
   const r = await post('/api/step/start', { step: stepId });
-  const title = lessonDef(lessonId).title;
-  check(`${note || stepId}: starting it is refused and names the lesson`, r.status === 400 && r.code === 'step_locked' && r.message.includes(title), `${r.status} ${r.code} ${r.message}`);
+  check(`${note || stepId}: starting it is refused with the lock message`, r.status === 400 && r.code === 'step_locked' && r.message === LOCK_MESSAGE, `${r.status} ${r.code} ${r.message}`);
   const sub = await post('/api/step/check', { step: stepId });
   check(`${note || stepId}: checking it is refused`, sub.status === 400, String(sub.status));
 }
@@ -549,12 +550,11 @@ async function stageMission() {
   check('only the mission is open; everything after it is locked', map.mission === 'active' && s.course.filter((c) => c.id !== 'mission').every((c) => c.status === 'locked'), JSON.stringify(map));
   check('steps list is all locked', s.steps.every((x) => x.status === 'locked'));
   check('state has course text and a review summary', s.course_text && s.review && s.review.due === 0);
-  // Before setup a locked lesson opens to read, as a preview that records nothing. Everything that acts on it is refused.
+  // A locked lesson is refused, before setup as after it: no text is returned and nothing is recorded.
   const previewBefore = fs.existsSync(PENDING) ? fs.readFileSync(PENDING, 'utf8') : null;
-  const preview = await viewLesson('hook');
-  check('viewing a lesson after the mission before setup is a read-only preview', preview.ok && lessonOf(preview).status === 'preview' && lessonOf(preview).can_complete === false && lessonOf(preview).can_skip === false && lessonOf(preview).body.length > 0, `${preview.status} ${preview.code}`);
-  scanLessonText('hook (preview)', preview);
-  check('reading ahead recorded nothing', (fs.existsSync(PENDING) ? fs.readFileSync(PENDING, 'utf8') : null) === previewBefore);
+  const refusedLesson = await viewLesson('hook');
+  check('viewing a lesson after the mission before setup is refused with the lock message', refusedLesson.status === 400 && refusedLesson.code === 'lesson_locked' && refusedLesson.message === LOCK_MESSAGE && !refusedLesson.json.lesson, `${refusedLesson.status} ${refusedLesson.code}`);
+  check('the refused request recorded nothing', (fs.existsSync(PENDING) ? fs.readFileSync(PENDING, 'utf8') : null) === previewBefore);
   for (const [name, r] of [
     ['answering a lesson after the mission', await answer('hook', 'hook-compare', { option: 'a' })],
     ['completing a lesson after the mission', await post('/api/lesson/complete', { lesson: 'hook' })],
@@ -623,7 +623,9 @@ async function stageMission() {
   check('finishing the mission scheduled no review and made no learning record', Object.keys(lessonsBlock().review.items).length === 0 && (lessonsBlock().records || []).length === 0);
   check('the mission progress is held in the app folder before a project exists', exists(PENDING) && !exists(PROGRESS));
   s = await getState();
-  check('hook stays locked until preflight passes', courseMap(s).hook === 'locked' && courseMap(s).mission === 'done' && s.current_item === null, JSON.stringify(s.current_item));
+  check('hook is the next lesson to do and opens to read, but its CLI exercise is refused until preflight passes', courseMap(s).hook === 'active' && courseMap(s).mission === 'done' && s.current_item && s.current_item.id === 'hook', JSON.stringify(s.current_item));
+  const hookCli = await post('/api/lesson/cli/start', { lesson: 'hook', activity: 'hook-compare' });
+  check('starting the hook CLI before preflight is refused', hookCli.status === 400 && hookCli.code === 'preflight_incomplete', `${hookCli.status} ${hookCli.code}`);
   check('no violations so far', state.violations.length === 0, state.violations.join(' | '));
   await quitApp();
   endStage('mission');
@@ -637,8 +639,8 @@ async function stageHook() {
   await expectStepLocked('generate', 'hook', 'generate while hook is open');
   const progressBefore = fs.readFileSync(PROGRESS, 'utf8');
   const locked = await viewLesson('several-runs');
-  check('a later lesson opens as a read-only preview that names the lesson still to do', locked.ok && lessonOf(locked).status === 'preview' && lessonOf(locked).can_complete === false && lessonOf(locked).held_by && lessonOf(locked).held_by.id === 'hook', `${locked.status} ${locked.code}`);
-  check('reading a later lesson recorded nothing', fs.readFileSync(PROGRESS, 'utf8') === progressBefore);
+  check('a later lesson is refused with the lock message and returns no text', locked.status === 400 && locked.code === 'lesson_locked' && locked.message === LOCK_MESSAGE && !locked.json.lesson, `${locked.status} ${locked.code}`);
+  check('refusing a later lesson recorded nothing', fs.readFileSync(PROGRESS, 'utf8') === progressBefore);
   const lockedAnswer = await answer('several-runs', 'generate-spot', { option: 'a' });
   check('a later lesson cannot be answered early', lockedAnswer.status === 400 && lockedAnswer.code === 'lesson_locked', lockedAnswer.code);
   const lockedCli = await post('/api/lesson/cli/start', { lesson: 'rules', activity: 'build-try' });
@@ -1247,12 +1249,19 @@ async function spawnApp(home) {
   const log = path.join(L.WORK, 'server-migrate.out');
   fs.writeFileSync(log, '');
   const out = fs.openSync(log, 'a');
-  const child = spawn(L.PYTHON, [L.PYZ, '--no-browser', '--custom-ai', '--home', home], { detached: true, stdio: ['ignore', out, out], env: L.filteredEnv(), windowsHide: true, cwd: L.WORK });
+  const child = spawn(L.PYTHON, [L.PYZ, '--no-browser', '--custom-ai', ...L.demoArgs(), '--home', home], { detached: true, stdio: ['ignore', out, out], env: L.filteredEnv(), windowsHide: true, cwd: L.WORK });
   child.unref();
   fs.closeSync(out);
   for (let i = 0; i < 100; i += 1) {
     const m = readText(log).match(/http:\/\/127\.0\.0\.1:(\d+)\/\?t=(\S+)/);
-    if (m) return { pid: child.pid, port: m[1], token: m[2] };
+    if (m) {
+      // Part 3 is locked until demo access is on: a participant who has done nothing in Parts 1 and 2 is refused.
+      const refused = await fetch(`http://127.0.0.1:${m[1]}/api/lesson?id=mission`, { headers: { 'X-Eval-Token': m[2] } });
+      const body = await refused.json();
+      const lockedBefore = refused.status === 400 && body.error && body.error.code === 'lesson_locked';
+      await L.unlockDemo(m[1], m[2]);
+      return { pid: child.pid, port: m[1], token: m[2], lockedBefore };
+    }
     await sleep(100);
   }
   throw new Error('migration server did not print its URL');
@@ -1288,6 +1297,7 @@ async function stageMigrate() {
   const app = await spawnApp(home);
   target = { port: app.port, token: app.token };
   try {
+    check('lock: Part 3 refuses its first lesson until demo access is on, when Parts 1 and 2 are untouched', !L.STANDIN || app.lockedBefore === true);
     for (const p of projects) {
       const r = await post('/api/setup', { project_path: p.dir, cli_command: L.CLI_COMMAND, starter: 'northwind' });
       check(`${p.name}: older progress.json (no lessons) loads without error`, r.ok, r.text.slice(0, 200));
@@ -1564,7 +1574,7 @@ async function expectP2Locked(step, lessonId, note) {
   const s = await getState();
   check(`${note}: the step is locked in the course`, courseMap(s)[step] === 'locked', courseMap(s)[step]);
   const r = await post('/api/step/submit', { step, data: { checks: {} } });
-  check(`${note}: saving is refused and names the lesson`, r.status === 400 && r.code === 'step_locked' && r.message.includes(lessonDef(lessonId).title), `${r.status} ${r.code} ${r.message}`);
+  check(`${note}: saving is refused with the lock message`, r.status === 400 && r.code === 'step_locked' && r.message === LOCK_MESSAGE, `${r.status} ${r.code} ${r.message}`);
   const c = await post('/api/step/check', { step });
   check(`${note}: checking it is refused`, c.status === 400 && c.code === 'step_locked', `${c.status} ${c.code}`);
 }
@@ -1590,12 +1600,12 @@ async function part2Flow() {
   check('part 2: the Series map row is a course, not coming soon', row.kind === 'course' && row.total === 8 && row.state === 'not_started', JSON.stringify(row));
   await enterStage('p2-mission');
 
-  // Order and locking, and what a preview shows.
+  // Order and locking, and what a refused request returns.
   await expectP2Locked('draft', 'p2-mission', 'part 2 draft before the lessons');
   const preview = await get('/api/state?step=reference');
-  check('part 2: the reference step opens as a preview with no reference in it', preview.status === 200 && preview.json.step.preview === true && preview.json.step.data && Object.keys(preview.json.step.data).length === 0, preview.text.slice(0, 120));
-  const previewText = JSON.stringify(preview.json.step).toLowerCase();
-  check('part 2: the preview holds no reference threshold or list word', !p2ReferenceParts().some((x) => previewText.includes(x.toLowerCase())));
+  check('part 2: the reference step is refused with the lock message, so no reference is returned', preview.status === 400 && preview.json.error.code === 'step_locked' && preview.json.error.message === LOCK_MESSAGE, preview.text.slice(0, 120));
+  const previewText = JSON.stringify(preview.json.state ? preview.json.state.step : null).toLowerCase();
+  check('part 2: the refused response holds no reference threshold or list word', !p2ReferenceParts().some((x) => previewText.includes(x.toLowerCase())));
   const mission = lessonOf(await viewLesson('p2-mission'));
   check('part 2: the mission is one page with no questions', mission.activities.length === 0);
   await completeLesson('p2-mission');

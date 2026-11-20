@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 import course_helpers as ch
+import helpers
 from helpers import FakeTerminal
 from test_http_course import CourseServer
 
@@ -110,17 +111,15 @@ class CourseOrderAndLocking(PartTwoBase):
         self.reach("p2-thresholds")
         self.assertEqual(self.status("thresholds"), "locked")
         error = self.assert_code("step_locked", self.engine.step_submit, "thresholds", {"checks": {"script_test": True}})
-        self.assertIn(self.course.get("p2-thresholds")["title"], error.message)
+        self.assertEqual(error.message, self.engine.lesson_text["ui"]["locked_tip"])
         self.finish("p2-thresholds")
         self.assertEqual(self.status("thresholds"), "active")
 
-    def test_a_locked_step_is_a_preview_and_changes_nothing(self):
+    def test_a_locked_step_is_refused_and_changes_nothing(self):
         before = self.paths.progress_file.read_bytes()
         for step in state.PART_2.step_ids:
-            preview = self.detail(step)
             with self.subTest(step=step):
-                self.assertTrue(preview["preview"])
-                self.assertEqual((preview["status"], preview["cli"], preview["data"]), ("locked", None, {}))
+                self.assert_code("step_locked", self.engine.get_state, step=step)
         self.assertEqual(self.paths.progress_file.read_bytes(), before)
         self.assertFalse(self.paths.part2.exists())
 
@@ -550,7 +549,7 @@ class BeforeSetup(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.home, self.project = self.tmp / "home", self.tmp / "project"
         self.terminal = FakeTerminal()
-        self.engine = Engine(self.home, self.terminal, poll_interval=0.01, lessons=ch.bundled_course())
+        self.engine = helpers.make_engine(self.home, self.terminal, poll_interval=0.01, lessons=ch.bundled_course())
         self.addCleanup(self.engine.shutdown)
         self.engine.setup({"project_path": str(self.project), "cli_command": "mycli", "starter": "northwind"})
         self.paths = project.Paths(self.home, self.project)
@@ -560,17 +559,14 @@ class BeforeSetup(unittest.TestCase):
             fn(*args)
         return ctx.exception.code
 
-    def test_the_mission_opens_and_the_steps_are_previews(self):
+    def test_the_mission_opens_and_the_steps_are_refused(self):
         view = self.engine.get_state(part="part-2")
         self.assertEqual(view["course"][0]["status"], "active")
         self.assertEqual(self.engine.lesson_view("p2-mission")["lesson"]["status"], "active")
         before = self.paths.progress_file.read_bytes()
         for step in state.PART_2.step_ids:
-            preview = self.engine.get_state(step=step)["step"]
             with self.subTest(step=step):
-                self.assertTrue(preview["preview"])
-                self.assertEqual((preview["status"], preview["cli"]), ("locked", None))
-                self.assertTrue(preview["instructions"])
+                self.assertEqual(self.code_of(self.engine.get_state, step), "step_locked")
         self.assertEqual(self.paths.progress_file.read_bytes(), before)
 
     def test_save_and_check_are_refused_before_setup_and_nothing_is_written(self):
@@ -599,7 +595,12 @@ class NoLeakBeforeTheReveal(PartTwoBase):
 
     def test_no_response_before_the_gate_holds_a_reference_criterion_threshold_or_list_word(self):
         self.reach("test-file")
-        bodies = [json.dumps(self.engine.get_state(step=step)) for step in state.PART_2.step_ids]
+        bodies = []
+        for step in state.PART_2.step_ids:
+            try:
+                bodies.append(json.dumps(self.engine.get_state(step=step)))
+            except EngineError as exc:  # `reference` is locked, so nothing of it is returned at all
+                self.assertEqual(exc.code, "step_locked")
         bodies += [json.dumps(self.engine.lesson_view(lesson)) for lesson in
                    ("p2-mission", "p2-criteria", "p2-thresholds", "p2-testfile")]
         bodies += [json.dumps(self.engine.get_state(part="part-2")), json.dumps(self.engine.get_state())]
@@ -643,5 +644,5 @@ class OverHttp(CourseServer):
         phrase = REFERENCE_THRESHOLD.lower()
         for path in ("/api/state?step=reference", "/api/state?step=draft", "/api/state?part=part-2"):
             status, raw = self.get(path)
-            self.assertEqual(status, 200)
+            self.assertEqual(status, 400 if path.endswith("reference") else 200)
             self.assertNotIn(phrase, json.dumps(raw).lower())

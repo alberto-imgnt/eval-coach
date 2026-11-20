@@ -29,14 +29,15 @@ class Gating(CourseBase):
             self.assertTrue(item["title"])
 
     def test_other_lessons_need_preflight_and_a_project(self):
-        # Before setup they can be read (a preview that records nothing), but not answered.
-        self.assertEqual(self.engine.lesson_view("hook")["lesson"]["status"], "preview")
-        self.assert_code("preflight_incomplete", self.engine.lesson_answer, "hook", "hook-compare", {})
+        # A lesson that order keeps shut cannot be read or answered, with or without setup.
+        error = self.assert_code("lesson_locked", self.engine.lesson_view, "hook")
+        self.assertEqual(error.message, self.engine.lesson_text["ui"]["locked_tip"])
+        self.assert_code("lesson_locked", self.engine.lesson_answer, "hook", "hook-compare", {})
 
     def test_the_mission_finishes_before_a_project_exists_and_is_kept(self):
         self.finish("mission")
         self.assertEqual(self.status_of("mission"), "done")
-        self.assertEqual(self.status_of("hook"), "locked")
+        self.assertEqual(self.status_of("hook"), "active")  # the next item can be read before setup
         self.assertTrue((self.home / "pending-lessons.json").is_file())
         again = self.new_engine()
         self.assertEqual(next(i["status"] for i in again.get_state()["course"] if i["id"] == "mission"), "done")
@@ -48,42 +49,26 @@ class Gating(CourseBase):
         self.assertEqual(saved["lessons"]["per_lesson"]["mission"]["status"], "done")
         self.assertEqual(saved["lessons"]["review"]["items"], {})
 
-    def test_a_locked_lesson_opens_as_a_preview_after_setup_but_cannot_be_done(self):
+    def test_a_locked_lesson_is_refused_after_setup_and_nothing_changes(self):
         self.setup_project()
         before = self.paths.progress_file.read_bytes()
-        view = self.engine.lesson_view("several-runs")["lesson"]
-        self.assertEqual(view["status"], "preview")
-        self.assertEqual(view["held_by"], {"kind": "lesson", "id": "mission", "title": self.lesson("mission")["title"]})
-        self.assertFalse(view["can_complete"] or view["can_skip"])
-        self.assertEqual(self.paths.progress_file.read_bytes(), before)
+        self.assert_code("lesson_locked", self.engine.lesson_view, "several-runs")
         self.assert_code("lesson_locked", self.engine.lesson_answer, "several-runs", "generate-spot", {"option": "a"})
         self.assert_code("lesson_locked", self.engine.lesson_complete, "several-runs")
         self.assertEqual(self.paths.progress_file.read_bytes(), before)
 
-    def test_a_preview_has_no_holder_before_setup(self):
-        self.assertIsNone(self.engine.lesson_view("hook")["lesson"]["held_by"])
-        self.assertIsNone(self.engine.get_state(step="key")["step"]["held_by"])
-
-    def test_a_locked_step_opens_as_words_only_after_setup(self):
+    def test_a_locked_step_is_refused_when_asked_for_and_the_key_stays_sealed(self):
         self.setup_project()
         before = self.paths.progress_file.read_bytes()
-        step = self.engine.get_state(step="key")["step"]
-        self.assertTrue(step["preview"])
-        self.assertEqual((step["status"], step["cli"], step["data"]), ("locked", None, {}))
-        self.assertEqual(step["held_by"]["id"], "mission")
+        error = self.assert_code("step_locked", self.engine.get_state, step="key")
+        self.assertEqual(error.message, self.engine.lesson_text["ui"]["locked_tip"])
         self.assertFalse(self.paths.key_work.exists())
         self.assertEqual(self.paths.progress_file.read_bytes(), before)
-
-    def test_the_holder_follows_the_current_item(self):
-        self.setup_project()
-        self.finish_before("several-runs")
-        self.assertEqual(self.engine.lesson_view("rules")["lesson"]["held_by"]["id"], "several-runs")
-        self.assertEqual(self.engine.get_state(step="generate")["step"]["held_by"]["id"], "several-runs")
 
     def test_a_locked_step_is_still_refused_for_work(self):
         self.setup_project()
         before = self.paths.progress_file.read_bytes()
-        self.engine.get_state(step="generate")
+        self.assert_code("step_locked", self.engine.get_state, step="generate")
         self.assert_code("step_locked", self.engine.step_start, "generate")
         self.assert_code("step_locked", self.engine.step_send, "generate")
         self.assertEqual(self.paths.progress_file.read_bytes(), before)
@@ -96,7 +81,7 @@ class Gating(CourseBase):
         self.assertEqual(self.status_of("generate"), "locked")
         self.assertIsNone(self.state()["current_step"])
         error = self.assert_code("step_locked", self.engine.step_start, "generate")
-        self.assertIn("One answer proves little", error.message)
+        self.assertEqual(error.message, self.engine.lesson_text["ui"]["locked_tip"])
         self.assert_code("step_locked", self.engine.step_send, "generate")
         self.finish("several-runs")
         self.assertEqual(self.status_of("generate"), "active")
@@ -132,7 +117,7 @@ class Gating(CourseBase):
         self.assertEqual(self.status_of("baseline"), "locked")
         self.assertIsNone(self.state()["current_step"])
         error = self.assert_code("step_locked", self.engine.step_start, "baseline")
-        self.assertIn("Your baseline, and what comes next", error.message)
+        self.assertEqual(error.message, self.engine.lesson_text["ui"]["locked_tip"])
         self.assert_code("step_locked", self.engine.step_run_checker, "baseline", "baseline")
         self.finish("baseline-why")
         self.assertEqual(self.current(), {"kind": "step", "id": "baseline"})
@@ -462,7 +447,7 @@ class Shuffles(CourseBase):
     def participant(self, name):
         home = self.tmp / name
         helpers.write_passed_preflight(home)
-        engine = Engine(home, self.terminal, poll_interval=0.01, lessons=self.course, clock=self.clock)
+        engine = helpers.make_engine(home, self.terminal, poll_interval=0.01, lessons=self.course, clock=self.clock)
         self.addCleanup(engine.shutdown)
         engine.setup({"project_path": str(self.tmp / f"{name}-project"), "cli_command": "mycli",
                       "starter": "northwind"})
@@ -615,7 +600,7 @@ class MigrationState(unittest.TestCase):
     def test_new_progress_carries_an_empty_lessons_block(self):
         block = new_progress("C:/p", "cli", "northwind")["lessons"]
         self.assertEqual(block, {"seed": None, "per_lesson": {}, "placement": {}, "records": [],
-                                 "review": {"items": {}}, "step_checks": {}})
+                                 "review": {"items": {}}, "step_checks": {}, "skipped_parts": []})
 
     def test_the_course_order_matches_the_lessons_the_content_must_define(self):
         self.assertEqual(LESSON_IDS, ("mission", "hook", "several-runs", "rules", "trust", "surprise", "baseline-why"))
@@ -1078,7 +1063,7 @@ class StepQuestions(CourseBase):
         return self.engine.get_state(step)["step"]["question"]
 
     def test_the_question_waits_for_the_step_to_be_done(self):
-        self.assertIsNone(self.question())
+        self.assert_code("step_locked", self.engine.get_state, "generate")
         self.assert_code("step_question_locked", self.engine.step_question_answer, "generate", "a")
         self.mark_step_done("generate")
         view = self.question()
