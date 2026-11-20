@@ -388,14 +388,14 @@ test('import screen screenshot at 1280x800', async ({ page, request }) => {
 
 test('preflight shows each status on its own page, with detail and next action, and Next waits for the check', async ({ page, request }) => {
   await openPreflight(page, request, {
-    python: { status: 'failed', detail: 'Python could not run.', next: 'Run setup.cmd again.' },
+    python: { status: 'failed', detail: 'Python could not run.', next: 'Start eval-coach again.' },
     cli: { status: 'needs_you', detail: 'Choose your AI.', next: 'Pick one below.' },
   });
   // The wizard opens on the first check that has not passed.
   await expect(page.locator('#wizard-count')).toHaveText('3 of 7');
   await expect(page.locator('#pf-status-python')).toHaveText('Failed');
   await expect(page.locator('#pf-item-python .pf-detail')).toHaveText('Python could not run.');
-  await expect(page.locator('#pf-item-python .pf-next')).toHaveText('Run setup.cmd again.');
+  await expect(page.locator('#pf-item-python .pf-next')).toHaveText('Start eval-coach again.');
   await expect(page.locator('#pf-item-cli')).toHaveCount(0);
   await expect(page.locator('#wizard-next')).toHaveAttribute('aria-disabled', 'true');
   await expect(page.locator('#wizard-needed')).toContainText('Finish this check');
@@ -2870,7 +2870,7 @@ test('completing setup from the first-run screen ends on the Your AI window page
   await expect(page.locator('#pf-skip')).toHaveCount(0);
   await expect(page.locator('#topbar')).toBeHidden();
   await page.locator('#wizard-finish').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await expect(page.locator('#setup-reminder')).toHaveCount(0);
   await expect(page.locator('#pf-skip')).toHaveCount(0);
   await enterPart(page);
@@ -2880,12 +2880,12 @@ test('completing setup from the first-run screen ends on the Your AI window page
 test('skipping setup opens the Series map with the banner, and the skip is remembered after a reload', async ({ page, request }) => {
   await openApp(page, request, 'course-first-run');
   await page.locator('#pf-skip').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await expect(page.locator('#series-list')).toBeVisible();
   await expect(page.locator('#setup-reminder')).toBeVisible();
   expect((await postsTo(request, '/api/preflight/skip')).length).toBe(1);
   await page.reload();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await expect(page.locator('#setup-reminder')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toHaveCount(0);
   await enterPart(page);
@@ -3459,7 +3459,7 @@ test('Settings setup group: setup can be completed from Settings on a fresh app,
   await expect(page.locator('#topbar')).toBeVisible();
   expect((await postsTo(request, '/api/setup')).length).toBe(1);
   await page.locator('#settings-close').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await enterPart(page);
   await expect(page.locator('#step-heading')).toHaveText('Your mission');
 });
@@ -3637,7 +3637,7 @@ test('Settings reset: Reset app configuration says progress is cleared too, then
   await expect(page.locator('#setup-reminder')).toHaveCount(0);
   // Finishing setup again lands on the Series map, not inside the Part.
   await page.locator('#pf-skip').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
 });
 
 // ---- The Series map ----------------------------------------------------------------
@@ -3656,7 +3656,7 @@ async function openMap(page, request, scenario, done) {
   await mock(request, 'reset', { scenario });
   for (const id of done || []) await mock(request, 'lesson_status', { id, status: 'done' });
   await page.goto(`/?t=${TOKEN}`);
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
 }
 
 const postsLog = async (request) => (await mockLog(request)).log.filter((e) => e.method === 'POST').map((e) => e.path);
@@ -3668,9 +3668,17 @@ test('Series map: the app opens on it after a launch and after a reload, with si
   await enterPart(page);
   await expect(page.locator('#step-heading')).toHaveText('One update, three grades');
   await page.reload();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await expect(page.locator('#series-list > li')).toHaveCount(6);
   await expect(page.locator('.lesson-page')).toHaveCount(0);
+});
+
+test('Series map: the page is titled Evaluated systems, opens with the outcome intro, and the Back control keeps its name', async ({ page, request }) => {
+  await openMap(page, request, 'course-main', ['mission']);
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
+  await expect(page.locator('.lede')).toContainText(/^Is it good enough to use\?/);
+  await enterPart(page);
+  await expect(page.locator('#back-to-series')).toContainText('Back to series map');
 });
 
 test('Series map: Parts 4 and 5 say Coming soon and do nothing, Part 6 says Live meeting and explains itself', async ({ page, request }) => {
@@ -3697,7 +3705,7 @@ test('Series map: Parts 4 and 5 say Coming soon and do nothing, Part 6 says Live
   await expect(live).not.toContainText(/office hours|AIR discussion|session/i);
   await expect(live.locator('button, a, [tabindex], .series-chevron')).toHaveCount(0);
   await live.click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   expect(await postsLog(request)).toEqual([]);
 });
 
@@ -3735,7 +3743,7 @@ test('Series map: only the active Part starts expanded and each lists its own le
   await expect(page.locator('#series-lessons-part-1')).toBeVisible();
   await page.locator('#series-toggle-part-3').click();
   await expect(page.locator('#series-lessons-part-3')).toBeHidden();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   expect(await postsLog(request)).toEqual([]);
 });
 
@@ -3761,7 +3769,7 @@ test('Series map: the Part 3 row expands and collapses by mouse and keyboard wit
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await page.keyboard.press('Tab');
   expect(await page.evaluate(() => document.activeElement.id)).toBe('series-open-part-3');
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+    await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   expect(await postsLog(request)).toEqual([]);
 });
 
@@ -3769,7 +3777,7 @@ test('Series map: the Part 3 row says Start, Continue or Review, shows the same 
   await openApp(page, request, 'course-first-run');
   await page.locator('#pf-skip').click();
   const row = page.locator('#series-part-3');
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await expect(row).toContainText('Not started');
   await expect(row.locator('.series-action')).toHaveText('Start');
   await expect(row.locator('.series-count')).toHaveCount(0);
@@ -3802,7 +3810,7 @@ test('Series map: Back to series map keeps progress and the map shows it; Contin
   const before = await page.locator('.journey-text').innerText();
   await page.screenshot({ path: path.join(SHOTS, 'series-back-wide.png') });
   await back.click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await expect(page.locator('#back-to-series')).toHaveCount(0);
   const count = (await page.locator('#series-part-3 .series-count').innerText()).match(/^(\d+) of (\d+)/);
   expect(before).toContain(`${count[1]} of ${count[2]}`);
@@ -3817,7 +3825,7 @@ test('Series map: the sidebar tools work on the map, it shows no progress or cou
   await page.locator('#nav-toggle').click();
   expect(await rootAttr(page, 'data-nav')).toBe('collapsed');
   await page.locator('#back-to-series').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   expect(await rootAttr(page, 'data-nav')).toBe('collapsed');
   await page.locator('#nav-toggle').click();
   expect(await rootAttr(page, 'data-nav')).toBe('expanded');
@@ -3832,7 +3840,7 @@ test('Series map: the sidebar tools work on the map, it shows no progress or cou
   await page.locator('#glossary-open').click();
   await expect(page.locator('dialog[open]')).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await page.locator('#quit').click();
   await expect(page.locator('dialog.confirm[open]')).toBeVisible();
   await page.keyboard.press('Escape');
@@ -3845,13 +3853,13 @@ test('Series map: Settings opened from the map or from a Part returns to where i
   await page.locator('#settings-open').click();
   await expect(page.locator('.settings-page #step-heading')).toHaveText('Settings');
   await page.locator('#settings-close').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+    await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await page.locator('#settings-open').click();
   await page.locator('#settings-setup-open').click();
   await page.locator('#wizard-close').click();
   await expect(page.locator('.settings-page #step-heading')).toHaveText('Settings');
   await page.locator('#settings-close').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await enterPart(page);
   await openSettings(page);
   await page.locator('#settings-close').click();
@@ -3862,12 +3870,12 @@ test('Series map: the setup banner shows on the map, and closing setup from it r
   await openApp(page, request, 'course-first-run');
   await page.locator('#pf-skip').click();
   const banner = page.locator('#setup-reminder');
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await expect(banner).toBeVisible();
   await page.locator('#setup-banner-go').click();
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toBeVisible();
   await page.locator('#wizard-close').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await expect(banner).toBeVisible();
   await enterPart(page);
   await expect(page.locator('.lesson-page')).toBeVisible();
@@ -3889,7 +3897,7 @@ test('Series map: on a narrow screen the Back control is in the top bar and the 
   expect(box.y + box.height).toBeLessThanOrEqual(bar.y + bar.height + 1);
   await page.screenshot({ path: path.join(SHOTS, 'series-back-narrow.png') });
   await back.click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
 });
 
 // Contrast of an element's text on the nearest opaque background behind it.
@@ -3929,7 +3937,7 @@ test('Series map: labels are readable in both themes, and the map fits at three 
       await page.setViewportSize({ width, height: 900 });
       await openWithStorage(page, request, 'course-main', { 'eval-coach-theme': theme });
       await page.goto(`/?t=${TOKEN}`);
-      await expect(page.locator('#step-heading')).toHaveText('Series map');
+      await expect(page.locator('#step-heading')).      toHaveText('Evaluated systems');
       expect(await sideways(page), `${theme} ${width}`).toBeLessThanOrEqual(0);
       for (const selector of ['.series-tag', '.series-state', '.series-action', '.series-outcome', '.series-count', '.series-lesson-status']) {
         expect(await textContrast(page, selector), `${theme} ${width} ${selector}`).toBeGreaterThanOrEqual(4.5);
@@ -3941,7 +3949,7 @@ test('Series map: labels are readable in both themes, and the map fits at three 
   await page.setViewportSize({ width: 1280, height: 900 });
   await openWithStorage(page, request, 'course-main', { 'eval-coach-text-size': '150' });
   await page.goto(`/?t=${TOKEN}`);
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+    await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   expect(await sideways(page)).toBeLessThanOrEqual(0);
   await page.locator('#nav-toggle').click();
   expect(await sideways(page)).toBeLessThanOrEqual(0);
@@ -3954,7 +3962,7 @@ test('Series map: resetting the app configuration ends on setup first and then o
   await page.locator('dialog.confirm[open]').getByRole('button', { name: 'Reset app configuration' }).click();
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toBeVisible();
   await page.locator('#pf-skip').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await expect(page.locator('#series-toggle-part-1')).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('#series-toggle-part-3')).toHaveAttribute('aria-expanded', 'false');
 });

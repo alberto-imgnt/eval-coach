@@ -1,4 +1,4 @@
-"""The real setup.cmd launches the real, freshly built app and it answers /api/state."""
+"""The built eval-coach.cmd, alone in its folder, finds Python, starts the real app and it answers /api/state."""
 from __future__ import annotations
 
 import json
@@ -16,8 +16,7 @@ from pathlib import Path
 from helpers import ROOT
 from test_setup_cmd import CMD_EXE, SYSTEM_ROOT, real_python_dir, rmtree_with_retries
 
-SETUP = ROOT / "packaging" / "setup.cmd"
-PYZ = ROOT / "dist" / "eval-coach.pyz"
+LAUNCHER = ROOT / "dist" / "eval-coach.cmd"
 TMP_ROOT = ROOT / "tests" / ".tmp-integration"
 REAL_PROFILE = Path(os.environ["USERPROFILE"]) / ".eval-coach"
 
@@ -41,7 +40,7 @@ def _listing(folder):
     return sorted((p.name, p.stat().st_mtime_ns) for p in folder.iterdir())
 
 
-class SetupLaunchesTheRealApp(unittest.TestCase):
+class LauncherStartsTheRealApp(unittest.TestCase):
     def setUp(self):
         self.real_profile_before = _listing(REAL_PROFILE)
         self.work = TMP_ROOT / f"run-{os.getpid()}"
@@ -57,12 +56,12 @@ class SetupLaunchesTheRealApp(unittest.TestCase):
     def tearDown(self):
         self.assertEqual(self.real_profile_before, _listing(REAL_PROFILE), "the real profile must not change")
 
-    def test_setup_cmd_launches_the_built_app(self):
+    def test_launcher_alone_starts_the_built_app(self):
         build = subprocess.run([sys.executable, str(ROOT / "tools" / "build_pyz.py")], capture_output=True, text=True, timeout=120)
         self.assertEqual(build.returncode, 0, build.stderr)
-        self.assertTrue(PYZ.is_file())
-        shutil.copyfile(SETUP, self.install_dir / "setup.cmd")
-        shutil.copyfile(PYZ, self.install_dir / "eval-coach.pyz")
+        self.assertTrue(LAUNCHER.is_file())
+        shutil.copyfile(LAUNCHER, self.install_dir / "eval-coach.cmd")
+        self.assertEqual(["eval-coach.cmd"], [p.name for p in self.install_dir.iterdir()])
 
         browser_marker = self.work / "browser-opened.txt"
         fake_browser = self.work / "fake-browser.cmd"
@@ -81,7 +80,7 @@ class SetupLaunchesTheRealApp(unittest.TestCase):
             "TMP": str(self.temp),
             "BROWSER": str(fake_browser),
         }
-        command = f'"{CMD_EXE}" /d /c ""{self.install_dir / "setup.cmd"}""'
+        command = f'"{CMD_EXE}" /d /c ""{self.install_dir / "eval-coach.cmd"}""'
         log_path = self.work / "setup-output.txt"
         with open(log_path, "wb") as log:
             proc = subprocess.Popen(command, stdin=subprocess.DEVNULL, env=env, cwd=str(self.work),
@@ -122,7 +121,7 @@ class SetupLaunchesTheRealApp(unittest.TestCase):
         deadline = time.monotonic() + 90
         while time.monotonic() < deadline:
             if proc.poll() is not None:
-                self.fail(f"setup.cmd exited early with code {proc.returncode}")
+                self.fail(f"eval-coach.cmd exited early with code {proc.returncode}")
             if marker.is_file():
                 text = marker.read_text(encoding="mbcs", errors="replace").strip()
                 if text:

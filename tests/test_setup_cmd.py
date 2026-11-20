@@ -1,4 +1,4 @@
-"""Runs the real packaging/setup.cmd under a scrubbed PATH and a temporary profile.
+"""Runs the real packaging/launcher.cmd, assembled with a stub app, under a scrubbed PATH and a temporary profile.
 
 Nothing here touches the real %USERPROFILE%. Set EVAL_COACH_TEST_REAL_DOWNLOAD=1
 to also run the one test that downloads from python.org.
@@ -6,6 +6,7 @@ to also run the one test that downloads from python.org.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import re
@@ -22,7 +23,11 @@ from unittest import mock
 
 from helpers import ROOT
 
-SETUP = ROOT / "packaging" / "setup.cmd"
+sys.path.insert(0, str(ROOT / "tools"))
+from build_pyz import LAUNCHER_MARKER, assemble_launcher  # noqa: E402
+
+SETUP = ROOT / "packaging" / "launcher.cmd"
+LAUNCHER_NAME = "eval-coach.cmd"
 TMP_ROOT = ROOT / "tests" / ".tmp-setup"
 PREFLIGHT = ROOT / "spikes" / "phase0-preflight"
 ARCHIVE = PREFLIGHT / "downloads" / "python-3.13.17-embed-amd64.zip"
@@ -108,11 +113,12 @@ class SetupTestCase(unittest.TestCase):
 
     def put_package(self, folder: Path):
         folder.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(SETUP, folder / "setup.cmd")
         source = self.work / "stub-src"
         source.mkdir(exist_ok=True)
         (source / "__main__.py").write_text(STUB_MAIN, encoding="utf-8")
-        zipapp.create_archive(source, folder / "eval-coach.pyz")
+        stub = io.BytesIO()
+        zipapp.create_archive(source, stub)
+        (folder / LAUNCHER_NAME).write_bytes(assemble_launcher(SETUP.read_bytes(), stub.getvalue()))
 
     def run_setup(self, answers="", url=ARCHIVE.as_uri(), path_extra=(), script=None, extra_env=None, timeout=180):
         path = os.pathsep.join([str(self.bin), *[str(p) for p in path_extra]])
@@ -132,7 +138,7 @@ class SetupTestCase(unittest.TestCase):
             env["EVAL_COACH_PYTHON_URL"] = url
         if extra_env:
             env.update(extra_env)
-        target = script or (self.install_dir / "setup.cmd")
+        target = script or (self.install_dir / LAUNCHER_NAME)
         # A raw command line, quoted the way Explorer does it. subprocess would
         # leave a path with an ampersand but no spaces unquoted.
         command = f'"{CMD_EXE}" /d /c ""{target}""'
@@ -146,8 +152,8 @@ class SetupTestCase(unittest.TestCase):
         return Result(proc, output)
 
     def patch_setup(self, *replacements):
-        """Edits this test's copy of setup.cmd to reach a branch that needs a broken machine."""
-        target = self.install_dir / "setup.cmd"
+        """Edits this test's copy of the launcher to reach a branch that needs a broken machine."""
+        target = self.install_dir / LAUNCHER_NAME
         data = target.read_bytes()
         for old, new in replacements:
             self.assertIn(old.encode("ascii"), data)
@@ -158,7 +164,7 @@ class SetupTestCase(unittest.TestCase):
         self.patch_setup((MANIFEST["sha256"], hashlib.sha256(payload).hexdigest()))
 
     def launched(self):
-        self.assertTrue(self.record.exists(), "eval-coach.pyz was not launched")
+        self.assertTrue(self.record.exists(), "the app was not launched")
         return json.loads(self.record.read_text(encoding="utf-8"))
 
     def assert_no_shadow_used(self):
@@ -199,8 +205,48 @@ class ScriptShapeTests(unittest.TestCase):
         self.data = SETUP.read_bytes()
         self.text = self.data.decode("ascii")
 
+    def assembled(self):
+        stub = io.BytesIO()
+        with zipfile.ZipFile(stub, "w") as handle:
+            handle.writestr("__main__.py", "pass\n")
+        return assemble_launcher(self.data, stub.getvalue())
+
     def test_uses_crlf_only(self):
         self.assertEqual(0, len(re.findall(rb"(?<!\r)\n", self.data)))
+
+    def test_script_part_ends_at_the_marker_and_is_ascii(self):
+        script, marker, archive = self.assembled().partition(LAUNCHER_MARKER)
+        self.assertEqual(LAUNCHER_MARKER, marker)
+        self.assertEqual(self.data, script + marker)
+        script.decode("ascii")
+        self.assertEqual(0, len(re.findall(rb"(?<!\r)\n", script)))
+
+    def test_what_follows_the_marker_is_the_app_archive(self):
+        archive = self.assembled().partition(LAUNCHER_MARKER)[2]
+        with zipfile.ZipFile(io.BytesIO(archive)) as handle:
+            self.assertIn("__main__.py", handle.namelist())
+
+    def test_launcher_without_the_marker_is_refused(self):
+        with self.assertRaises(ValueError):
+            assemble_launcher(b"@echo off\r\n", b"PK")
+
+    def test_never_jumps_backward(self):
+        # cmd stops searching for a label at binary data, so a backward goto or call
+        # fails silently once the archive is appended.
+        lines = self.text.split("\r\n")
+        labels = {}
+        for number, line in enumerate(lines):
+            match = re.match(r":([A-Za-z_]\w*)", line)
+            if match:
+                labels[match.group(1).lower()] = number
+        backward = []
+        for number, line in enumerate(lines):
+            if re.match(r"\s*rem\b", line, re.I):
+                continue
+            for target in re.findall(r"\b(?:goto|call)\s+:?([A-Za-z_]\w*)", line, re.I):
+                if target.lower() in labels and labels[target.lower()] < number:
+                    backward.append(f"line {number + 1}: {line.strip()}")
+        self.assertEqual([], backward)
 
     def test_pinned_values_match_manifest(self):
         self.assertIn(f'set "EC_PY_SHA256={MANIFEST["sha256"]}"', self.text)
@@ -228,12 +274,13 @@ class NoPythonTests(SetupTestCase):
         self.assertEqual(0, result.code, result.output)
         self.assert_consent_text(result.output)
         self.assertIn("Nothing was installed", result.output)
-        self.assertIn("run setup.cmd again", result.output)
+        self.assertIn("start eval-coach again", result.output)
         self.assertIn("Company Portal or Software Center", result.output)
         self.assertFalse(self.record.exists())
         self.assert_nothing_installed()
         self.assert_no_shadow_used()
         self.assert_no_contact_instruction(result.output)
+        self.assertNotIn("setup.cmd", result.output)
 
     def test_no_answer_at_all_counts_as_declined(self):
         result = self.run_setup("")
@@ -325,20 +372,12 @@ class NoPythonTests(SetupTestCase):
         self.assert_nothing_installed()
         self.assert_no_contact_instruction(result.output)
 
-    def test_missing_pyz_explains_how_to_extract(self):
-        (self.install_dir / "eval-coach.pyz").unlink()
-        result = self.run_setup("Y\r\n")
-        self.assertEqual(1, result.code, result.output)
-        self.assertIn("Extract All", result.output)
-        self.assert_nothing_installed()
-        self.assert_no_contact_instruction(result.output)
-
     def test_app_failure_is_reported_with_its_code(self):
         self.copy_private_runtime()
         result = self.run_setup("", extra_env={"EC_TEST_EXIT": "7"})
         self.assertEqual(7, result.code, result.output)
         self.assertIn("eval-coach stopped because of a problem (code 7)", result.output)
-        self.assertIn("run setup.cmd again", result.output)
+        self.assertIn("start eval-coach again", result.output)
         self.assert_no_contact_instruction(result.output)
 
 
@@ -387,6 +426,21 @@ class DetectionTests(SetupTestCase):
         self.assertEqual(0, result.code, result.output)
         self.assertIn("Install it now", result.output)
 
+    def test_launcher_alone_in_a_folder_starts_the_app(self):
+        self.assertEqual([LAUNCHER_NAME], [p.name for p in self.install_dir.iterdir()])
+        self.copy_private_runtime()
+        result = self.run_setup("", url=(self.work / "never.zip").as_uri())
+        self.assertEqual(0, result.code, result.output)
+        self.assert_launched_with(self.private_exe)
+
+    def test_launcher_in_a_folder_with_special_characters_starts_the_app(self):
+        folder = self.work / "My Files & (Old)!"
+        self.put_package(folder)
+        self.copy_private_runtime()
+        result = self.run_setup("", script=folder / LAUNCHER_NAME, url=(self.work / "never.zip").as_uri())
+        self.assertEqual(0, result.code, result.output)
+        self.assert_launched_with(self.private_exe)
+
     def test_private_python_is_used_without_asking_or_downloading(self):
         self.copy_private_runtime()
         result = self.run_setup("", url=(self.work / "never.zip").as_uri())
@@ -415,7 +469,7 @@ class AwkwardProfileTests(SetupTestCase):
         super().setUp()
         self.weird_install = self.profile / "Downloads" / "eval-coach (1) & more"
         self.put_package(self.weird_install)
-        self.weird_setup = self.weird_install / "setup.cmd"
+        self.weird_setup = self.weird_install / LAUNCHER_NAME
 
     def test_install_and_launch(self):
         result = self.run_setup("Y\r\n", script=self.weird_setup)

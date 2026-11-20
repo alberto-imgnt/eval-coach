@@ -18,7 +18,7 @@ def main(argv=None):
     parser.add_argument("--port", type=int, default=0, help="Port to use (default: a random free port).")
     parser.add_argument("--home", default=None, help="Storage folder (default: %%USERPROFILE%%\\.eval-coach).")
     parser.add_argument("--no-browser", action="store_true", help="Print the URL but do not open a browser.")
-    parser.add_argument("--python", default=None, help="Path of the Python that launched the app (setup.cmd sets this).")
+    parser.add_argument("--python", default=None, help="Path of the Python that launched the app (the launcher sets this).")
     parser.add_argument("--custom-ai", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--demo-hash-file", default=None, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)

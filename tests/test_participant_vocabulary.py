@@ -171,11 +171,9 @@ class TracksAndSeriesWords(unittest.TestCase):
             with self.subTest(text=text[:50]):
                 self.assertIsNone(FORBIDDEN_FOR_TRACKS.search(text))
 
-    def test_the_series_map_intro_is_about_doing_the_work_yourself(self):
+    def test_the_series_map_intro_has_no_count_step_or_stage_wording(self):
         intro = json.loads((CONTENT / "series.json").read_text(encoding="utf-8"))["ui"]["intro"]
-        self.assertIn("Six Parts, one method.", intro)
-        self.assertIn("Do each one yourself", intro)
-        self.assertNotRegex(intro, r"(?i)look ahead|stage 3")
+        self.assertNotRegex(intro, r"(?i)\b(six|parts?|steps?|first|then)\b|look ahead|stage 3")
 
 
 class Categories(unittest.TestCase):

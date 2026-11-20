@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "change": "single-file-launcher",
+  "tree": "4f527340678224f385848e0122700454a141bf0b",
+  "excludes": [
+    "openspec"
+  ],
+  "head": "96b621c69fc04e148531b4f69f8efe2bfe259ef3",
+  "checks": [
+    {
+      "name": "backend",
+      "command": "python -m unittest discover -s tests",
+      "exit_code": 0,
+      "tests": 1708,
+      "finished": "2026-11-20T18:10:59Z"
+    },
+    {
+      "name": "backend-embedded",
+      "command": "spikes\\phase0-preflight\\runtime\\python-embed-3.13.17-nopth\\python.exe -m unittest discover -s tests",
+      "exit_code": 0,
+      "tests": 1708,
+      "finished": "2026-11-20T18:18:58Z"
+    },
+    {
+      "name": "build",
+      "command": "python tools\\build_pyz.py --smoke",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-20T18:19:02Z"
+    },
+    {
+      "name": "e2e",
+      "command": "node e2e-work\\harness\\run-all.js --fresh",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-20T18:35:43Z"
+    },
+    {
+      "name": "interface",
+      "command": "node tests/frontend/.tmp/node_modules/@playwright/test/cli.js test --config tests/frontend/playwright.config.js",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-20T19:05:14Z"
+    }
+  ]
+}

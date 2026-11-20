@@ -47,7 +47,7 @@ async function readFile(request, name) {
 async function openPart1(page, request, opts = {}) {
   await control(request, '/control/reset', { scenario: opts.scenario || 'ready', reach: opts.reach, answer: opts.answer });
   await page.goto(`/?t=${TOKEN}`);
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await page.locator('#series-open-part-1').click();
   await expect(page.locator('#series-list')).toHaveCount(0);
 }
@@ -122,13 +122,13 @@ test('opening Part 1 shows its own header, course list and groups, and Part 3 ke
     'Use it on your own work',
   ]);
   await page.locator('#back-to-series').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await page.locator('#series-open-part-3').click();
   await expect(page.locator('.brand-sub')).toHaveText('Part 3 · Running evals and baseline');
   await expect(page.locator('.course-group').first()).toHaveText('Why check AI work');
   await expect(page.locator('.course-item')).toHaveCount(16);
   await page.locator('#back-to-series').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await page.locator('#series-open-part-1').click();
   await expect(page.locator('.brand-sub')).toHaveText('Part 1 · Structured prompting');
   await expect(page.locator('.course-item')).toHaveCount(9);
@@ -579,7 +579,7 @@ test('before setup the next step can be read, and nothing in it can be saved or 
   await page.goto(`/?t=${TOKEN}`);
   await expect(page.getByRole('heading', { name: 'Before you begin' })).toBeVisible();
   await page.locator('#pf-skip').click();
-  await expect(page.locator('#step-heading')).toHaveText('Series map');
+  await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await page.locator('#series-open-part-1').click();
   await expect(page.locator('#step-heading')).toHaveText('Your mission');
   await page.locator('#lesson-continue').click();

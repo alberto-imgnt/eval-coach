@@ -46,7 +46,7 @@ Part 3 offers two tracks:
 | Design | "Graphite and Lime" design system with light and dark themes |
 | Content | JSON files under `app/eval_coach/content/` hold every word participants see |
 | Storage | Local JSON files written atomically (`%USERPROFILE%\.eval-coach` and the participant's project folder) |
-| Packaging | A single `eval-coach.pyz` built with `zipapp`, started by `packaging\setup.cmd` |
+| Packaging | One file, `dist\eval-coach.cmd`: the launcher `packaging\launcher.cmd` followed by the app archive (`eval-coach.pyz`, built with `zipapp`) |
 | Setup runtime | Private Python 3.13 (embedded) installed after consent when no suitable Python is found |
 | promptfoo track | promptfoo 0.125.1 on a private Node.js, installed after consent |
 | Spec-driven changes | [OpenSpec](openspec/) |
@@ -64,8 +64,8 @@ Part 3 offers two tracks:
 ```
 app/eval_coach/    the app (modules, content/*.json, kit/ bundled files, web/ static UI)
 tests/             unittest suite; tests/frontend holds the Playwright tests
-tools/build_pyz.py builds dist/eval-coach.pyz
-packaging/         setup.cmd, the participant entry point
+tools/build_pyz.py builds dist/eval-coach.pyz and dist/eval-coach.cmd
+packaging/         launcher.cmd, the source of the participant file eval-coach.cmd
 docs/              spec, plan, design and course context
 openspec/          specs and in-flight changes
 e2e-work/harness/  stand-in end-to-end harness
@@ -80,7 +80,7 @@ Run from the repo root on Windows.
 # Start the app from source
 $env:PYTHONPATH = "app"; python -m eval_coach --no-browser    # options: --port, --home
 
-# Build dist\eval-coach.pyz and smoke test it
+# Build dist\eval-coach.pyz and dist\eval-coach.cmd, and smoke test both
 python tools\build_pyz.py --smoke
 
 # Backend tests
@@ -93,7 +93,7 @@ node tests/frontend/.tmp/node_modules/@playwright/test/cli.js test --config test
 node e2e-work\harness\run-all.js --fresh
 ```
 
-Participants start the app by running `setup.cmd` next to `eval-coach.pyz`.
+Participants start the app by double-clicking `eval-coach.cmd`, the only file they need.
 
 ## Documentation
 
