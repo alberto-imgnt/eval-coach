@@ -433,11 +433,14 @@ class DetectionTests(SetupTestCase):
     def test_hung_candidate_times_out_and_moves_on(self):
         shim_dir = self.work / "hung"
         shim_dir.mkdir()
+        # The shim hangs for two minutes; the probe limit is shortened so a slow runner, which probes the same
+        # shim several times, still finishes far sooner than the shim would.
         (shim_dir / "python.cmd").write_text(
-            f'@"{SYSTEM_ROOT}\\System32\\ping.exe" -n 45 127.0.0.1 >nul\r\n', encoding="ascii")
+            f'@"{SYSTEM_ROOT}\\System32\\ping.exe" -n 120 127.0.0.1 >nul\r\n', encoding="ascii")
+        self.patch_setup(('set "EC_PROBE_TIMEOUT=10"', 'set "EC_PROBE_TIMEOUT=3"'))
         started = time.monotonic()
         result = self.run_setup("N\r\n", path_extra=[shim_dir])
-        self.assertLess(time.monotonic() - started, 40)
+        self.assertLess(time.monotonic() - started, 100)
         self.assertEqual(0, result.code, result.output)
         self.assertIn("Install it now", result.output)
 
