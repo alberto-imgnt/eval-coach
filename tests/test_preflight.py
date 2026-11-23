@@ -1420,7 +1420,7 @@ class MacNodeInstall(MacBase):
 
     def test_the_build_for_this_chip_is_downloaded_unpacked_and_put_in_place(self):
         self.install()
-        self.assertEqual(self.item("node")["status"], "passed")
+        self.assertEqual(self.item("node")["status"], "passed", self.item("node"))
         curl = self.fake.calls_named("curl")[0]["argv"]
         self.assertEqual(curl[0], "/usr/bin/curl")
         self.assertNotIn("--ssl-no-revoke", curl)
