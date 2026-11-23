@@ -1,0 +1,49 @@
+{
+  "comment": "The one source for every pinned runtime. tools/build_pyz.py stamps these values into packaging/launcher.cmd and packaging/launcher.sh, and tests/test_launcher_manifest.py fails when a launcher or app/eval_coach/hostos.py disagrees. Mac Python comes from python-build-standalone release assets; each hash is the asset digest published on the release.",
+  "windows": {
+    "python": {
+      "version": "3.13.17",
+      "url": "https://www.python.org/ftp/python/3.13.17/python-3.13.17-embed-amd64.zip",
+      "sha256": "9e35319bffedab8b36ad44d8f377cb4f1733bcec257a0b6d04d94f01486ddb38"
+    },
+    "node": {
+      "version": "26.13.0",
+      "url": "https://nodejs.org/dist/v26.13.0/node-v26.13.0-win-x64.zip",
+      "sha256": "dcc60d59a0746999f99064a01c020445d54d84228c691cdbf25b49ac3b59150a",
+      "folder": "node-v26.13.0-win-x64",
+      "download_bytes": 41157375
+    }
+  },
+  "mac": {
+    "python": {
+      "version": "3.13.18",
+      "release": "20261110",
+      "arm64": {
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.13.18%2B20261110-aarch64-apple-darwin-install_only.tar.gz",
+        "sha256": "1afd3983237c2a10277345f235be730e9cb49a123e0574ed252dbf3a841a24e4",
+        "download_bytes": 25598083
+      },
+      "x86_64": {
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.13.18%2B20261110-x86_64-apple-darwin-install_only.tar.gz",
+        "sha256": "a46bcdeecd28ba253522b321dcb3806da1b0ff581479fc1d27e9613e3ac44764",
+        "download_bytes": 25349864
+      }
+    },
+    "node": {
+      "version": "26.13.0",
+      "min_macos": "13.5",
+      "arm64": {
+        "url": "https://nodejs.org/dist/v26.13.0/node-v26.13.0-darwin-arm64.tar.gz",
+        "sha256": "d38bd5e5a2ddce6bbb5ce45e46e208337da4d51fffe611e567fd32073d6439f6",
+        "folder": "node-v26.13.0-darwin-arm64",
+        "download_bytes": 58334661
+      },
+      "x64": {
+        "url": "https://nodejs.org/dist/v26.13.0/node-v26.13.0-darwin-x64.tar.gz",
+        "sha256": "525c9b29bb0263d687de60a4cec0e2a6db876a8eb032369e5795eca71e7c358e",
+        "folder": "node-v26.13.0-darwin-x64",
+        "download_bytes": 59802926
+      }
+    }
+  }
+}

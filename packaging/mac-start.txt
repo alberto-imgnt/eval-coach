@@ -1,0 +1,22 @@
+Starting eval-coach on a Mac
+
+You get one zip file, eval-coach-mac.zip. It holds one file, eval-coach.command.
+
+1. Double-click eval-coach-mac.zip. The file eval-coach.command appears next to it.
+2. Double-click eval-coach.command. A Terminal window opens, and eval-coach starts in your browser. Keep the Terminal window open while you use eval-coach.
+
+The first time, macOS may say it cannot open the file because it is not from the App Store or from an identified developer. You allow it once:
+
+1. Right-click the file (or hold Control and click it), choose Open, then choose Open in the box that appears.
+2. If there is no Open button in that box, open System Settings, choose Privacy & Security, scroll down to the Security section, find the message about eval-coach.command and choose Open Anyway. This is on macOS 15 and later. Enter your Mac password if it asks.
+
+If double-clicking still does nothing, start it from Terminal instead:
+
+1. Open Terminal. Press Command-Space, type Terminal and press Return.
+2. Paste this line and press Return. It assumes the file is in your Downloads folder; if it is somewhere else, type "bash " (with a space after it), drag the file from Finder into the Terminal window, and press Return.
+
+bash ~/Downloads/eval-coach.command
+
+The first time you start eval-coach it may ask to install a private copy of Python. Type Y and press Return to agree. It needs no administrator rights and changes nothing else on your Mac.
+
+To update, replace the file with a newer one. Your progress and files are kept.

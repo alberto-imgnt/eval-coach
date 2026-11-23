@@ -1,6 +1,6 @@
 # eval-coach: build specification
 
-Standalone app for the **"Evaluated Systems (Stage 3)" series**. It teaches the series Part by Part, asynchronously: Part 1 (structured prompting), Part 2 (defining evaluation criteria) and Part 3 (running evals and baseline) are built, Parts 4 and 5 are "Coming soon" and Part 6 is a live meeting (see "Series map" and "Parts"). There is no presenter and there are no handouts: every instruction lives in the app. The app is a **wrapper around the participant's own AI CLI**. Mac is deferred, so keep OS-specific code in `conpty.py` and the setup scripts.
+Standalone app for the **"Evaluated Systems (Stage 3)" series**. It teaches the series Part by Part, asynchronously: Part 1 (structured prompting), Part 2 (defining evaluation criteria) and Part 3 (running evals and baseline) are built, Parts 4 and 5 are "Coming soon" and Part 6 is a live meeting (see "Series map" and "Parts"). There is no presenter and there are no handouts: every instruction lives in the app. The app is a **wrapper around the participant's own AI CLI**. Keep OS-specific code in `conpty.py`, `ptyterm.py`, `hostos.py`, the setup scripts and the launchers.
 
 How this document is organised: the rules, layout, storage, HTTP contract, setup and the Series map apply to every Part. The sections "Steps in this slice", "Promptfoo track", "Content guidance", "Troubleshooting coverage" and "Optional live mode" are **Part 3's** step contract. "Part 1" and "Part 2" are those Parts' own contracts. "Parts" explains how the engine holds them side by side. Where an OpenSpec spec exists for an area it wins over this file.
 
@@ -12,7 +12,7 @@ Source material for the content is kept outside the repository (read-only, never
 - The CLI is whatever command the participant enters (it may include arguments, for example `claude --model sonnet`). There is no allowlist and no CLI-specific logic in the app, except the data in `cli-recipes.json`. That data includes each supported tool's `models` entry: the app passes the Sonnet or Haiku choice as a launch option (see "Model choice"). A command with no `models` data starts with no model option. The app does not hold API keys or call any model itself.
 - Terminal output is displayed only. The app never parses it to make decisions. It decides by reading files and by running the checker itself. One scoped exception: for a tool that needs an exact model ID, the app may read the tool's own `/model` list in memory to get that ID, and the text shown before it only to avoid typing into a question; never for a result (see "Model choice").
 - "New chat" means a new CLI process. Only one CLI process runs at a time.
-- Nothing is sent anywhere except by the participant's CLI. No telemetry. The app's own network use is limited to consented preflight downloads from python.org, nodejs.org and the npm registry; it fetches nothing else and sends nothing.
+- Nothing is sent anywhere except by the participant's CLI. No telemetry. The app's own network use is limited to consented preflight downloads from python.org, nodejs.org and the npm registry, and, on a Mac, GitHub release downloads for the private Python (the launcher only, after consent, against a fixed SHA-256 per chip); it fetches nothing else and sends nothing.
 - Plain language for non-technical readers. Never mention a facilitator, presenter, room, breakout, chat waterfall, handout, neighbor or clock. "Script track" and "promptfoo track" replace Room A and Room B. One exception (authorized 2026-11-15): Part 6 is a live troubleshooting meeting, so `baseline-why` "Your own work" says, as information only, that it happens live and that task ideas can be brought to office hours or the AIR discussion. No other text points people to anyone. The only other mention of the live meeting is the Series map's Part 6 row (authorized 2026-11-15), which says, as information only, that Part 6 is a live meeting and what it is about; it never names office hours, the AIR discussion, or any person, place, contact detail, link or schedule.
 - Copilot Chat in Teams is not an approved tool and must never be suggested.
 - The Northwind weekly update is a learning example and is never a submission option. Participants read it as the "Practice task" (the other starter is "My own task"); the client name stays inside the example's own text, and ids, folders and kit files keep "northwind". Participants read "your AI" and "AI window" where code and these docs say "CLI" (vendor names such as GitHub Copilot CLI and Devin CLI stay). OpenSpec change `content-clarity` (its `participant-vocabulary` spec wins over this paragraph); `tests/test_participant_vocabulary.py` enforces it.
@@ -23,7 +23,9 @@ eval-coach/
   app/eval_coach/
     __main__.py     CLI entry: --port --home --no-browser (plus a hidden test-only --custom-ai)
     conpty.py       Windows pseudo console (harden from spikes/phase0-wrapper/conpty.py)
-    terminal.py     one-session manager, output ring buffer with sequence numbers
+    ptyterm.py      Mac pseudo terminal (`PosixPTY`, the same surface as `ConPTY`: its own session and process group, group kill)
+    hostos.py       the one place that knows the operating system: tool paths, process flags, kill-tree, download and unpack commands, recipe shells, extra PATH folders, the Node.js pin per platform and chip (Windows values are exactly the old literals)
+    terminal.py     one-session manager, output ring buffer with sequence numbers; picks `ConPTY` or `PosixPTY` by platform
     models.py       the Sonnet or Haiku choice: per-tool `models` data lookup, the launch option, the hidden `/model` read for exact IDs, the saved IDs (`model-cache.json`)
     server.py       HTTP server, security, routes, SSE
     engine.py       step state machine and course (lessons, placement, review), the only class the server calls for domain work
@@ -61,8 +63,11 @@ eval-coach/
 
     web/            static UI, no build step (reference.html is the printable one-page reference; js/theme.js applies the saved theme before first paint; js/part-steps.js holds Part 1's three step panels; js/criteria-steps.js holds Part 2's worksheet, test-file and reference panels)
   tests/            unittest
-  tools/build_pyz.py   builds dist/eval-coach.pyz with stdlib zipapp, then dist/eval-coach.cmd (packaging/launcher.cmd followed by the .pyz bytes)
+  tools/build_pyz.py   builds dist/eval-coach.pyz with stdlib zipapp, then dist/eval-coach.cmd (packaging/launcher.cmd followed by the .pyz bytes), dist/eval-coach.command and dist/eval-coach-mac.zip (packaging/launcher.sh followed by the .pyz bytes, the zip keeping mode 0755); stamps the pins from packaging/runtime-manifest.json into both launchers
   packaging/launcher.cmd   the Windows launcher: finds or installs Python, then runs the app from its own file; shipped as dist/eval-coach.cmd, the one file participants get
+  packaging/launcher.sh    the Mac launcher, shipped as dist/eval-coach.command inside dist/eval-coach-mac.zip (see docs/SETUP.md "Mac: distribution and the launcher")
+  packaging/runtime-manifest.json   every pinned Python and Node.js version, URL and SHA-256, for both platforms
+  packaging/mac-start.txt   the text that goes with the Mac zip (first open, Gatekeeper, the Terminal fallback)
   tools/verify_receipt.py   records and checks verification receipts (git tree hash of the working tree)
   tools/make_demo_hash.py   makes app/eval_coach/demo_hash.json from a password typed at a prompt (never printed or stored)
   docs/SPEC.md
@@ -83,10 +88,10 @@ eval-coach/
 - `<home>\pending-lessons.json`: course progress made before a project exists (the mission). It has the same shape as the `lessons` block below and is merged into `progress.json` when the project is set up.
 - `<home>\preflight.json`: preflight results, track choice, the AI command, `setup_skipped` (true once the participant skipped setup; a configuration reset forgets it) and `model_preference` (`"sonnet"` or `"haiku"`, default `"sonnet"`; a configuration reset returns it to Sonnet, a lesson progress reset keeps it). Written atomically. A `signin` item and `signed_in_command` / `launched_command` from older files are ignored, not migrated.
 - `<home>\model-cache.json`: exact model IDs found by the hidden `/model` read, per tool: `{"<program>":{"program":"<path>|<size>|<mtime>","ids":{"sonnet":str,"haiku":str}}}`. Only IDs and the program marker (read from the file system); never screen text, an account name or an email. Moved by a configuration reset, kept by a progress reset. `<home>\cli-models\` is the empty scratch folder that read runs in; it is left in place.
-- `<home>\runtime\node`, `<home>\npm-cache`, `<home>\promptfoo`: private Node.js, npm cache and promptfoo config, created only after consent.
+- `<home>\runtime\node`, `<home>\npm-cache`, `<home>\promptfoo`: private Node.js, npm cache and promptfoo config, created only after consent. On a Mac `<home>\runtime\python` holds the private Python the launcher installed after consent (`bin/python3`); `<home>\runtime\node` holds the Mac Node.js layout (`bin/node`, `lib/node_modules`).
 - `<home>\cli-test\`, `<home>\cli-install\`: cleared and used only for the working test and install recipes. An old `<home>\cli-signin\` is no longer created and is left in place if present.
-- `<home>\cli-recipes.json` (optional): replaces the bundled recipes without a rebuild.
-- Default project path: `%USERPROFILE%\eval-project`. A new project inside OneDrive is refused by item 8; an existing one keeps its progress but fails item 8 until moved.
+- `<home>\cli-recipes.json` (optional): replaces the bundled recipes without a rebuild. The bundled file keeps each recipe's Windows values at the top and adds a `platforms` block (`windows`, `mac`); see "Mac" in `docs/SETUP.md`.
+- Default project path: `%USERPROFILE%\eval-project` (on a Mac `~/eval-project`, and the home folder `~/.eval-coach`). A new project inside OneDrive is refused by item 8; an existing one keeps its progress but fails item 8 until moved.
 - `<home>\reset-backup\` (one slot): everything the last reset or "Start this step again" moved out, under `project\` (project folder files, same relative names) and `app\` (files and folders from `<home>`). It is built in `<home>\reset-backup.new\` and replaces the previous backup only when complete (a restart that moves nothing leaves it alone). It never holds an answer key. It is a plain folder; the app does not read it or restore from it.
 - Never overwrite an existing participant file when creating a project. If `.learning\progress.json` exists, resume.
 

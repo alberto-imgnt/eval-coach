@@ -5,7 +5,7 @@ import argparse
 import sys
 import webbrowser
 
-from . import demo_access
+from . import demo_access, hostos
 from .engine import Engine
 from .lessons import LessonError, load_bundled
 from .project import default_home
@@ -16,7 +16,8 @@ from .terminal import TerminalManager
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="eval-coach", description="Learn to run evals with your own AI CLI.")
     parser.add_argument("--port", type=int, default=0, help="Port to use (default: a random free port).")
-    parser.add_argument("--home", default=None, help="Storage folder (default: %%USERPROFILE%%\\.eval-coach).")
+    parser.add_argument("--home", default=None,
+                        help="Storage folder (default: " + hostos.default_home_label().replace("%", "%%") + ").")
     parser.add_argument("--no-browser", action="store_true", help="Print the URL but do not open a browser.")
     parser.add_argument("--python", default=None, help="Path of the Python that launched the app (the launcher sets this).")
     parser.add_argument("--custom-ai", action="store_true", help=argparse.SUPPRESS)

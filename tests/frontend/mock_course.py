@@ -8,11 +8,15 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "app"))
+from eval_coach import resources  # noqa: E402  platform words are put in as the server does
+
 CONTENT_ROOT = Path(__file__).resolve().parents[2] / "app" / "eval_coach" / "content"
-LESSON_UI = json.loads((CONTENT_ROOT / "lesson-ui.json").read_text(encoding="utf-8"))
-GLOSSARY = json.loads((CONTENT_ROOT / "glossary.json").read_text(encoding="utf-8"))
+LESSON_UI = json.loads(resources.read_text("content/lesson-ui.json"))
+GLOSSARY = json.loads(resources.read_text("content/glossary.json"))
 UI = LESSON_UI["ui"]
 REASONS = LESSON_UI["rule_reasons"]
 ERRORS = LESSON_UI["errors"]

@@ -23,6 +23,9 @@ from unittest import mock
 
 from helpers import ROOT
 
+if sys.platform != "win32":
+    raise unittest.SkipTest("this tests the Windows launcher; the Mac launcher is tested in test_launcher_mac.py")
+
 sys.path.insert(0, str(ROOT / "tools"))
 from build_pyz import LAUNCHER_MARKER, assemble_launcher  # noqa: E402
 

@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    name: backend (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows
+            os: windows-latest
+            python: "3.13"
+          - name: windows, Python 3.9
+            os: windows-latest
+            python: "3.9"
+          # Runner labels checked 2026-11-20. macos-15 is Apple Silicon and macos-15-intel is Intel;
+          # an Intel runner may be retired later without blocking a release (change add-mac-support, D10).
+          - name: macos (Apple Silicon)
+            os: macos-15
+            python: "3.13"
+          - name: macos (Intel)
+            os: macos-15-intel
+            python: "3.13"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Build the launchers and check them
+        run: python tools/build_pyz.py --smoke
+      - name: Backend tests
+        run: python -m unittest discover -s tests
+        env:
+          OPENSPEC_TELEMETRY: "0"

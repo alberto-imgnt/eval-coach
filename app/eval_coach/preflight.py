@@ -17,7 +17,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import models, project, resources
+from . import hostos, models, project, resources
 from . import state as store
 from .state import CorruptStateError
 
@@ -28,12 +28,14 @@ STATUSES = ("not_checked", "passed", "failed", "needs_you")
 
 # Pinned values: spikes/phase0-preflight/runtime-manifest.json.
 NODE_MIN = (22, 22, 0)
-NODE_VERSION = "26.13.0"
-NODE_URL = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-win-x64.zip"
-NODE_SHA256 = "dcc60d59a0746999f99064a01c020445d54d84228c691cdbf25b49ac3b59150a"
-NODE_FOLDER = "node-v26.13.0-win-x64"
-NODE_DOWNLOAD_BYTES = 41157375
-NODE_NEEDS_BYTES = 200 * 10**6
+_NODE_PIN = hostos.node_pin()  # the pinned build for this computer (Windows x64, or the Mac's chip)
+NODE_VERSION = _NODE_PIN.version
+NODE_URL = _NODE_PIN.url
+NODE_SHA256 = _NODE_PIN.sha256
+NODE_FOLDER = _NODE_PIN.folder
+NODE_ARCHIVE_EXT = _NODE_PIN.archive_ext
+NODE_DOWNLOAD_BYTES = _NODE_PIN.download_bytes
+NODE_NEEDS_BYTES = _NODE_PIN.needs_bytes
 PROMPTFOO_VERSION = "0.125.1"
 PROMPTFOO_CACHE_BYTES = 1050855363
 PROMPTFOO_NEEDS_BYTES = 12 * 10**8
@@ -48,17 +50,14 @@ SIZE_POLL_SECONDS = 3.0
 PUBLISH_SECONDS = 1.0
 AI_TEST_SECONDS = 120  # the quiet test's limit when a recipe does not name one
 AI_TEST_STOP_SECONDS = 45  # how long to wait for a cancelled quiet test's process to be gone
-CREATE_NO_WINDOW = 0x08000000
-_SYSTEM32 = os.path.join(os.environ.get("SystemRoot") or r"C:\Windows", "System32")
-CURL = os.path.join(_SYSTEM32, "curl.exe")
-TAR = os.path.join(_SYSTEM32, "tar.exe")
-TASKKILL = os.path.join(_SYSTEM32, "taskkill.exe")
-CMD = os.path.join(_SYSTEM32, "cmd.exe")
-POWERSHELL = os.path.join(_SYSTEM32, "WindowsPowerShell", "v1.0", "powershell.exe")
+CREATE_NO_WINDOW = hostos.CREATE_NO_WINDOW
+CURL = hostos.tool_path("curl")
+TAR = hostos.tool_path("tar")
+CMD = hostos.tool_path("cmd", "win32")  # only used to start npx.cmd, which exists only on Windows
 NPM_NETWORK_RE = re.compile(r"ENOTFOUND|ETIMEDOUT|EAI_AGAIN|ECONN\w*|E403|E407|proxy|network", re.I)
 NPM_DISK_RE = re.compile(r"ENOSPC", re.I)
 
-_RECIPE_SHELLS = ("cmd", "powershell", "none")
+_RECIPE_SHELLS = ("cmd", "powershell", "zsh", "none")
 _MAX_OUTPUT = 200_000
 
 
@@ -85,10 +84,9 @@ class SystemRunner:
     """Runs real programs. Tests replace this with a fake."""
 
     def run(self, argv, timeout, env=None, cwd=None, on_tick=None, cancel=None):
-        flags = CREATE_NO_WINDOW if sys.platform == "win32" else 0
         try:
             proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE, env=env, cwd=cwd, creationflags=flags)
+                                    stderr=subprocess.PIPE, env=env, cwd=cwd, **hostos.popen_flags())
         except OSError as exc:
             return Result(code=-1, stderr=str(exc), started=False)
         out, err = bytearray(), bytearray()
@@ -139,12 +137,7 @@ class SystemRunner:
 
     @staticmethod
     def _kill_tree(proc):
-        try:
-            subprocess.run([TASKKILL, "/T", "/F", "/PID", str(proc.pid)], stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, timeout=15,
-                           creationflags=CREATE_NO_WINDOW)
-        except (OSError, subprocess.SubprocessError):
-            proc.kill()
+        hostos.kill_tree(proc)
 
     def which(self, name, path):
         return shutil.which(name, path=path)
@@ -153,34 +146,30 @@ class SystemRunner:
         return shutil.disk_usage(str(path)).free
 
 
-def read_registry_paths():
-    """PATH entries a new terminal would get, so a CLI installed a minute ago can be found.
-
-    Read only. Nothing here writes to the registry.
-    """
-    if sys.platform != "win32":
-        return []
-    import winreg
-
-    found = []
-    for root, key_path in ((winreg.HKEY_LOCAL_MACHINE,
-                            r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
-                           (winreg.HKEY_CURRENT_USER, "Environment")):
-        try:
-            with winreg.OpenKey(root, key_path) as key:
-                value, _ = winreg.QueryValueEx(key, "Path")
-        except OSError:
-            continue
-        found.extend(os.path.expandvars(part) for part in str(value).split(os.pathsep) if part.strip())
-    return found
-
-
 def human_bytes(number):
     if number is None:
         return "an unknown amount"
     if number >= 10**9:
         return f"{number / 10**9:.1f} GB"
     return f"{number / 10**6:.0f} MB"
+
+
+def _mac_ver_text():
+    import platform as _platform
+    return _platform.mac_ver()[0]
+
+
+def _replace_text(value, replacements):
+    """A copy of nested content with every string's listed phrases replaced."""
+    if isinstance(value, str):
+        for old, new in replacements.items():
+            value = value.replace(old, new)
+        return value
+    if isinstance(value, list):
+        return [_replace_text(item, replacements) for item in value]
+    if isinstance(value, dict):
+        return {k: _replace_text(v, replacements) for k, v in value.items()}
+    return value
 
 
 def parse_node_version(text):
@@ -267,8 +256,13 @@ class _AiTest:
 
 
 class Preflight:
-    def __init__(self, home, terminal, publish=None, runner=None, registry_paths=read_registry_paths,
-                 python_path=None, paths_provider=None, custom_ai=False, on_ai_test_passed=None):
+    def __init__(self, home, terminal, publish=None, runner=None, registry_paths=None,
+                 python_path=None, paths_provider=None, custom_ai=False, on_ai_test_passed=None,
+                 platform=None, machine=None, user_home=None, mac_version_text=None):
+        self.platform = platform or sys.platform  # tests pass "darwin" to follow the Mac branches
+        self.machine = machine
+        self.platform_home = user_home
+        self.mac_version_text = mac_version_text
         self.custom_ai = bool(custom_ai)
         self.home = Path(home)
         self.home.mkdir(parents=True, exist_ok=True)
@@ -276,10 +270,10 @@ class Preflight:
         self.publish = publish or (lambda: None)
         self.on_ai_test_passed = on_ai_test_passed or (lambda command: None)
         self.runner = runner or SystemRunner()
-        self.registry_paths = registry_paths
+        self.registry_paths = registry_paths or self._platform_path_dirs
         self.python_path = python_path or sys.executable
         self.paths_provider = paths_provider or (lambda: None)
-        self.content = json.loads(resources.read_text("content/preflight.json"))
+        self.content = self._load_content()
         self.recipes = self._load_recipes()
         self.path = self.home / "preflight.json"
         self._lock = threading.RLock()
@@ -293,18 +287,55 @@ class Preflight:
 
     # --- persistence -------------------------------------------------------
 
+    def _load_content(self):
+        """The words for this platform: preflight.json, with its `platform_overrides` and `platform_text` for a Mac."""
+        key = hostos.platform_key(self.platform)
+        with resources.platform_words(key if key in ("windows", "mac") else None):
+            content = json.loads(resources.read_text("content/preflight.json"))
+        overrides = content.pop("platform_overrides", {}).get(key, {})
+        replacements = content.pop("platform_text", {}).get(key, {})
+        for section, values in overrides.items():
+            if isinstance(content.get(section), dict) and isinstance(values, dict):
+                content[section].update(values)
+        return _replace_text(content, replacements) if replacements else content
+
     def _load_recipes(self):
         override = self.home / "cli-recipes.json"
         if override.is_file():
             try:
                 data = store.read_json(override)
                 self._validate_recipes(data)
-                return data["recipes"]
+                return self._for_platform(data["recipes"])
             except (CorruptStateError, OSError, KeyError, TypeError, ValueError):
                 pass
         data = json.loads(resources.read_text("content/cli-recipes.json"))
         self._validate_recipes(data)
-        return data["recipes"]
+        return self._for_platform(data["recipes"])
+
+    def _for_platform(self, recipes):
+        """The recipes offered on this computer, each with its platform's values laid over the shared ones.
+
+        The top-level values of a recipe are the Windows ones. A recipe's `platforms` block holds only what
+        differs: a value of null removes a field, and `"available": false` leaves the recipe out.
+        """
+        key = hostos.platform_key(self.platform)
+        offered = []
+        for recipe in recipes:
+            recipe = dict(recipe)
+            platforms = recipe.pop("platforms", None)
+            if platforms is not None:
+                data = platforms.get(key, {} if key == "windows" else None)
+                if not isinstance(data, dict) or data.get("available") is False:
+                    continue
+                for name, value in data.items():
+                    if name == "available":
+                        continue
+                    if value is None:
+                        recipe.pop(name, None)
+                    else:
+                        recipe[name] = value
+            offered.append(recipe)
+        return offered
 
     @staticmethod
     def _validate_recipes(data):
@@ -434,14 +465,15 @@ class Preflight:
         base = dict(os.environ)
         runtime = self.home / "runtime"
         entries = []
-        private_python = runtime / "python"
-        if (private_python / "python.exe").is_file():
-            entries.append(str(private_python))
+        private_python = runtime.joinpath(*hostos.private_python_relative(self.platform)[1:])
+        if private_python.is_file():
+            entries.append(str(private_python.parent))
         elif self.python_path:
             entries.append(os.path.dirname(os.path.abspath(self.python_path)))
+        pin = self._pin()
         private_node = runtime / "node"
-        if (private_node / "node.exe").is_file():
-            entries.append(str(private_node))
+        if private_node.joinpath(*pin.exe_relative).is_file():
+            entries.append(str(private_node.joinpath(*pin.exe_relative).parent))
         path_value = base.get("PATH", "")
         merged, seen = [], set()
         for entry in entries + path_value.split(os.pathsep) + list(self.registry_paths()):
@@ -454,6 +486,21 @@ class Preflight:
         base["PROMPTFOO_DISABLE_TELEMETRY"] = "1"
         base["PROMPTFOO_CONFIG_DIR"] = str(self.home / "promptfoo")
         return base
+
+    def _platform_path_dirs(self):
+        """PATH entries a new terminal would get: the Windows registry, or the Mac install folders."""
+        extra = []
+        for recipe in self.recipes:
+            extra += [d for d in recipe.get("path_dirs", []) if isinstance(d, str)]
+        return hostos.extra_path_dirs(self.platform, home=self.platform_home, extra=extra)
+
+    def _pin(self):
+        """The pinned Node.js build for this platform. The module values win on the real platform so tests can patch them."""
+        pin = hostos.node_pin(self.platform, self.machine)
+        if self.platform == sys.platform:
+            pin = pin._replace(version=NODE_VERSION, url=NODE_URL, sha256=NODE_SHA256, folder=NODE_FOLDER,
+                               download_bytes=NODE_DOWNLOAD_BYTES)
+        return pin
 
     def _find_tool(self, name, env):
         path = env.get("PATH", "")
@@ -552,7 +599,12 @@ class Preflight:
             self._set("python", "failed", "python_too_old", found=sys.version.split()[0])
             return
         env = self.env()
-        exe = self._find_tool("python", env)
+        exe = None
+        for name in hostos.python_command_names(self.platform):
+            found_exe = self._find_tool(name, env)
+            if found_exe and not self._is_apple_stub(found_exe):  # running Apple's stub opens an installer dialog
+                exe = found_exe
+                break
         if not exe:
             self._set("python", "failed", "python_missing")
             return
@@ -570,13 +622,26 @@ class Preflight:
         if version < (3, 9):
             self._set("python", "failed", "python_too_old", found=found)
             return
-        self._set("python", "passed", "python_ok", version=found)
+        self._set("python", "passed", "python_ok", version=found, path=exe)
+
+    def _is_apple_stub(self, exe):
+        """True for /usr/bin/python3 on a Mac whose Command Line Tools are missing: running it opens Apple's installer."""
+        return (hostos.is_mac(self.platform) and exe.replace("\\", "/") == "/usr/bin/python3"
+                and not os.path.exists("/Library/Developer/CommandLineTools/usr/bin/python3")
+                and not os.path.exists("/Applications/Xcode.app"))
+
+    def _node_supported(self):
+        return hostos.node_supported(self.platform, self.mac_version_text)
+
+    def _macos_text(self):
+        return self.mac_version_text if self.mac_version_text is not None else _mac_ver_text()
 
     def _check_node(self):
         env = self.env()
         exe = self._find_tool("node", env)
         if not exe:
-            self._set("node", "needs_you", "node_missing")
+            self._set("node", "needs_you", "node_missing" if self._node_supported() else "node_unsupported_macos",
+                      macos=self._macos_text())
             return
         result = self.runner.run([exe, "--version"], timeout=CHECK_TIMEOUT, env=env)
         if result.timed_out:
@@ -584,11 +649,13 @@ class Preflight:
             return
         version = parse_node_version(result.stdout)
         if result.code != 0 or version is None:
-            self._set("node", "needs_you", "node_missing")
+            self._set("node", "needs_you", "node_missing" if self._node_supported() else "node_unsupported_macos",
+                      macos=self._macos_text())
             return
         found = ".".join(str(n) for n in version)
         if not node_is_new_enough(version):
-            self._set("node", "needs_you", "node_too_old", found=found)
+            self._set("node", "needs_you", "node_too_old" if self._node_supported() else "node_unsupported_macos",
+                      found=found, macos=self._macos_text())
             return
         self._set("node", "passed", "node_ok", version=found)
 
@@ -596,7 +663,8 @@ class Preflight:
         """The launch command for npx, avoiding cmd.exe when a plain Node path works."""
         node = self._find_tool("node", env)
         if node:
-            script = Path(node).parent / "node_modules" / "npm" / "bin" / "npx-cli.js"
+            pin = self._pin()
+            script = hostos.node_root(node, pin).joinpath(*pin.npx_cli_relative)
             if script.is_file():
                 return [node, str(script)]
         npx = self._find_tool("npx", env)
@@ -740,7 +808,10 @@ class Preflight:
         if item == "node":
             if self._status("node") == "passed":
                 raise self._error("node_not_needed")
-            if self._ensure_disk("node", NODE_NEEDS_BYTES):
+            if not self._node_supported():
+                raise PreflightError("node_needs_newer_macos",
+                                     self.content["errors"]["node_needs_newer_macos"].format(macos=self._macos_text()))
+            if self._ensure_disk("node", self._pin().needs_bytes):
                 self._start_job("node", self.content["ui"]["progress_downloading"].format(label="Node.js"), self._job_node)
         elif item == "promptfoo":
             if self._status("node") != "passed":
@@ -764,11 +835,8 @@ class Preflight:
                 done = 0
             self._tick(job, done)
 
-        result = self.runner.run(
-            [CURL, "--fail", "--location", "--ssl-no-revoke", "--connect-timeout", "30",
-             "--max-time", str(DOWNLOAD_MAX_TIME), "--retry", "2", "--retry-delay", "3",
-             "--silent", "--show-error", "--output", name, url],
-            timeout=DOWNLOAD_TIMEOUT, cwd=str(dest.parent), on_tick=tick, cancel=job.cancel)
+        result = self.runner.run(hostos.download_argv(name, url, DOWNLOAD_MAX_TIME, self.platform),
+                                 timeout=DOWNLOAD_TIMEOUT, cwd=str(dest.parent), on_tick=tick, cancel=job.cancel)
         if result.cancelled:
             _unlink(dest)
             self._set(item, "failed", "install_cancelled")
@@ -805,24 +873,25 @@ class Preflight:
     def _job_node(self, job):
         runtime = self.home / "runtime"
         runtime.mkdir(parents=True, exist_ok=True)
-        archive = runtime / f"{NODE_FOLDER}.zip"
+        pin = self._pin()
+        archive = runtime / f"{pin.folder}{pin.archive_ext}"
         staging = runtime / "node.new"
         _unlink(archive)
         _rmtree(staging)
-        if not self._download(job, "node", NODE_URL, archive, NODE_SHA256, NODE_DOWNLOAD_BYTES, NODE_NEEDS_BYTES):
+        if not self._download(job, "node", pin.url, archive, pin.sha256, pin.download_bytes, pin.needs_bytes):
             return
         staging.mkdir(parents=True, exist_ok=True)
         job.total_bytes = None
         job.detail = self.content["ui"]["progress_unpacking"]
         self.publish()
-        result = self.runner.run([TAR, "-xf", archive.name, "-C", staging.name], timeout=EXTRACT_TIMEOUT,
-                                 cwd=str(runtime), cancel=job.cancel)
+        result = self.runner.run(hostos.extract_argv(archive.name, staging.name, self.platform),
+                                 timeout=EXTRACT_TIMEOUT, cwd=str(runtime), cancel=job.cancel)
         if result.cancelled:
             _rmtree(staging)
             _unlink(archive)
             self._set("node", "failed", "install_cancelled")
             return
-        extracted = staging / NODE_FOLDER / "node.exe"
+        extracted = staging.joinpath(pin.folder, *pin.exe_relative)
         if result.code != 0 or not extracted.is_file():
             _rmtree(staging)
             _unlink(archive)
@@ -837,7 +906,7 @@ class Preflight:
             return
         target = runtime / "node"
         _rmtree(target)
-        shutil.move(str(staging / NODE_FOLDER), str(target))
+        shutil.move(str(staging / pin.folder), str(target))
         _rmtree(staging)
         _unlink(archive)
         self._set("node", "passed", "installed_node", version=".".join(str(n) for n in version))
@@ -1103,9 +1172,7 @@ class Preflight:
             raise PreflightError("not_enough_disk", self.content["messages"]["not_enough_disk"]["detail"].format(
                 need=human_bytes(needed), free=human_bytes(free)) + " " +
                 self.content["messages"]["not_enough_disk"]["next"])
-        if recipe["shell"] == "powershell":
-            return [POWERSHELL, "-NoProfile", "-Command", command]
-        return [CMD, "/d", "/s", "/c", command]
+        return hostos.recipe_shell_argv(recipe["shell"], command, self.platform)
 
     # --- state ---------------------------------------------------------------
 
@@ -1122,13 +1189,21 @@ class Preflight:
         if item == "node" and self._applies(item) and info["status"] != "passed":
             view["install"] = {"available": not job_running, "consent": self._consent_view(
                 "node_title", "node_body", "node_confirm", version=NODE_VERSION,
-                path=str(self.home / "runtime" / "node"), free=human_bytes(free))}
+                path=str(self.home / "runtime" / "node"), free=human_bytes(free))} if self._node_supported() else None
         elif item == "promptfoo" and self._applies(item) and info["status"] != "passed":
             ready = self._status("node") == "passed"
             view["install"] = {"available": ready and not job_running, "consent": self._consent_view(
                 "promptfoo_title", "promptfoo_body", "promptfoo_confirm",
                 path=str(self.home / "npm-cache"), free=human_bytes(free))} if ready else None
         return view
+
+    def _track_options(self):
+        """The two track choices. On a Mac too old for the pinned Node.js, the promptfoo hint says so and points to the Script track."""
+        options = copy.deepcopy(self.content["track_options"])
+        extra = self.content.get("track_promptfoo_old_macos")
+        if extra and not self._node_supported():
+            options["promptfoo"]["hint"] = f"{options['promptfoo']['hint']} {extra.format(macos=self._macos_text())}"
+        return options
 
     def _recipes_view(self, free):
         env = self.env()
@@ -1207,7 +1282,7 @@ class Preflight:
                 "passed": passed,
                 "skipped": self._data.get("setup_skipped") is True,
                 "track": self._data["track"],
-                "track_options": copy.deepcopy(self.content["track_options"]),
+                "track_options": self._track_options(),
                 "track_note": self.content["track_promptfoo_note"] if self._data["track"] == "promptfoo" else None,
                 "items": items,
                 "job": job,

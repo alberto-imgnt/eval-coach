@@ -6,6 +6,7 @@
 // kept out of the repository); without it the script refuses to run. Set CAPTURE_TRUST=1 to send one single-use Yes to the
 // folder-trust question of the scratch folder (only when the highlighted choice is a Yes); use it only with the
 // user's approval. Real-CLI use needs the user's approval (AGENTS.md).
+if (process.platform !== 'win32') { console.log('SKIP: this runs on Windows only.'); process.exit(0); }
 const { chromium } = require('../../tests/frontend/.tmp/node_modules/@playwright/test');
 const { spawn } = require('child_process');
 const fs = require('fs');

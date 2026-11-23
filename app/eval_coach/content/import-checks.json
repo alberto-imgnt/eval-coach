@@ -1,9 +1,9 @@
 {
   "blocking": {
-    "missing_prompt_path": "Enter the full path of your prompt file, for example C:\\Users\\you\\Documents\\my-prompt.md. Then press Check my files.",
-    "missing_test_cases_path": "Enter the full path of your test cases file, for example C:\\Users\\you\\Documents\\my-test-cases.md. Then press Check my files.",
-    "not_absolute": "The path to your {label} file is not a full path. Enter the full path, starting with a drive letter, for example C:\\Users\\you\\Documents\\my-file.md. In File Explorer you can right-click the file and choose Copy as path. Then press Check my files.",
-    "file_not_found": "Your {label} file was not found at {path}. Check the path, or right-click the file in File Explorer, choose Copy as path, paste it here and press Check my files again.",
+    "missing_prompt_path": "Enter the full path of your prompt file, for example {path_example}{sep}my-prompt.md. Then press Check my files.",
+    "missing_test_cases_path": "Enter the full path of your test cases file, for example {path_example}{sep}my-test-cases.md. Then press Check my files.",
+    "not_absolute": "The path to your {label} file is not a full path. Enter the full path, {full_path_rule}, for example {path_example}{sep}my-file.md. {copy_path_hint} Then press Check my files.",
+    "file_not_found": "Your {label} file was not found at {path}. Check the path, or {copy_path_action}, paste it here and press Check my files again.",
     "not_a_file": "The path for your {label} file points to a folder, not a file. Enter the path of the file itself, then press Check my files again.",
     "file_unreadable": "Your {label} file could not be read ({reason}). Close the file in any program that has it open, or pick another copy, then press Check my files again.",
     "too_large": "Your {label} file is larger than 1 MB, which is far more than a prompt or a set of test cases needs. Choose the right file, or shorten it, then press Check my files again.",

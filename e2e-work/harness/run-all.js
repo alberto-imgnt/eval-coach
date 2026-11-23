@@ -6,6 +6,7 @@
 // Always E2E_PROFILE=standin: these stages use only the stand-in fake_cli.py, never a real CLI.
 // The promptfoo pass runs the REAL pinned promptfoo from the spike's private Node and npm cache, which are
 // linked (junctions, never copied or deleted) into the stand-in home as runtime\node and npm-cache.
+if (process.platform !== 'win32') { console.log('SKIP: the stand-in harness runs on Windows only.'); process.exit(0); }
 const { spawnSync, execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');

@@ -12,6 +12,10 @@
       "plain": "Installs GitHub Copilot CLI, GitHub's AI tool, from GitHub. It takes about 400 MB of disk and needs a GitHub Copilot license.",
       "source": "GitHub's official Copilot CLI documentation",
       "requires": {"command": "pwsh", "name": "PowerShell 6 or later", "recipe": "powershell", "detail": "GitHub Copilot CLI needs PowerShell 6 or later. Windows only includes PowerShell 5.1, so install PowerShell first with the option below."},
+      "platforms": {
+        "windows": {"available": true},
+        "mac": {"shell": "zsh", "command": "curl -fsSL https://gh.io/copilot-install | bash", "requires": null}
+      },
       "models": {
         "discover": {"command": "/model", "ready_quiet_seconds": 3, "read_quiet_seconds": 2, "max_seconds": 45,
                      "stop_words": ["sign in", "log in", "trust", "allow", "approve"],
@@ -31,6 +35,10 @@
       "needs_mb": 400,
       "plain": "Installs Claude Code, Anthropic's AI tool, from Anthropic's own installer. It takes about 400 MB of disk and needs a Claude account that includes Claude Code.",
       "source": "Anthropic's official Claude Code documentation",
+      "platforms": {
+        "windows": {"available": true},
+        "mac": {"shell": "zsh", "command": "curl -fsSL https://claude.ai/install.sh | bash"}
+      },
       "models": {
         "sonnet": {"label": "Sonnet", "launch": ["--model", "sonnet"]},
         "haiku": {"label": "Haiku", "launch": ["--model", "haiku"]}
@@ -46,6 +54,10 @@
       "needs_mb": 400,
       "plain": "Installs Claude Code through winget, the Windows package manager. It takes about 400 MB of disk.",
       "source": "Anthropic's official Claude Code documentation",
+      "platforms": {
+        "windows": {"available": true},
+        "mac": {"available": false}
+      },
       "models": {
         "sonnet": {"label": "Sonnet", "launch": ["--model", "sonnet"]},
         "haiku": {"label": "Haiku", "launch": ["--model", "haiku"]}
@@ -62,6 +74,10 @@
       "needs_mb": 400,
       "plain": "Installs Devin CLI, Devin's AI tool, from Devin's own setup script. It takes about 400 MB of disk and needs a Devin account.",
       "source": "Devin's official documentation",
+      "platforms": {
+        "windows": {"available": true},
+        "mac": {"shell": "zsh", "command": "curl -fsSL https://cli.devin.ai/install.sh | bash"}
+      },
       "models": {
         "sonnet": {"label": "Sonnet", "launch": ["--model", "sonnet"]},
         "haiku": {"label": "Haiku", "launch": ["--model", "haiku"]}
@@ -76,7 +92,11 @@
       "needs_mb": 400,
       "plain": "Installs PowerShell, which GitHub Copilot CLI needs. It takes about 400 MB of disk.",
       "source": "Microsoft's official PowerShell documentation",
-      "hidden": true
+      "hidden": true,
+      "platforms": {
+        "windows": {"available": true},
+        "mac": {"available": false}
+      }
     },
     {
       "id": "other",
@@ -87,7 +107,11 @@
       "command": "",
       "needs_mb": 0,
       "source": "",
-      "note": "Install your own agentic AI tool the way its vendor recommends, then enter the command above and press Check this command. It must be able to read files, write files and run commands."
+      "note": "Install your own agentic AI tool the way its vendor recommends, then enter the command above and press Check this command. It must be able to read files, write files and run commands.",
+      "platforms": {
+        "windows": {"available": true},
+        "mac": {"available": true}
+      }
     }
   ]
 }

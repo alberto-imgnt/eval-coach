@@ -3,7 +3,7 @@ githubCopilot:
   cloudAgent: false
 
 context: |
-  eval-coach is a standalone Windows learning app: a stdlib-only Python local web server with a no-build static UI that wraps the participant's own AI CLI in an embedded terminal. Read AGENTS.md first; docs/SPEC.md, docs/DESIGN.md, docs/SETUP.md and docs/CONTENT-RULES.md are the existing (pre-OpenSpec) specs and still apply where no OpenSpec spec covers an area. Working papers (the implementation plan and history, series intent and Stage 3 task notes) are kept in docs/local/, which is git-ignored; a fresh clone does not have them.
+  eval-coach is a standalone learning app for Windows and Mac: a stdlib-only Python local web server with a no-build static UI that wraps the participant's own AI CLI in an embedded terminal. Read AGENTS.md first; docs/SPEC.md, docs/DESIGN.md, docs/SETUP.md and docs/CONTENT-RULES.md are the existing (pre-OpenSpec) specs and still apply where no OpenSpec spec covers an area. Working papers (the implementation plan and history, series intent and Stage 3 task notes) are kept in docs/local/, which is git-ignored; a fresh clone does not have them.
   Constraints that artifacts and code must respect:
   - Python standard library only at runtime, Python 3.9-compatible syntax. The browser UI has no build step.
   - Never parse terminal output to decide anything; decide from files and by running the checker. The app never answers a CLI prompt and never calls a model.

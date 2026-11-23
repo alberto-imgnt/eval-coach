@@ -14,7 +14,11 @@ import urllib.request
 from pathlib import Path
 
 from helpers import ROOT
-from test_setup_cmd import CMD_EXE, SYSTEM_ROOT, real_python_dir, rmtree_with_retries
+
+if sys.platform != "win32":
+    raise unittest.SkipTest("this runs the built Windows launcher")
+
+from test_setup_cmd import CMD_EXE, SYSTEM_ROOT, real_python_dir, rmtree_with_retries  # noqa: E402
 
 LAUNCHER = ROOT / "dist" / "eval-coach.cmd"
 TMP_ROOT = ROOT / "tests" / ".tmp-integration"

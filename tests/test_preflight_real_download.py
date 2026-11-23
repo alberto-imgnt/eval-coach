@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 import time
 import unittest
 from pathlib import Path
@@ -17,9 +18,12 @@ from unittest import mock
 import helpers
 from helpers import FakeTerminal, ROOT
 
-from eval_coach import preflight as pf
-from eval_coach.preflight import Preflight
-from test_setup_cmd import rmtree_with_retries
+if sys.platform != "win32":
+    raise unittest.SkipTest("the real download test pins the Windows Node.js build")
+
+from eval_coach import preflight as pf  # noqa: E402
+from eval_coach.preflight import Preflight  # noqa: E402
+from test_setup_cmd import rmtree_with_retries  # noqa: E402
 
 TMP_ROOT = ROOT / "tests" / ".tmp-preflight"
 SPIKE_DOWNLOAD = ROOT / "spikes" / "phase0-preflight" / "downloads" / "node-v26.13.0-win-x64.zip"

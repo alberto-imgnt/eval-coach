@@ -1,5 +1,6 @@
 // Shared harness code: server control, xterm reader, strict approval classifier,
 // logging with email redaction, and the assertions that run during the flow.
+if (process.platform !== 'win32') { console.log('SKIP: the stand-in harness runs on Windows only.'); process.exit(0); }
 const { chromium } = require('../../tests/frontend/.tmp/node_modules/@playwright/test');
 const fs = require('fs');
 const path = require('path');

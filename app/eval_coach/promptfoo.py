@@ -11,9 +11,9 @@ import re
 import subprocess
 import sys
 
-from . import resources
+from . import hostos, resources
 from .parsers import CheckerOutputError, parse_promptfoo_summary, parse_test_cases
-from .preflight import CREATE_NO_WINDOW, PROMPTFOO_VERSION, SystemRunner
+from .preflight import PROMPTFOO_VERSION, SystemRunner
 
 CONFIG_NAME = "promptfooconfig.yaml"
 RESULTS_NAME = "results.json"
@@ -121,11 +121,10 @@ def summarize(project, prefix, python=None, timeout=SUMMARY_TIMEOUT):
         return "", "results.json was not found, so there is nothing to summarize. Run the eval again."
     script = resources.read_bytes(SUMMARY_SCRIPT)
     argv = [python or sys.executable, "-", RESULTS_NAME] + ([prefix] if prefix else [])
-    flags = CREATE_NO_WINDOW if sys.platform == "win32" else 0
     env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
     try:
         proc = subprocess.run(argv, input=script, cwd=str(project), capture_output=True, timeout=timeout,
-                              env=env, creationflags=flags)
+                              env=env, **hostos.popen_flags(new_group=False))
     except subprocess.TimeoutExpired:
         return "", "The summary did not finish within a minute. Run the eval again."
     except OSError as exc:

@@ -9,7 +9,7 @@ import stat
 import time
 from pathlib import Path
 
-from . import resources
+from . import hostos, resources
 from . import state as store
 
 SKILL_PREFIX = "kit/skills/"
@@ -126,10 +126,12 @@ class Paths:
 
 
 def default_home():
+    """The storage folder: `.eval-coach` in the user's home folder (USERPROFILE on Windows, `~` on a Mac)."""
     return os.path.join(os.environ.get("USERPROFILE") or os.path.expanduser("~"), ".eval-coach")
 
 
 def default_project_path():
+    """The default project folder: `eval-project` in the user's home folder."""
     return os.path.join(os.environ.get("USERPROFILE") or os.path.expanduser("~"), "eval-project")
 
 
@@ -152,7 +154,7 @@ def _inside(child, parent):
 
 def validate_project_path(home, project):
     if not Path(project).is_absolute():
-        raise ProjectError("bad_project_path", "Enter the full path of the project folder, for example C:\\Users\\you\\eval-project.")
+        raise ProjectError("bad_project_path", "Enter the full path of the project folder, for example " + hostos.project_path_example() + ".")
     if _inside(project, home) or _inside(home, project):
         raise ProjectError(
             "bad_project_path",

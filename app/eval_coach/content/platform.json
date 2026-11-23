@@ -1,0 +1,23 @@
+{
+  "comment": "The words that depend on the computer. Content files use these tokens, and resources.read_text puts in the words for the computer the app runs on (Windows or Mac). Every token must have both entries.",
+  "tokens": {
+    "paste_key": {"windows": "Ctrl+V", "mac": "⌘V (Command-V)"},
+    "copy_key": {"windows": "Ctrl+C", "mac": "⌘C (Command-C)"},
+    "copy_path_hint": {
+      "windows": "In File Explorer you can right-click the file and choose Copy as path.",
+      "mac": "In Finder you can select the file and press Option-Command-C to copy its path."
+    },
+    "copy_path_action": {
+      "windows": "right-click the file in File Explorer, choose Copy as path",
+      "mac": "select the file in Finder, press Option-Command-C to copy its path"
+    },
+    "full_path_rule": {
+      "windows": "starting with a drive letter",
+      "mac": "starting with a slash (/)"
+    },
+    "path_example": {"windows": "C:\\Users\\you\\Documents", "mac": "/Users/you/Documents"},
+    "sep": {"windows": "\\", "mac": "/"},
+    "python_cmd": {"windows": "python", "mac": "python3"},
+    "python_swap": {"windows": "py instead of python", "mac": "python3 instead of python"}
+  }
+}

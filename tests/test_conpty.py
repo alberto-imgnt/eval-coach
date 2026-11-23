@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -12,8 +13,11 @@ from pathlib import Path
 import helpers
 from helpers import wait_until
 
-from eval_coach.conpty import ConPTY, command_to_argv, parse_command, resolve_command
-from eval_coach.terminal import TerminalManager
+if sys.platform != "win32":
+    raise unittest.SkipTest("ConPTY is the Windows terminal; the Mac terminal is tested in test_ptyterm.py")
+
+from eval_coach.conpty import ConPTY, command_to_argv, parse_command, resolve_command  # noqa: E402
+from eval_coach.terminal import TerminalManager  # noqa: E402
 
 
 def visible(pty):

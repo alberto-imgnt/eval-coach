@@ -1,9 +1,14 @@
 """Read bundled files, from disk or from inside a zipapp."""
 from __future__ import annotations
 
+import contextlib
+import json
 import posixpath
+import re
 import zipfile
 from pathlib import Path, PurePosixPath
+
+from . import hostos
 
 _loader = globals().get("__loader__")
 _ARCHIVE = getattr(_loader, "archive", None)
@@ -48,7 +53,52 @@ def read_bytes(relpath):
 
 
 def read_text(relpath):
-    return read_bytes(relpath).decode("utf-8")
+    """Bundled text. A content file (content/*.json) has its platform tokens, such as {paste_key}, resolved first."""
+    text = read_bytes(relpath).decode("utf-8")
+    if relpath.startswith("content/") and relpath.endswith(".json") and relpath not in _UNRESOLVED:
+        return resolve_platform_text(text)
+    return text
+
+
+_UNRESOLVED = ("content/platform.json", "content/cli-recipes.json")
+_TOKEN = re.compile(r"\{([a-z][a-z_]*)\}")
+_override = [None]
+
+
+@contextlib.contextmanager
+def platform_words(key):
+    """Test helper: read the content as it reads on "windows" or "mac" while the block runs."""
+    previous = _override[0]
+    _override[0] = key
+    try:
+        yield
+    finally:
+        _override[0] = previous
+
+
+def current_platform():
+    return _override[0] or hostos.content_platform()
+
+
+def platform_tokens(key=None):
+    """{token: text} for one platform, from content/platform.json."""
+    key = key or current_platform()
+    data = json.loads(read_bytes("content/platform.json").decode("utf-8"))
+    return {name: values[key] for name, values in data["tokens"].items()}
+
+
+def resolve_platform_text(text, key=None):
+    """Replace each known {token} in JSON text with this platform's words, escaped to sit inside a JSON string.
+
+    A {placeholder} that is not a platform token (such as {path} or {label}) is left for the code that fills it.
+    """
+    tokens = platform_tokens(key)
+
+    def replace(match):
+        value = tokens.get(match.group(1))
+        return match.group(0) if value is None else json.dumps(value, ensure_ascii=False)[1:-1]
+
+    return _TOKEN.sub(replace, text)
 
 
 def canonical(relpath):
