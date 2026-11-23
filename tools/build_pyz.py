@@ -143,7 +143,11 @@ def smoke(command, archive=TARGET):
     found = {}
 
     def read_url():
-        found["line"] = proc.stdout.readline()
+        # A launcher prints its own status lines before the app prints the URL.
+        for line in proc.stdout:
+            found["line"] = line
+            if "?t=" in line:
+                break
 
     reader = threading.Thread(target=read_url, daemon=True)
     reader.start()

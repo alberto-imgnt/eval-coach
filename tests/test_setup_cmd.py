@@ -88,6 +88,8 @@ class SetupTestCase(unittest.TestCase):
     profile_name = "Plain User"
 
     def setUp(self):
+        if not PRIVATE_FIXTURE.exists():
+            self.skipTest("the spike's private Python is not on this machine")
         self.real_runtime_before = REAL_PROFILE_RUNTIME.exists()
         self.work = TMP_ROOT / f"{self.id().rsplit('.', 1)[-1]}-{os.getpid()}"
         self.work.mkdir(parents=True)
@@ -255,6 +257,7 @@ class ScriptShapeTests(unittest.TestCase):
         self.assertIn(f'set "EC_PY_SHA256={MANIFEST["sha256"]}"', self.text)
         self.assertIn(f'set "EC_PY_URL={MANIFEST["url"]}"', self.text)
 
+    @unittest.skipUnless(ARCHIVE.exists(), "the spike's downloaded archive is not on this machine")
     def test_local_archive_matches_pinned_hash(self):
         self.assertEqual(MANIFEST["sha256"], hashlib.sha256(ARCHIVE.read_bytes()).hexdigest())
 
