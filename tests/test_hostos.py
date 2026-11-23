@@ -20,9 +20,9 @@ class PlatformTests(unittest.TestCase):
     def test_windows_tools_are_the_system32_programs(self):
         for name, tail in (("curl", "curl.exe"), ("tar", "tar.exe"), ("taskkill", "taskkill.exe"),
                            ("cmd", "cmd.exe")):
-            parts = hostos.tool_path(name, WIN).lower().split("\\")
+            parts = hostos.tool_path(name, WIN).lower().replace("/", "\\").split("\\")
             self.assertEqual(parts[-2:], ["system32", tail])
-        self.assertTrue(hostos.tool_path("powershell", WIN).lower().endswith(
+        self.assertTrue(hostos.tool_path("powershell", WIN).lower().replace("/", "\\").endswith(
             "\\windowspowershell\\v1.0\\powershell.exe"))
 
     def test_mac_tools_are_fixed_system_paths(self):

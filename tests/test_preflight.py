@@ -433,6 +433,7 @@ class Install(Base):
         self.engine.preflight.wait_for_job(10)
 
 
+@WINDOWS_ONLY
 class Promptfoo(Base):
     def setUp(self):
         super().setUp()
@@ -567,6 +568,7 @@ class Cli(Base):
         self.assertEqual(self.terminal.typed, [])
 
 
+@WINDOWS_ONLY
 class BackgroundTest(Base):
     """Choosing an AI starts a quiet one-shot test. Only the exit status decides, and it never records a failure."""
 
@@ -776,6 +778,7 @@ class BackgroundTest(Base):
         self.assertEqual(call["timeout"], 9)
 
 
+@WINDOWS_ONLY
 class DetectAis(Base):
     """Item 6: the checks find which supported AIs resolve, without starting any."""
 
@@ -839,6 +842,7 @@ class DetectAis(Base):
         self.assertTrue(engine.get_state()["preflight"]["custom_ai"])
 
 
+@WINDOWS_ONLY
 class Recipes(Base):
     def test_recipe_needs_consent(self):
         self.assert_code("consent_required", self.engine.preflight_recipe, "claude-winget", False)
@@ -899,6 +903,7 @@ class Recipes(Base):
         self.assertEqual([r["id"] for r in recipes], ["fake"])
 
 
+@WINDOWS_ONLY
 class WorkingTest(Base):
     def setUp(self):
         super().setUp()
@@ -1086,6 +1091,7 @@ class ProjectFolder(Base):
         self.setup_project()
 
 
+@WINDOWS_ONLY
 class Lock(Base):
     def pass_everything(self):
         self.engine.preflight_cli("fake-cli")
@@ -1189,6 +1195,7 @@ class RealRunner(unittest.TestCase):
         self.assertTrue(result.cancelled)
 
 
+@WINDOWS_ONLY
 class TerminalOutputIsIgnored(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="eval-coach-pf-"))

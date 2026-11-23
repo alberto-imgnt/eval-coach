@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import threading
 import unittest
@@ -62,8 +63,9 @@ class ModelsCase(unittest.TestCase):
         self.home.mkdir()
         self.bin = self.tmp / "bin"
         self.bin.mkdir()
-        self.program = self.bin / "copilot.exe"
+        self.program = self.bin / ("copilot.exe" if sys.platform == "win32" else "copilot")
         self.program.write_bytes(b"version one")
+        self.program.chmod(0o755)
         self.env = {"PATH": str(self.bin)}
         self.ptys = []
 

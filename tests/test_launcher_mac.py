@@ -306,9 +306,10 @@ class RunTheLauncher(unittest.TestCase):
         progress = self.home / ".eval-coach" / "progress.txt"
         progress.write_text("done", encoding="utf-8")
         first = self.launcher()
+        before = first.read_bytes()
         self.assertEqual(self.run_launcher(first).returncode, 0)
         newer = self.launcher(extra=b"newer build")
-        self.assertNotEqual(first.read_bytes(), newer.read_bytes())
+        self.assertNotEqual(before, newer.read_bytes())
         result = self.run_launcher(newer)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(progress.read_text(encoding="utf-8"), "done")
