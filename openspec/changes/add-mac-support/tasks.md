@@ -17,9 +17,9 @@ Verification commands are from AGENTS.md. Run the two backend suites one after t
 
 ## 3. Mac terminal
 
-- [ ] 3.1 Add `app/eval_coach/ptyterm.py` (`PosixPTY` with the `ConPTY` public surface, new session and process group, `TIOCSWINSZ` resize, group `pids`, escalating `close`). Add `tests/test_ptyterm.py` (skipped on Windows): round trip with a small Python child, resize seen by the child, exit code, `close` ends a child and a grandchild, output ring buffer limit. Verify: `python -m unittest tests.test_ptyterm` on a Mac or macOS CI.
+- [x] 3.1 Add `app/eval_coach/ptyterm.py` (`PosixPTY` with the `ConPTY` public surface, new session and process group, `TIOCSWINSZ` resize, group `pids`, escalating `close`). Add `tests/test_ptyterm.py` (skipped on Windows): round trip with a small Python child, resize seen by the child, exit code, `close` ends a child and a grandchild, output ring buffer limit. Verify: `python -m unittest tests.test_ptyterm` on a Mac or macOS CI.
 - [x] 3.2 Add POSIX command resolution (executable check, `shutil.which`, shebang left to the OS) and make `test_conpty.py` and other Windows-only tests skip on a Mac with a reason. Verify: `python -m unittest tests.test_conpty` is skipped on macOS and unchanged on Windows.
-- [ ] 3.3 Run the stand-in `fake_cli.py` through `PosixPTY` and the quiet background test with its time limit and process-group stop. Verify: a new test in `tests/test_ptyterm.py` and `tests/test_preflight.py` (Mac branch), run on macOS CI.
+- [x] 3.3 Run the stand-in `fake_cli.py` through `PosixPTY` and the quiet background test with its time limit and process-group stop. Verify: a new test in `tests/test_ptyterm.py` and `tests/test_preflight.py` (Mac branch), run on macOS CI.
 
 ## 4. Mac setup and installs
 
@@ -32,9 +32,9 @@ Verification commands are from AGENTS.md. Run the two backend suites one after t
 ## 5. Mac launcher and build
 
 - [x] 5.1 Add `packaging/runtime-manifest.json` with the Windows and Mac pins, and make `build_pyz.py` stamp them into both launchers; add a test that a launcher and the manifest agree. Verify: `python -m unittest tests.test_launcher_manifest` (new) and `python tools\build_pyz.py` succeeds.
-- [ ] 5.2 Write `packaging/launcher.sh`: macOS version check, chip detection (including Rosetta), Python discovery with the Apple stub rule and per-run token probe, consent text, three tries, download with `curl`, SHA-256 with `shasum -a 256`, unpack to `python.new`, probe, rename, start the app, plain failure messages, hold the window on failure, `exit` before the archive. Use only bash 3.2 features and quoted paths. Verify: `sh -n packaging/launcher.sh` (or `bash -n`) and the tests in 5.4.
-- [ ] 5.3 Extend `tools/build_pyz.py` to write `dist/eval-coach.command` (script, marker line, archive) and `dist/eval-coach-mac.zip` with mode `0755` on the command file; `--smoke` starts the app from each launcher on the platform it can. Verify: `python tools\build_pyz.py --smoke` passes on Windows (Mac launcher structure checked) and on macOS CI (launcher started).
-- [ ] 5.4 Launcher tests (`tests/test_launcher_mac.py`, skipped on Windows): Python found, Apple stub skipped, private copy used, consent yes and no and unclear x3, wrong hash deletes the file, hash cannot be overridden by `EVAL_COACH_PYTHON_URL`, unusual folder name, read-only folder, newer file keeps progress, message wording has no file names. Verify: `python -m unittest tests.test_launcher_mac` on macOS CI.
+- [x] 5.2 Write `packaging/launcher.sh`: macOS version check, chip detection (including Rosetta), Python discovery with the Apple stub rule and per-run token probe, consent text, three tries, download with `curl`, SHA-256 with `shasum -a 256`, unpack to `python.new`, probe, rename, start the app, plain failure messages, hold the window on failure, `exit` before the archive. Use only bash 3.2 features and quoted paths. Verify: `sh -n packaging/launcher.sh` (or `bash -n`) and the tests in 5.4.
+- [x] 5.3 Extend `tools/build_pyz.py` to write `dist/eval-coach.command` (script, marker line, archive) and `dist/eval-coach-mac.zip` with mode `0755` on the command file; `--smoke` starts the app from each launcher on the platform it can. Verify: `python tools\build_pyz.py --smoke` passes on Windows (Mac launcher structure checked) and on macOS CI (launcher started).
+- [x] 5.4 Launcher tests (`tests/test_launcher_mac.py`, skipped on Windows): Python found, Apple stub skipped, private copy used, consent yes and no and unclear x3, wrong hash deletes the file, hash cannot be overridden by `EVAL_COACH_PYTHON_URL`, unusual folder name, read-only folder, newer file keeps progress, message wording has no file names. Verify: `python -m unittest tests.test_launcher_mac` on macOS CI.
 - [x] 5.5 Write the Mac start instructions (zip, double-click, right-click Open, Open Anyway on macOS 15 and later, Terminal fallback line, no Gatekeeper bypass) into `docs/SETUP.md` and the text that accompanies the zip, and a test that scans them for forbidden advice. Verify: `python -m unittest tests.test_launcher_mac.InstructionsTest` (name to match the test written).
 
 ## 6. Platform wording (waits for interface authorization, rule 11)
@@ -47,7 +47,7 @@ Verification commands are from AGENTS.md. Run the two backend suites one after t
 
 ## 7. CI and cross-platform tests
 
-- [ ] 7.1 Add `.github/workflows/ci.yml` running the backend suite on Windows and on macOS (Apple Silicon and Intel runner labels as available), with Mac-only and Windows-only tests skipping by reason. Verify: the workflow runs green on the pull request.
+- [x] 7.1 Add `.github/workflows/ci.yml` running the backend suite on Windows and on macOS (Apple Silicon and Intel runner labels as available), with Mac-only and Windows-only tests skipping by reason. Verify: the workflow runs green on the pull request.
 - [x] 7.2 Add platform skips to `test_setup_cmd.py`, `test_integration_setup.py`, `test_preflight_real_download.py`, `test_promptfoo_real.py` and the Node harness entry points so each suite is green on each platform. Verify: `python -m unittest discover -s tests` on Windows and in macOS CI.
 
 ## 8. Integration checks
