@@ -1,46 +1,46 @@
 {
   "version": 1,
   "change": "add-mac-support",
-  "tree": "36d73f3a05f9b36af5a2e628b740fb8f6f3fde86",
+  "tree": "240a9e45edb361e8a4730d1fa89652d2ca222588",
   "excludes": [
     "openspec"
   ],
-  "head": "5ac8f2204285ffea0d992c00614e0f45a8dd2d8d",
+  "head": "2a6ae0490bb7be59ce67cb31277fa552245f860d",
   "checks": [
     {
       "name": "backend",
       "command": "python -m unittest discover -s tests",
       "exit_code": 0,
-      "tests": 1841,
-      "finished": "2026-11-23T15:41:31Z"
+      "tests": 1860,
+      "finished": "2026-11-23T16:40:53Z"
     },
     {
       "name": "backend-embedded",
       "command": "spikes\\phase0-preflight\\runtime\\python-embed-3.13.17-nopth\\python.exe -m unittest discover -s tests",
       "exit_code": 0,
-      "tests": 1841,
-      "finished": "2026-11-23T15:48:44Z"
+      "tests": 1860,
+      "finished": "2026-11-23T16:47:35Z"
     },
     {
       "name": "build",
       "command": "python tools\\build_pyz.py --smoke",
       "exit_code": 0,
       "tests": null,
-      "finished": "2026-11-23T15:48:55Z"
+      "finished": "2026-11-23T16:48:01Z"
     },
     {
       "name": "interface",
       "command": "node tests/frontend/.tmp/node_modules/@playwright/test/cli.js test --config tests/frontend/playwright.config.js",
       "exit_code": 0,
       "tests": null,
-      "finished": "2026-11-23T15:58:29Z"
+      "finished": "2026-11-23T16:58:16Z"
     },
     {
       "name": "e2e",
       "command": "node e2e-work\\harness\\run-all.js --fresh",
       "exit_code": 0,
       "tests": null,
-      "finished": "2026-11-23T16:03:44Z"
+      "finished": "2026-11-23T17:03:28Z"
     }
   ]
 }

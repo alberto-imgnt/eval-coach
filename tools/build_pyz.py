@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -139,7 +141,8 @@ def smoke(command, archive=TARGET):
     temp = Path(tempfile.mkdtemp(prefix="eval-coach-smoke-"))
     cli = "cmd.exe" if sys.platform == "win32" else "sh"
     proc = subprocess.Popen(list(command) + ["--no-browser", "--port", "0", "--home", str(temp / "home")],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                            start_new_session=(sys.platform != "win32"))
     found = {}
 
     def read_url():
@@ -195,10 +198,28 @@ def smoke(command, archive=TARGET):
         print("Process exit code:", proc.returncode)
         return 0 if proc.returncode == 0 else 1
     finally:
-        if proc.poll() is None:
-            proc.kill()
-            proc.wait(10)
+        _stop_everything(proc)
         shutil.rmtree(temp, ignore_errors=True)
+
+
+def _stop_everything(proc):
+    """End the launcher and the app it started. Killing only the launcher would leave the app listening."""
+    if sys.platform == "win32":
+        if proc.poll() is None:
+            taskkill = os.path.join(os.environ.get("SystemRoot") or r"C:\Windows", "System32", "taskkill.exe")
+            try:
+                subprocess.run([taskkill, "/T", "/F", "/PID", str(proc.pid)], stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL, timeout=15)
+            except (OSError, subprocess.SubprocessError):
+                pass
+    else:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)  # the smoke command runs in its own process group
+        except OSError:
+            pass
+    if proc.poll() is None:
+        proc.kill()
+    proc.wait(10)
 
 
 def check_mac_files():

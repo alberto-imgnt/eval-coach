@@ -1312,6 +1312,15 @@ class MacPython(MacBase):
         self.assertEqual(item["status"], "failed")
         self.assertIn("start eval-coach again", item["next"])
 
+    def test_a_working_python_is_found_when_python3_is_too_old(self):
+        self.fake.which_map = {"python3": "/usr/bin/python3-old", "python": "/usr/local/bin/python"}
+        self.fake.programs["python3-old"] = text_result("Python 3.8.10\n")
+        self.fake.programs["python"] = text_result("Python 3.13.18\n")
+        self.check_all()
+        item = self.item("python")
+        self.assertEqual(item["status"], "passed")
+        self.assertIn("/usr/local/bin/python", item["detail"])
+
     def test_apples_stub_is_never_run(self):
         self.fake.which_map = {"python3": "/usr/bin/python3"}
         with mock.patch.object(pf.os.path, "exists", return_value=False):
@@ -1544,7 +1553,7 @@ class MacRecipes(MacBase):
 
     def test_the_recipe_runs_through_a_login_zsh(self):
         argv = self.pre.recipe_argv("devin", True)
-        self.assertEqual(argv, ["/bin/zsh", "-lc", "curl -fsSL https://cli.devin.ai/install.sh | bash"])
+        self.assertEqual(argv, ["/bin/zsh", "-o", "pipefail", "-lc", "curl -fsSL https://cli.devin.ai/install.sh | bash"])
 
     def test_the_choose_page_lists_one_install_per_tool(self):
         tools = self.pre.view(None, None)["cli"]["tools"]
@@ -1555,6 +1564,25 @@ class MacRecipes(MacBase):
     def test_every_tool_keeps_its_model_data(self):
         for name in ("copilot", "claude-installer", "devin"):
             self.assertIn("sonnet", self.recipes()[name]["models"])
+
+    def test_an_override_written_for_windows_is_not_run_by_zsh(self):
+        self.home.mkdir(parents=True, exist_ok=True)
+        (self.home / "cli-recipes.json").write_text(json.dumps({"recipes": [
+            {"id": "copilot", "name": "Copilot", "cli_command": "copilot", "shell": "cmd",
+             "command": "winget install GitHub.Copilot", "needs_mb": 1, "plain": "p", "source": "s"}]}), encoding="utf-8")
+        self.pre = self.build()
+        self.assertEqual(sorted(self.recipes()), ["claude-installer", "copilot", "devin", "other"])
+        self.assertEqual(self.recipes()["copilot"]["shell"], "zsh")
+
+    def test_an_override_with_a_mac_entry_is_still_used(self):
+        self.home.mkdir(parents=True, exist_ok=True)
+        (self.home / "cli-recipes.json").write_text(json.dumps({"recipes": [
+            {"id": "mine", "name": "Mine", "cli_command": "mine", "shell": "cmd", "command": "x", "needs_mb": 1,
+             "plain": "p", "source": "s", "platforms": {"windows": {}, "mac": {"shell": "zsh", "command": "y"}}}]}),
+            encoding="utf-8")
+        self.pre = self.build()
+        self.assertEqual(list(self.recipes()), ["mine"])
+        self.assertEqual(self.recipes()["mine"]["command"], "y")
 
 
 class RecipePlatforms(unittest.TestCase):

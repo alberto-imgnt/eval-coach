@@ -54,7 +54,7 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(hostos.recipe_shell_argv("cmd", "winget x", WIN)[1:], ["/d", "/s", "/c", "winget x"])
         self.assertEqual(hostos.recipe_shell_argv("powershell", "irm x | iex", WIN)[1:],
                          ["-NoProfile", "-Command", "irm x | iex"])
-        self.assertEqual(hostos.recipe_shell_argv("zsh", "echo hi", MAC), ["/bin/zsh", "-lc", "echo hi"])
+        self.assertEqual(hostos.recipe_shell_argv("zsh", "echo hi", MAC), ["/bin/zsh", "-o", "pipefail", "-lc", "echo hi"])
 
     def test_recipe_shells(self):
         self.assertEqual(hostos.recipe_shells(WIN), ("cmd", "powershell", "none"))

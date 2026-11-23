@@ -14,6 +14,7 @@ import sys
 import tarfile
 import tempfile
 import textwrap
+import threading
 import unittest
 import zipfile
 from pathlib import Path
@@ -291,6 +292,35 @@ class RunTheLauncher(unittest.TestCase):
                               capture_output=True, text=True, timeout=30)
         self.assertEqual(stub.returncode, 1 if tools_installed else 0)
 
+    def test_a_link_to_apples_stub_is_the_stub_too(self):
+        link = self.tmp / "python3"
+        os.symlink("/usr/bin/python3", str(link))
+        tools_installed = subprocess.run(["/usr/bin/xcode-select", "-p"], capture_output=True).returncode == 0
+        check = subprocess.run(["/bin/bash", "-c", f'EC_SOURCE_ONLY=1; . "{LAUNCHER}"; apple_stub_unsafe "{link}"'],
+                               capture_output=True, text=True, timeout=30)
+        self.assertEqual(check.returncode, 1 if tools_installed else 0)
+
+    def test_the_python_that_answered_is_the_one_started(self):
+        real = self.tmp / "real" / "python3"
+        self.fake_python(real)
+        shim = self.bin / "python3"
+        shim.write_text(FAKE_PYTHON.replace('echo "$0"', f'echo "{real}"').replace(
+            'echo "FAKE-PYTHON-STARTED', 'echo "SHIM-STARTED'), encoding="ascii")
+        shim.chmod(0o755)
+        result = self.run_launcher(self.launcher())
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(f"--python {real}", result.stdout)
+        self.assertNotIn("SHIM-STARTED", result.stdout)
+
+    def test_a_python_that_exits_with_an_error_is_not_used(self):
+        failing = self.bin / "python3"
+        failing.write_text(FAKE_PYTHON.replace("exit 0", "exit 1", 1), encoding="ascii")
+        failing.chmod(0o755)
+        self.fake_python(self.home / PRIVATE)
+        result = self.run_launcher(self.launcher())
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(f"--python {self.home / PRIVATE}", result.stdout)
+
     # --- the private copy ------------------------------------------------------
 
     def test_the_private_copy_from_an_earlier_run_is_used_without_a_download(self):
@@ -389,6 +419,51 @@ class RunTheLauncher(unittest.TestCase):
         self.assertIn("Nothing was installed", result.stdout)
         self.assertIn("What to do next", result.stdout)
         self.assertNotIn("eval-coach.command", result.stdout)
+
+    # --- two windows ----------------------------------------------------------
+
+    @property
+    def lock(self):
+        return self.home / ".eval-coach" / "runtime" / "install.lock"
+
+    def test_a_lock_left_by_a_window_that_is_gone_is_replaced(self):
+        gone = subprocess.Popen(["/usr/bin/true"])
+        gone.wait()
+        self.lock.mkdir(parents=True)
+        (self.lock / "pid").write_text(f"{gone.pid}\n", encoding="ascii")
+        result = self.consent_run("y\n")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("is installed", result.stdout)
+        self.assertFalse(self.lock.exists(), "the lock is given back")
+
+    def test_a_second_window_waits_and_then_uses_the_python_the_first_one_installed(self):
+        archive, sha = self.archive()
+        path = self.launcher(sha=sha)
+        holder = subprocess.Popen(["/bin/sleep", "120"])
+        self.addCleanup(holder.kill)
+        self.lock.mkdir(parents=True)
+        (self.lock / "pid").write_text(f"{holder.pid}\n", encoding="ascii")
+        env = {"HOME": str(self.home), "PATH": f"{self.bin}:/bin", "TMPDIR": str(self.work) + "/",
+               "EVAL_COACH_PATH_ONLY": "1", "LANG": "en_US.UTF-8", "EVAL_COACH_PYTHON_URL": archive.as_uri()}
+        window = subprocess.Popen(["/bin/bash", str(path)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT, text=True, env=env, cwd=str(path.parent))
+        watchdog = threading.Timer(90, window.kill)
+        watchdog.start()
+        self.addCleanup(watchdog.cancel)
+        window.stdin.write("y\n")
+        window.stdin.flush()
+        seen = ""
+        while "Waiting for it to finish" not in seen:
+            line = window.stdout.readline()
+            self.assertNotEqual(line, "", "the window ended before it waited: " + seen)
+            seen += line
+        self.fake_python(self.home / PRIVATE)  # the first window finishes its install ...
+        shutil.rmtree(str(self.lock))  # ... and gives the lock back
+        rest, _ = window.communicate(timeout=60)
+        self.assertEqual(window.returncode, 0, seen + rest)
+        self.assertIn("installed by another eval-coach window", rest)
+        self.assertNotIn("Downloading", rest)
+        self.assertIn(f"--python {self.home / PRIVATE}", rest)
 
     def test_the_chip_decides_which_build_is_offered(self):
         def pick(machine, translated):

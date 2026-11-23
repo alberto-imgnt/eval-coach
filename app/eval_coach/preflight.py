@@ -97,11 +97,18 @@ class SystemRunner:
         deadline = time.monotonic() + timeout
         timed_out = cancelled = False
         while True:
-            try:
-                proc.wait(0.5)
-                break
-            except subprocess.TimeoutExpired:
-                pass
+            if proc.poll() is None:
+                try:
+                    proc.wait(0.5)
+                except subprocess.TimeoutExpired:
+                    pass
+            else:
+                # The program has exited, but something it started may still hold its output open: keep
+                # the time limit and the cancel flag in force until the output ends.
+                for reader in readers:
+                    reader.join(0.25)
+                if not any(reader.is_alive() for reader in readers):
+                    break
             if cancel is not None and cancel.is_set():
                 cancelled = True
             elif time.monotonic() > deadline:
@@ -305,7 +312,9 @@ class Preflight:
             try:
                 data = store.read_json(override)
                 self._validate_recipes(data)
-                return self._for_platform(data["recipes"])
+                recipes = self._for_platform(data["recipes"])
+                if recipes:  # an override written for another computer has nothing to offer here
+                    return recipes
             except (CorruptStateError, OSError, KeyError, TypeError, ValueError):
                 pass
         data = json.loads(resources.read_text("content/cli-recipes.json"))
@@ -316,9 +325,12 @@ class Preflight:
         """The recipes offered on this computer, each with its platform's values laid over the shared ones.
 
         The top-level values of a recipe are the Windows ones. A recipe's `platforms` block holds only what
-        differs: a value of null removes a field, and `"available": false` leaves the recipe out.
+        differs: a value of null removes a field, and `"available": false` leaves the recipe out. A recipe
+        whose shell does not exist on this computer (after the overlay) is left out too, so a recipe for
+        Windows is never run by zsh.
         """
         key = hostos.platform_key(self.platform)
+        shells = hostos.recipe_shells(self.platform)
         offered = []
         for recipe in recipes:
             recipe = dict(recipe)
@@ -334,7 +346,8 @@ class Preflight:
                         recipe.pop(name, None)
                     else:
                         recipe[name] = value
-            offered.append(recipe)
+            if recipe.get("shell") in shells:
+                offered.append(recipe)
         return offered
 
     @staticmethod
@@ -599,30 +612,37 @@ class Preflight:
             self._set("python", "failed", "python_too_old", found=sys.version.split()[0])
             return
         env = self.env()
-        exe = None
+        failure = None
+        # On a Mac `python3` can be too old while `python` is fine (the launcher picks the one that works), so a
+        # command that fails the check does not end the search; the first failure is what is reported.
         for name in hostos.python_command_names(self.platform):
-            found_exe = self._find_tool(name, env)
-            if found_exe and not self._is_apple_stub(found_exe):  # running Apple's stub opens an installer dialog
-                exe = found_exe
-                break
-        if not exe:
+            exe = self._find_tool(name, env)
+            if not exe or self._is_apple_stub(exe):  # running Apple's stub opens an installer dialog
+                continue
+            outcome = self._probe_python(exe, env)
+            if outcome[0] == "python_ok":
+                self._set("python", "passed", outcome[0], **outcome[1])
+                return
+            failure = failure or outcome
+        if failure is None:
             self._set("python", "failed", "python_missing")
-            return
+        else:
+            self._set("python", "failed", failure[0], **failure[1])
+
+    def _probe_python(self, exe, env):
+        """Run `exe --version`. Returns (message code, fields) for `_set`: python_ok, or why it is not usable."""
         result = self.runner.run([exe, "--version"], timeout=CHECK_TIMEOUT, env=env)
         if result.timed_out:
-            self._set("python", "failed", "check_timeout", seconds=CHECK_TIMEOUT)
-            return
+            return "check_timeout", {"seconds": CHECK_TIMEOUT}
         text = (result.stdout + result.stderr).strip()
         match = re.search(r"Python (\d+)\.(\d+)\.?(\d*)", text)
         if result.code != 0 or not match:
-            self._set("python", "failed", "python_missing")
-            return
+            return "python_missing", {}
         version = (int(match.group(1)), int(match.group(2)))
         found = ".".join(g for g in match.groups() if g)
         if version < (3, 9):
-            self._set("python", "failed", "python_too_old", found=found)
-            return
-        self._set("python", "passed", "python_ok", version=found, path=exe)
+            return "python_too_old", {"found": found}
+        return "python_ok", {"version": found, "path": exe}
 
     def _is_apple_stub(self, exe):
         """True for /usr/bin/python3 on a Mac whose Command Line Tools are missing: running it opens Apple's installer."""

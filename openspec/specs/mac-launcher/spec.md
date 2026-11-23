@@ -43,19 +43,23 @@ The setup instructions for the Mac download (`docs/SETUP.md` and the text that a
 - **THEN** none says to disable Gatekeeper, run `sudo`, or use `xattr -c` on a system file
 
 ### Requirement: Python is found without asking when it exists
-The Mac launcher SHALL look first for a working Python 3.9 or later on the computer (the Python on the participant's PATH, then the usual python.org and Homebrew locations), then in the private copy from an earlier run, and SHALL ask a question only when neither is found. It SHALL NOT run Apple's `/usr/bin/python3` unless the Command Line Tools are already installed, because running it otherwise opens Apple's installer. A candidate SHALL count only when it prints a per-run token and reports a version of 3.9 or later.
+The Mac launcher SHALL look first for a working Python 3.9 or later on the computer (the Python on the participant's PATH, then the usual python.org and Homebrew locations), then in the private copy from an earlier run, and SHALL ask a question only when neither is found. It SHALL NOT run Apple's `/usr/bin/python3` unless the Command Line Tools are already installed, because running it otherwise opens Apple's installer. A candidate SHALL count only when it exits successfully, prints a per-run token and reports a version of 3.9 or later. The launcher SHALL start the app with the interpreter path the candidate reports for itself, not with the candidate's own path, so a shim that picks a Python by folder cannot start a different one. Apple's `/usr/bin/python3` SHALL be recognised by file identity, so a link to it is the same stub, and SHALL never be run without the Command Line Tools on any discovery path.
 
 #### Scenario: Python on the computer
 - **GIVEN** a working Python 3.9 or later is installed
 - **WHEN** the launcher runs
 - **THEN** that Python starts the app and no download is offered
 
+#### Scenario: A shim picks the Python
+- **GIVEN** the first `python3` found is a shim that chooses its Python by folder
+- **WHEN** the launcher tests it and then starts the app
+- **THEN** the app starts with the Python the shim reported for itself
+
 #### Scenario: Apple's stub is never opened
 - **GIVEN** the Command Line Tools are not installed and no other Python is found
 - **WHEN** the launcher runs
-- **THEN** Apple's installer dialog does not open
+- **THEN** Apple's installer dialog does not open, even when a link in another folder points to the stub
 - **AND** the launcher offers the private copy
-
 #### Scenario: Private copy from an earlier run
 - **GIVEN** no other Python is found and the private copy from an earlier run works
 - **WHEN** the launcher runs
@@ -79,6 +83,12 @@ When no working Python is found, the Mac launcher SHALL say what it would instal
 - **WHEN** the participant types N, or gives no answer
 - **THEN** nothing is installed and nothing on the computer changes
 - **AND** the launcher says what to do next, either start it again and answer Y or install Python from python.org or the company's software portal
+
+#### Scenario: Two windows at once
+- **GIVEN** a second launcher window agrees to the install while the first is installing
+- **WHEN** the second window reaches the download
+- **THEN** it waits for the first to finish and then uses the copy the first installed, without downloading or replacing anything
+- **AND** a wait ends if the window holding the lock is gone
 
 ### Requirement: The download must match its fixed fingerprint for this chip
 The Mac launcher SHALL pick the download for the chip it runs on (Apple Silicon or Intel) and SHALL accept the file only if its SHA-256 fingerprint equals the value built into the launcher for that chip. A mismatch, or a download that cannot be checked, SHALL delete the file, install nothing, and say so. No setting or environment value SHALL change the fingerprint that is required. A Mac running the launcher under Rosetta SHALL get the build that matches the chip the Python will run on.

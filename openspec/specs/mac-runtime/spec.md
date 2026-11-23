@@ -54,6 +54,11 @@ On a Mac, "Open a new AI chat", "Start again", closing the app and Quit SHALL en
 - **WHEN** the short wait passes
 - **THEN** it is ended by force
 
+#### Scenario: A job in a group of its own
+- **GIVEN** the AI, or a shell it started, put a program in a process group of its own
+- **WHEN** the participant starts a new chat or presses Quit, including after the AI itself has exited
+- **THEN** that program ends too
+
 ### Requirement: Setup checks and installs use Mac commands on a Mac
 On a Mac the setup checks SHALL look for Python, Node.js and promptfoo and the three AIs the way they are installed on a Mac, and every download or install the app offers SHALL use a Mac command and a Mac file. The private Node.js for the promptfoo track SHALL be the pinned build for the chip (Apple Silicon or Intel) and SHALL be accepted only if its SHA-256 equals the built-in value for that chip. Downloads SHALL come only from the hosts AGENTS.md rule 5 lists and SHALL start only after consent. Nothing SHALL need administrator rights or change the computer outside the app's own folders and what the AI's own installer does.
 
@@ -96,6 +101,11 @@ Choosing an AI on a Mac SHALL start the same quiet test described in `ai-selecti
 - **GIVEN** the AI does not finish in its time limit
 - **WHEN** the limit is reached
 - **THEN** the AI and its children are ended and the wizard moves to the AI working test page, with no failure recorded
+
+#### Scenario: A worker keeps the output open
+- **GIVEN** the AI's own process exits but something it started keeps its output open
+- **WHEN** the time limit is reached
+- **THEN** the test stops at the limit, the worker is ended, and the result is the time limit, not a pass
 
 ### Requirement: Files and folders behave the same on a Mac
 The app's folders SHALL be `~/.eval-coach` and `~/eval-project` by default, paths SHALL work with spaces and non-ASCII characters, a project inside a cloud-synced folder that the app already refuses (OneDrive) SHALL still be refused, and no participant file SHALL be overwritten or removed.

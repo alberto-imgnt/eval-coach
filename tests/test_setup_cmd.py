@@ -41,6 +41,11 @@ SYSTEM_ROOT = os.environ["SystemRoot"]
 CMD_EXE = os.path.join(SYSTEM_ROOT, "System32", "cmd.exe")
 SHADOWED_TOOLS = ("curl", "tar", "certutil", "where", "ping", "powershell", "taskkill", "cmd")
 
+# The spike's files are not in git, so a clean checkout (CI) lacks them. Only the tests that unpack the
+# archive or run the private Python need them; the rest of the launcher is tested everywhere.
+needs_archive = unittest.skipUnless(ARCHIVE.exists(), "the spike's downloaded Python archive is not on this machine")
+needs_private_python = unittest.skipUnless(PRIVATE_FIXTURE.exists(), "the spike's private Python is not on this machine")
+
 STUB_MAIN = (
     "import json, os, sys\n"
     "with open(os.environ['EC_TEST_RECORD'], 'w', encoding='utf-8') as handle:\n"
@@ -88,8 +93,6 @@ class SetupTestCase(unittest.TestCase):
     profile_name = "Plain User"
 
     def setUp(self):
-        if not PRIVATE_FIXTURE.exists():
-            self.skipTest("the spike's private Python is not on this machine")
         self.real_runtime_before = REAL_PROFILE_RUNTIME.exists()
         self.work = TMP_ROOT / f"{self.id().rsplit('.', 1)[-1]}-{os.getpid()}"
         self.work.mkdir(parents=True)
@@ -202,6 +205,8 @@ class SetupTestCase(unittest.TestCase):
         self.assertNotRegex(output.lower(), r"facilitator|presenter|help ?desk")
 
     def copy_private_runtime(self):
+        if not PRIVATE_FIXTURE.exists():
+            self.skipTest("the spike's private Python is not on this machine")
         shutil.copytree(PRIVATE_FIXTURE, self.private_exe.parent)
 
 
@@ -266,6 +271,7 @@ class ScriptShapeTests(unittest.TestCase):
 
 
 class NoPythonTests(SetupTestCase):
+    @needs_archive
     def test_no_python_installs_private_copy_and_launches(self):
         result = self.run_setup("Y\r\n")
         self.assertEqual(0, result.code, result.output)
@@ -295,12 +301,14 @@ class NoPythonTests(SetupTestCase):
         self.assertFalse(self.record.exists())
         self.assert_nothing_installed()
 
+    @needs_archive
     def test_unclear_answer_asks_again(self):
         result = self.run_setup('maybe & "\r\nY\r\n')
         self.assertEqual(0, result.code, result.output)
         self.assertIn("Please type Y for yes or N for no.", result.output)
         self.assert_private_installed()
 
+    @needs_archive
     def test_corrupted_archive_is_rejected_and_deleted(self):
         corrupted = self.work / "corrupted.zip"
         data = bytearray(ARCHIVE.read_bytes())
@@ -398,6 +406,7 @@ class DetectionTests(SetupTestCase):
         self.assertFalse(self.runtime.exists())
         self.assert_no_shadow_used()
 
+    @needs_archive
     def test_windowsapps_stub_is_skipped_without_running(self):
         marker = self.work / "stub-ran.txt"
         stub_dir = self.work / "AppData" / "Local" / "Microsoft" / "WindowsApps"
@@ -456,6 +465,7 @@ class DetectionTests(SetupTestCase):
         self.assert_launched_with(self.private_exe)
         self.assert_no_shadow_used()
 
+    @needs_archive
     def test_damaged_private_python_is_replaced_after_asking(self):
         self.private_exe.parent.mkdir(parents=True)
         self.private_exe.write_bytes(b"not a program")
@@ -477,6 +487,7 @@ class AwkwardProfileTests(SetupTestCase):
         self.put_package(self.weird_install)
         self.weird_setup = self.weird_install / LAUNCHER_NAME
 
+    @needs_archive
     def test_install_and_launch(self):
         result = self.run_setup("Y\r\n", script=self.weird_setup)
         self.assertEqual(0, result.code, result.output)
@@ -507,6 +518,7 @@ class AwkwardProfileTests(SetupTestCase):
         self.assertFalse(self.record.exists())
         self.assert_nothing_installed()
 
+    @needs_private_python
     def test_python_on_a_path_with_special_characters(self):
         python_dir = self.work / "Py & Tools (x64)"
         shutil.copytree(PRIVATE_FIXTURE, python_dir)
@@ -519,6 +531,7 @@ class AwkwardProfileTests(SetupTestCase):
 class AccentedProfileTests(SetupTestCase):
     profile_name = "Jos\u00e9 N\u00fa\u00f1ez"
 
+    @needs_archive
     def test_install_and_launch(self):
         result = self.run_setup("Y\r\n")
         self.assertEqual(0, result.code, result.output)

@@ -144,12 +144,35 @@ def clean_path(text):
 
 
 def _inside(child, parent):
-    child = os.path.normcase(os.path.abspath(str(child)))
-    parent = os.path.normcase(os.path.abspath(str(parent)))
+    child = os.path.abspath(str(child))
+    parent = os.path.abspath(str(parent))
     try:
-        return os.path.commonpath([child, parent]) == parent
+        if os.path.commonpath([os.path.normcase(child), os.path.normcase(parent)]) == os.path.normcase(parent):
+            return True
     except ValueError:  # different drives
+        pass
+    return _inside_on_disk(child, parent)
+
+
+def _inside_on_disk(child, parent):
+    """True when child is parent, or lies below it, judged by the folders on disk and not by spelling.
+
+    A Mac's usual file system ignores capitalization, so `.EVAL-COACH` and `.eval-coach` are one folder; a link
+    can name it too. The nearest folder of `child` that exists is compared with `parent`, going up from there.
+    """
+    if not os.path.exists(parent):
         return False
+    path = child
+    while True:
+        try:
+            if os.path.exists(path) and os.path.samefile(path, parent):
+                return True
+        except OSError:
+            pass
+        above = os.path.dirname(path)
+        if above == path:
+            return False
+        path = above
 
 
 def validate_project_path(home, project):

@@ -10,6 +10,8 @@ const CONTROL = `http://127.0.0.1:${PORT + 1}`;
 const SHOTS = path.join(__dirname, '.tmp', 'screenshots');
 const CSP_WORDS = /content security policy|refused to|csp/i;
 const FRAMEWORK_WORDS = /framework|RTCC|RISE|CO-STAR|RISEN|bucket/i;
+// The app says the copy key of the computer it runs on, and the servers run on this computer.
+const COPY_KEY = process.platform === 'darwin' ? '⌘C' : 'Ctrl+C';
 
 const test = base.extend({
   guarded: [
@@ -225,7 +227,7 @@ test('a browser that refuses the clipboard leaves the text selected and says how
   await expect(page.locator('#run-paste')).toContainText('<angle> brackets');
   await expect(page.locator('#run-paste').locator('angle')).toHaveCount(0);
   await page.locator('#copy-paste').click();
-  await expect(page.locator('#copy-status')).toContainText('Ctrl+C');
+  await expect(page.locator('#copy-status')).toContainText(COPY_KEY);
   const selected = await page.evaluate(() => window.getSelection().toString());
   expect(selected).toContain('Please write my Friday update with <angle> brackets.');
 });

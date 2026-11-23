@@ -49,6 +49,12 @@ class Parsing(unittest.TestCase):
         self.assertEqual(ptyterm._exit_code(3), 3)
         self.assertIsNone(ptyterm._exit_code(None))
 
+    def test_the_program_is_started_by_a_helper_that_runs_nothing_before_it(self):
+        argv = ptyterm._become_controlling_terminal_argv("/bin/tool", ["--flag", "a b"])
+        self.assertEqual(argv[1:3], ["-I", "-S"])
+        self.assertEqual(argv[-3:], ["/bin/tool", "--flag", "a b"])
+        compile(ptyterm._HELPER, "helper", "exec")
+
 
 def text(pty):
     return pty.snapshot().decode("utf-8", errors="replace")
@@ -141,6 +147,56 @@ class RealPty(unittest.TestCase):
         with self.assertRaises(OSError):
             pty.write(b"x")
 
+    def test_the_pty_is_the_controlling_terminal(self):
+        pty = self.start(textwrap.dedent("""
+            import sys
+            with open("/dev/tty", "w") as tty:
+                tty.write("has-a-tty\\n")
+            sys.stdout.flush()
+        """))
+        self.assertTrue(wait_until(lambda: "has-a-tty" in text(pty), 15), text(pty))
+
+    def test_a_program_that_cannot_be_started_says_so_in_the_window(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tool = os.path.join(tmp, "not-a-program")
+            with open(tool, "w") as handle:
+                handle.write("not a program\n")
+            os.chmod(tool, 0o755)
+            pty = ptyterm.PosixPTY([tool], cwd=tmp, env=dict(os.environ))
+            self.addCleanup(pty.close)
+            self.assertEqual(pty.wait(15), 127)
+            pty.close()
+            self.assertIn("Could not start", text(pty))
+
+    SEPARATE_GROUP = textwrap.dedent("""
+        import os, subprocess, sys, time
+        child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"], preexec_fn=os.setpgrp,
+                                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        sys.stdout.write("pids:%d:%d\\n" % (child.pid, os.getpgid(child.pid))); sys.stdout.flush()
+        time.sleep(SLEEP)
+    """)
+
+    def test_close_ends_a_program_the_ai_put_in_a_group_of_its_own(self):
+        pty = self.start(self.SEPARATE_GROUP.replace("SLEEP", "120"))
+        self.assertTrue(wait_until(lambda: "pids:" in text(pty), 15))
+        child, group = (int(n) for n in text(pty).split("pids:")[1].split()[0].split(":"))
+        self.assertNotEqual(group, pty.pid)
+        self.assertTrue(alive(child))
+        pty.close()
+        self.assertTrue(wait_until(lambda: not alive(child), 10), "the program in its own group is gone")
+
+    def test_close_ends_such_a_program_after_the_ai_itself_has_exited(self):
+        original = ptyterm.GROUP_SCAN_SECONDS
+        ptyterm.GROUP_SCAN_SECONDS = 0.2
+        self.addCleanup(setattr, ptyterm, "GROUP_SCAN_SECONDS", original)
+        pty = self.start(self.SEPARATE_GROUP.replace("SLEEP", "2"))
+        self.assertTrue(wait_until(lambda: "pids:" in text(pty), 15))
+        child = int(text(pty).split("pids:")[1].split()[0].split(":")[0])
+        self.assertEqual(pty.wait(15), 0)
+        self.assertTrue(alive(child))
+        pty.close()
+        self.assertTrue(wait_until(lambda: not alive(child), 10), "the program in its own group is gone")
+
     def test_a_process_that_ignores_the_polite_stop_is_forced(self):
         script = textwrap.dedent("""
             import signal, sys, time
@@ -200,6 +256,21 @@ class QuietTestRunner(unittest.TestCase):
         result = SystemRunner().run([sys.executable, "-c", "import sys; sys.exit(7)"], timeout=30)
         self.assertEqual(result.code, 7)
         self.assertFalse(result.timed_out)
+
+    LEAVES_A_WORKER = textwrap.dedent("""
+        import subprocess, sys
+        child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"])
+        sys.stdout.write("pids:%d\\n" % child.pid); sys.stdout.flush()
+    """)
+
+    def test_the_time_limit_holds_after_the_program_exits_but_a_worker_keeps_the_output_open(self):
+        from eval_coach.preflight import SystemRunner
+        started = time.monotonic()
+        result = SystemRunner().run([sys.executable, "-u", "-c", self.LEAVES_A_WORKER], timeout=2)
+        self.assertLess(time.monotonic() - started, 30)
+        self.assertTrue(result.timed_out)
+        grandchild = int(result.stdout.split("pids:")[1].split()[0])
+        self.assertTrue(wait_until(lambda: not alive(grandchild), 10), "the worker is gone")
 
 
 @unittest.skipUnless(POSIX, "the pty terminal needs a POSIX system")

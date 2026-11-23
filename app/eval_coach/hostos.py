@@ -126,20 +126,33 @@ def kill_group(pgid, wait_seconds=3.0, reap=None):
     `reap` (for example `proc.poll`) is called while waiting, so an exited group leader is not left as a zombie
     that keeps the group looking alive.
     """
+    kill_groups([pgid], wait_seconds, reap)
+
+
+def kill_groups(pgids, wait_seconds=3.0, reap=None):
+    """POSIX: stop several process groups together (hang-up, terminate, then kill after short waits).
+
+    A group that no longer exists is skipped, and the waits are shared, so a stubborn group does not make
+    the others wait their turn.
+    """
+    live = list(dict.fromkeys(pgids))
     for sig in (signal.SIGHUP, signal.SIGTERM):
-        if not _signal_group(pgid, sig):
+        live = [pgid for pgid in live if _signal_group(pgid, sig)]
+        if not live:
             return
         deadline = time.monotonic() + wait_seconds / 2
         while time.monotonic() < deadline:
             if reap is not None:
                 reap()
-            if not group_alive(pgid):
+            live = [pgid for pgid in live if group_alive(pgid)]
+            if not live:
                 return
             time.sleep(0.05)
-    _signal_group(pgid, signal.SIGKILL)
+    for pgid in live:
+        _signal_group(pgid, signal.SIGKILL)
     if reap is not None:
         deadline = time.monotonic() + 1.0
-        while time.monotonic() < deadline and (reap() is None or group_alive(pgid)):
+        while time.monotonic() < deadline and (reap() is None or any(group_alive(p) for p in live)):
             time.sleep(0.02)
 
 
@@ -185,7 +198,8 @@ def recipe_shell_argv(shell, command, platform=None):
         if shell == "powershell":
             return [tool_path("powershell", platform), "-NoProfile", "-Command", command]
         return [tool_path("cmd", platform), "/d", "/s", "/c", command]
-    return [tool_path("zsh", platform), "-lc", command]
+    # pipefail: a download that fails ends the pipeline with an error instead of handing an empty script to bash.
+    return [tool_path("zsh", platform), "-o", "pipefail", "-lc", command]
 
 
 def recipe_shells(platform=None):

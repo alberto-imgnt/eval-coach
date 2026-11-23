@@ -31,6 +31,8 @@ EC_PROBE_TIMEOUT=10
 EC_PY=""
 EC_BROKEN=""
 EC_WORK=""
+EC_LOCK=""
+EC_LOCK_HELD=""
 EC_URL=""
 EC_SHA256=""
 EC_BYTES=""
@@ -51,7 +53,49 @@ hold() {
   blank
 }
 
+# Only one window installs Python at a time, so two windows never work in the
+# same folder. mkdir is atomic. The lock names the window that holds it, so a
+# lock left by a window that has gone (or one older than any install can take)
+# is replaced.
+acquire_install_lock() {
+  local waited=0 empty=0 holder
+  while ! mkdir "$EC_LOCK" >/dev/null 2>&1; do
+    holder=""
+    if [ -f "$EC_LOCK/pid" ]; then
+      IFS= read -r holder <"$EC_LOCK/pid"
+    fi
+    if [ -n "$holder" ]; then
+      empty=0
+    else
+      empty=$((empty + 1))
+    fi
+    if { [ -n "$holder" ] && ! kill -0 "$holder" >/dev/null 2>&1; } \
+      || [ "$empty" -ge 10 ] \
+      || [ -n "$(/usr/bin/find "$EC_LOCK" -maxdepth 0 -mmin +60 2>/dev/null)" ]; then
+      rm -rf "$EC_LOCK" >/dev/null 2>&1
+      empty=0
+      continue
+    fi
+    if [ "$waited" -eq 0 ]; then
+      blank
+      say "Another eval-coach window is installing Python. Waiting for it to finish..."
+      waited=1
+    fi
+    sleep 1
+  done
+  EC_LOCK_HELD="1"
+  printf '%s\n' "$$" >"$EC_LOCK/pid"
+}
+
+release_install_lock() {
+  if [ -n "$EC_LOCK_HELD" ]; then
+    rm -rf "$EC_LOCK" >/dev/null 2>&1
+    EC_LOCK_HELD=""
+  fi
+}
+
 cleanup() {
+  release_install_lock
   if [ -n "$EC_WORK" ] && [ -d "$EC_WORK" ]; then
     rm -rf "$EC_WORK" >/dev/null 2>&1
   fi
@@ -89,13 +133,27 @@ macos_at_least() {
   [ "$major" -ge "$minimum" ]
 }
 
-# Tests the candidate in $1. Sets EC_PY on success. A candidate counts only when
-# it prints a per-run token and reports Python 3.9 or later. It runs with
+# True when the program in $1 is Apple's /usr/bin/python3 stub (by file identity, so a link to it
+# counts too): running it without the Command Line Tools opens Apple's installer, so it is never
+# run in that case.
+apple_stub_unsafe() {
+  [ -e /usr/bin/python3 ] && [ "$1" -ef /usr/bin/python3 ] || return 1
+  if /usr/bin/xcode-select -p >/dev/null 2>&1; then
+    return 1
+  fi
+  return 0
+}
+
+# Tests the candidate in $1. Sets EC_PY on success, to the path the Python reports
+# for itself (a shim such as pyenv's can pick another Python in another folder, so
+# the shim's own path is not what gets started). A candidate counts only when it
+# exits 0, prints a per-run token and reports Python 3.9 or later. It runs with
 # arguments only, stdin from /dev/null, in an empty folder, and is stopped after
-# a hard timeout.
+# a hard timeout. Apple's stub is never run without the Command Line Tools.
 probe() {
-  local cand="$1" token out pid ticks line1 line2
+  local cand="$1" token out pid ticks line1 line2 status
   [ -x "$cand" ] || return 1
+  apple_stub_unsafe "$cand" && return 1
   token="EC${RANDOM}${RANDOM}"
   out="$EC_WORK/$token.out"
   (
@@ -114,22 +172,19 @@ probe() {
     ticks=$((ticks + 1))
   done
   wait "$pid" >/dev/null 2>&1
+  status=$?
+  [ "$status" -eq 0 ] || return 1
   [ -f "$out" ] || return 1
   line1=""
   line2=""
   { IFS= read -r line1; IFS= read -r line2; } <"$out"
   [ "$line1" = "$token" ] || return 1
-  EC_PY="$cand"
-  return 0
-}
-
-# True when /usr/bin/python3 is Apple's stub: running it without the Command
-# Line Tools opens Apple's installer, so it is never run in that case.
-apple_stub_unsafe() {
-  [ "$1" = "/usr/bin/python3" ] || return 1
-  if /usr/bin/xcode-select -p >/dev/null 2>&1; then
-    return 1
-  fi
+  case "$line2" in
+    /*) ;;
+    *) return 1 ;;
+  esac
+  [ -x "$line2" ] || return 1
+  EC_PY="$line2"
   return 0
 }
 
@@ -139,7 +194,6 @@ find_python() {
     list="$(type -ap "$name" 2>/dev/null)"
     while IFS= read -r cand; do
       [ -n "$cand" ] || continue
-      apple_stub_unsafe "$cand" && continue
       probe "$cand" && return 0
     done <<EOF
 $list
@@ -392,6 +446,15 @@ install_private_python() {
   # Work inside the runtime folder with short relative names, so the system
   # tools never have to handle unusual characters in the home folder path.
   cd "$EC_RUNTIME" || fail_folder
+
+  # One window at a time from here on. If another window finished the install while this one
+  # waited, its copy is used and nothing is downloaded.
+  acquire_install_lock
+  if [ -x "$EC_PRIVATE" ] && probe "$EC_PRIVATE"; then
+    say "Python was installed by another eval-coach window."
+    return 0
+  fi
+  EC_PY=""
   archive="python-$EC_PY_VERSION.tar.gz"
   rm -f "$archive" >/dev/null 2>&1
 
@@ -486,6 +549,7 @@ main() {
   EC_HOME="$HOME/.eval-coach"
   EC_RUNTIME="$EC_HOME/runtime"
   EC_PRIVATE="$EC_RUNTIME/python/bin/python3"
+  EC_LOCK="$EC_RUNTIME/install.lock"
 
   # For tests: EVAL_COACH_PYTHON_URL may point at a local copy of the archive.
   # It changes where the file comes from, never the hash it must match.
