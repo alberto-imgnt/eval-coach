@@ -7,7 +7,7 @@ Lets a participant start eval-coach by double-clicking one file, with Python fou
 ## Requirements
 
 ### Requirement: One file starts the app
-Everything a participant needs to start eval-coach on Windows SHALL be in one file, `eval-coach.cmd`. Double-clicking it SHALL check for Python, then start the app and open it in the browser, with no other file beside it and no earlier step. Source: this replaces the Phase 5 plan item "Build `eval-coach.zip` with exactly two files".
+Everything a participant needs to start eval-coach on Windows SHALL be in one file, `eval-coach.cmd`. Double-clicking it SHALL check for Python, then start the app and open it in the browser, with no other file beside it and no earlier step. The Mac equivalent is `eval-coach.command` (see `mac-launcher`). Source: this replaces the Phase 5 plan item "Build `eval-coach.zip` with exactly two files".
 
 #### Scenario: Python is already installed
 - **GIVEN** the participant has a working Python 3.9 or later
@@ -99,7 +99,7 @@ Every failure the launcher can report (blocked download, timeout, damaged downlo
 - **AND** it says to close the window and start eval-coach again
 
 ### Requirement: Messages tell participants to start eval-coach again
-Setup messages that send a participant back to the launcher SHALL say to start eval-coach again, and SHALL NOT name `setup.cmd` or any other file. The launcher's own messages SHALL call the file `eval-coach`. Wording follows `participant-vocabulary` (AGENTS.md rule 10).
+Setup messages that send a participant back to the launcher SHALL say to start eval-coach again, and SHALL NOT name `setup.cmd`, `eval-coach.cmd`, `eval-coach.command` or any other file. The launchers' own messages SHALL call the file `eval-coach`. Wording follows `participant-vocabulary` (AGENTS.md rule 10). This holds on Windows and on a Mac.
 
 #### Scenario: Python missing in the wizard
 - **WHEN** the wizard's Python page reports that Python could not be run
@@ -107,8 +107,12 @@ Setup messages that send a participant back to the launcher SHALL say to start e
 - **AND** it names no file
 
 #### Scenario: Launcher messages
-- **WHEN** the launcher shows a failure or a decline message
-- **THEN** it refers to "eval-coach" and not to "setup.cmd"
+- **WHEN** a launcher shows a failure or a decline message
+- **THEN** it refers to "eval-coach" and not to "setup.cmd" or a file extension
+
+#### Scenario: Mac launcher messages
+- **WHEN** the Mac launcher shows a failure or a decline message
+- **THEN** it refers to "eval-coach" and not to "eval-coach.command"
 
 ### Requirement: The launcher works wherever the file is
 The launcher SHALL work when the folder holding the file, or the participant's profile folder, has spaces, ampersands, parentheses or exclamation marks in its path.
