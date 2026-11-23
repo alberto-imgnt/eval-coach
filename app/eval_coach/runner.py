@@ -5,11 +5,11 @@ import os
 import subprocess
 import sys
 
+from . import hostos
 from .parsers import CheckerOutputError, parse_checker_output
 
 TIMEOUT_SECONDS = 30
 RAW_LIMIT = 200_000
-CREATE_NO_WINDOW = 0x08000000
 
 
 def _basename(path):
@@ -26,11 +26,10 @@ def run_checker(project, files, timeout=TIMEOUT_SECONDS, env=None):
     `env` is the CLI environment (PATH and npm/promptfoo variables); None uses this process's.
     """
     env = dict(env if env is not None else os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
-    flags = CREATE_NO_WINDOW if sys.platform == "win32" else 0
     try:
         proc = subprocess.run([sys.executable, "check.py"] + list(files), cwd=str(project),
                               timeout=timeout, capture_output=True, stdin=subprocess.DEVNULL,
-                              env=env, creationflags=flags)
+                              env=env, **hostos.popen_flags(new_group=False))
     except subprocess.TimeoutExpired:
         return _result(False, -1, f"check.py did not finish within {timeout} seconds.", "", [])
     except OSError as exc:

@@ -82,8 +82,8 @@
     "project_blocked": "Finish the Choose your AI page first.",
     "project_required": "Please fill in the project folder.",
     "own_paths_required": "Please fill in the paths to your prompt and test cases files.",
-    "prompt_placeholder": "C:\\Users\\you\\Documents\\prompt-v0.md",
-    "test_cases_placeholder": "C:\\Users\\you\\Documents\\test-cases.md",
+    "prompt_placeholder": "{path_example}{sep}prompt-v0.md",
+    "test_cases_placeholder": "{path_example}{sep}test-cases.md",
     "term_title": "Your AI window",
     "term_line_intro": "This exact line will be typed into your AI:",
     "term_folder": "Your AI starts in:",
@@ -167,6 +167,7 @@
   },
   "track_promptfoo_note": "The promptfoo track has the same steps as the Script track, with one extra step where your AI adds your two fixtures to the config. The app runs promptfoo for you.",
   "track_locked_note": "You have already finished a step in this project, so its track is fixed. To use the other track, start a new project in a different folder.",
+  "track_promptfoo_old_macos": "This Mac has macOS {macos}, and the promptfoo track needs macOS 13.5 or later. Choose the Script track.",
   "items": {
     "track": {"title": "Your track"},
     "python": {"title": "Python"},
@@ -180,7 +181,7 @@
     "input_text": "hello from eval coach",
     "expected_output": "HELLO FROM EVAL COACH",
     "expected_version": "Python 3",
-    "line": "Read input.txt, write its contents in uppercase to output.txt, then run python --version and write what it prints to version.txt. Do nothing else.",
+    "line": "Read input.txt, write its contents in uppercase to output.txt, then run {python_cmd} --version and write what it prints to version.txt. Do nothing else.",
     "headless_line": "Reply with the single word OK.",
     "folder_label": "A small test folder",
     "terminal_label": "Your AI window"
@@ -200,6 +201,7 @@
     "node_ok": {"detail": "Node.js {version} was found and is new enough.", "next": ""},
     "node_missing": {"detail": "Node.js was not found.", "next": "Press Install to let the app put a private copy in its own folder, or install Node.js 22.22.0 or later from your company's software portal (Company Portal or Software Center) and choose Check everything again."},
     "node_too_old": {"detail": "Node.js {found} was found, and promptfoo needs 22.22.0 or later.", "next": "Press Install to let the app put a private copy in its own folder. Your other programs keep their own Node.js."},
+    "node_unsupported_macos": {"detail": "The promptfoo track needs Node.js, and the Node.js this app installs needs macOS 13.5 or later. This Mac has macOS {macos}.", "next": "Go back to the Track page and choose the Script track, which needs no Node.js. Or update macOS, or install Node.js 22.22.0 or later yourself, then choose Check everything again."},
     "promptfoo_ok": {"detail": "promptfoo {version} is ready.", "next": ""},
     "promptfoo_needs_node": {"detail": "promptfoo needs Node.js first.", "next": "Go back to the Node.js page and finish it, then choose Check everything again."},
     "promptfoo_needs_install": {"detail": "promptfoo 0.125.1 is not downloaded yet.", "next": "Press Install to download it. It takes several minutes and about 1 GB of disk."},
@@ -229,7 +231,7 @@
     "test_missing_output": {"detail": "No output.txt was written, so the app cannot tell whether your AI can write files.", "next": "Look at the AI window. If your AI asked for approval, answer it there and press Check the test result. Otherwise press Start my AI window to try again. A chat-only tool cannot pass this test."},
     "test_wrong_output": {"detail": "output.txt was written but it is not the uppercase text from input.txt, so reading and following the file did not work.", "next": "Press Start my AI window to try again and make sure your AI can read files in the folder it starts in."},
     "test_missing_version": {"detail": "output.txt is correct, but version.txt is missing, so running a command did not work.", "next": "Your AI must be allowed to run commands. Press Start my AI window to try again, and approve the command in the AI window if your AI asks."},
-    "test_bad_version": {"detail": "version.txt was written but does not say Python 3, so the command output was wrong. It contains: {found}", "next": "Press Start my AI window to try again. Your AI needs to run python --version itself and save exactly what it prints."},
+    "test_bad_version": {"detail": "version.txt was written but does not say Python 3, so the command output was wrong. It contains: {found}", "next": "Press Start my AI window to try again. Your AI needs to run {python_cmd} --version itself and save exactly what it prints."},
     "test_incomplete_generic": {"detail": "The working test is not finished yet.", "next": "Press Start my AI window, then Send the test line, wait for your AI to finish, and press Check the test result."},
     "project_needs_choice": {"detail": "Choose a folder for your project.", "next": "Fill in the form below and press Set up my project."},
     "project_ok": {"detail": "Your project folder is ready at {path}.", "next": ""},
@@ -264,6 +266,23 @@
     "not_found_for_install": "This item is already done.",
     "project_onedrive_create": "Choose a folder outside OneDrive. OneDrive can lock files while your AI and the checker use them.",
     "preflight_incomplete": "Finish setup first. Use the reminder at the top of the page, or open Settings, to go there.",
-    "corrupt_preflight": "The saved check results could not be read, so they will be run again."
+    "corrupt_preflight": "The saved check results could not be read, so they will be run again.",
+    "node_needs_newer_macos": "The promptfoo track needs Node.js, which needs macOS 13.5 or later. This Mac has macOS {macos}, so nothing was downloaded. Choose the Script track instead."
+  },
+  "platform_overrides": {
+    "mac": {
+      "messages": {
+        "python_ok": {"detail": "Python {version} at {path} runs the app and is available to your AI.", "next": ""},
+        "node_missing": {"detail": "Node.js was not found.", "next": "Press Install to let the app put a private copy in its own folder, or install Node.js 22.22.0 or later yourself and choose Check everything again."}
+      },
+      "consent": {
+        "node_body": "The app will install a private copy of Node.js {version} that only eval-coach uses.\nFrom: nodejs.org\nSize: about 58 MB to download, about 221 MB once installed.\nWhere: {path}\nFree space on this drive: {free}.\nNo administrator rights are needed. Your PATH and your other programs are not changed."
+      }
+    }
+  },
+  "platform_text": {
+    "mac": {
+      " (Company Portal or Software Center)": ""
+    }
   }
 }

@@ -5,11 +5,10 @@ import itertools
 import json
 import os
 import threading
-import uuid
 from collections import deque
 from pathlib import Path
 
-from . import resources
+from . import hostos, resources
 
 RING_BYTES = 2 * 1024 * 1024
 OUTPUT, EXIT = "output", "exit"
@@ -17,20 +16,29 @@ MIN_COLS, MIN_ROWS = 10, 2
 MAX_COLS, MAX_ROWS = 500, 300
 
 
+def _backend():
+    """The terminal module for this computer, imported late so each system loads only its own."""
+    if hostos.is_windows():
+        from . import conpty as backend
+    else:
+        from . import ptyterm as backend
+    return backend
+
+
 def _real_factory(argv, cwd=None, cols=120, rows=40, on_output=None, env=None):
-    from .conpty import ConPTY  # imported late: Windows only
-    return ConPTY(argv, cwd=cwd, env=env, cols=cols, rows=rows, on_output=on_output)
+    backend = _backend()
+    terminal_class = backend.ConPTY if hostos.is_windows() else backend.PosixPTY
+    return terminal_class(argv, cwd=cwd, env=env, cols=cols, rows=rows, on_output=on_output)
 
 
 def _real_argv(command, env=None):
-    from .conpty import command_to_argv
-    return command_to_argv(command, env.get("PATH") if env else None)
+    return _backend().command_to_argv(command, env.get("PATH") if env else None)
 
 
 def _real_check(command, env=None):
-    from .conpty import command_to_argv, resolve_command
+    backend = _backend()
     path = env.get("PATH") if env else None
-    resolve_command(command_to_argv(command, path), path)
+    backend.resolve_command(backend.command_to_argv(command, path), path)
 
 
 def _terminal_hints():
@@ -43,18 +51,18 @@ def _terminal_hints():
 def _with_terminal_hint(argv, env):
     """Some CLIs warn "Unsupported terminal" unless the environment names a terminal they know.
 
-    The page terminal is xterm.js on a ConPTY, which those CLIs handle fine, so they get a
-    Windows Terminal marker. Only the commands listed in content/terminal-hints.json get it,
-    so no other CLI sees a changed environment.
+    The page terminal is xterm.js, which those CLIs handle fine, so they get a marker for the
+    system's own terminal (a Windows Terminal id on Windows, Apple's Terminal on a Mac). Only the
+    commands listed in content/terminal-hints.json get it, so no other CLI sees a changed environment.
     """
     hints = _terminal_hints()
     names = {str(n).lower() for n in hints.get("commands_that_need_a_terminal_marker", [])}
-    variable = hints.get("marker_variable")
+    variable, value = hostos.terminal_marker(hints)
     if not argv or not variable or Path(str(argv[0])).stem.lower() not in names:
         return env
     merged = dict(os.environ) if env is None else dict(env)
     if not any(k.upper() in (variable, "TERM_PROGRAM") for k in merged):
-        merged[variable] = str(uuid.uuid4())
+        merged[variable] = value
     return merged
 
 

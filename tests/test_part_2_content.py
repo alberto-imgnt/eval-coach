@@ -566,7 +566,8 @@ class SeriesRow(unittest.TestCase):
         self.assertEqual(len({g["id"] for g in groups}), 4)
 
     def test_the_finished_screen_names_the_file_says_what_part_three_does_and_that_the_practice_task_is_practice(self):
-        body = series_part("part-2")["ui"]["finished_body"]
+        with resources.platform_words("windows"):
+            body = series_part("part-2")["ui"]["finished_body"]
         self.assertIn("part-2\\test-cases.md", body)
         self.assertRegex(body, r"In Part 3 an AI agent turns a file like this into a checker")
         self.assertIn("distinct criteria", body)

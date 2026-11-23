@@ -1,4 +1,6 @@
 {
   "marker_variable": "WT_SESSION",
+  "marker_variable_mac": "TERM_PROGRAM",
+  "marker_value_mac": "Apple_Terminal",
   "commands_that_need_a_terminal_marker": ["devin"]
 }

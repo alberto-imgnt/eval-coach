@@ -6,6 +6,8 @@ const SHOTS = path.join(__dirname, '.tmp', 'screenshots');
 const CSP_WORDS = /content security policy|refused to|csp/i;
 const PORT = process.env.UI_TEST_PORT || '38917';
 const ORIGIN = `http://127.0.0.1:${PORT}`;
+// The app says the copy key of the computer it runs on, and the servers run on this computer.
+const COPY_KEY = process.platform === 'darwin' ? '⌘C (Command-C)' : 'Ctrl+C';
 
 async function mock(request, route, data) {
   const res = await request.post(`/__mock/${route}`, {
@@ -1414,7 +1416,7 @@ test('paste flow: a browser that refuses the clipboard leaves the line selected 
   await openApp(page, request, 'generate');
   await expect(page.locator('#term-head .term-status')).toHaveText('Your AI is running.');
   await page.locator('#copy-paste').click();
-  await expect(page.locator('#copy-status')).toHaveText('Your browser did not allow copying. Select the text above and press Ctrl+C.');
+  await expect(page.locator('#copy-status')).toHaveText(`Your browser did not allow copying. Select the text above and press ${COPY_KEY}.`);
   expect(await page.evaluate(() => String(window.getSelection()))).toBe(GENERATE_LINE);
 });
 

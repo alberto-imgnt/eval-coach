@@ -23,6 +23,9 @@ from unittest import mock
 
 from helpers import ROOT
 
+if sys.platform != "win32":
+    raise unittest.SkipTest("this tests the Windows launcher; the Mac launcher is tested in test_launcher_mac.py")
+
 sys.path.insert(0, str(ROOT / "tools"))
 from build_pyz import LAUNCHER_MARKER, assemble_launcher  # noqa: E402
 
@@ -37,6 +40,11 @@ MANIFEST = json.loads((PREFLIGHT / "runtime-manifest.json").read_text(encoding="
 SYSTEM_ROOT = os.environ["SystemRoot"]
 CMD_EXE = os.path.join(SYSTEM_ROOT, "System32", "cmd.exe")
 SHADOWED_TOOLS = ("curl", "tar", "certutil", "where", "ping", "powershell", "taskkill", "cmd")
+
+# The spike's files are not in git, so a clean checkout (CI) lacks them. Only the tests that unpack the
+# archive or run the private Python need them; the rest of the launcher is tested everywhere.
+needs_archive = unittest.skipUnless(ARCHIVE.exists(), "the spike's downloaded Python archive is not on this machine")
+needs_private_python = unittest.skipUnless(PRIVATE_FIXTURE.exists(), "the spike's private Python is not on this machine")
 
 STUB_MAIN = (
     "import json, os, sys\n"
@@ -197,6 +205,8 @@ class SetupTestCase(unittest.TestCase):
         self.assertNotRegex(output.lower(), r"facilitator|presenter|help ?desk")
 
     def copy_private_runtime(self):
+        if not PRIVATE_FIXTURE.exists():
+            self.skipTest("the spike's private Python is not on this machine")
         shutil.copytree(PRIVATE_FIXTURE, self.private_exe.parent)
 
 
@@ -252,6 +262,7 @@ class ScriptShapeTests(unittest.TestCase):
         self.assertIn(f'set "EC_PY_SHA256={MANIFEST["sha256"]}"', self.text)
         self.assertIn(f'set "EC_PY_URL={MANIFEST["url"]}"', self.text)
 
+    @unittest.skipUnless(ARCHIVE.exists(), "the spike's downloaded archive is not on this machine")
     def test_local_archive_matches_pinned_hash(self):
         self.assertEqual(MANIFEST["sha256"], hashlib.sha256(ARCHIVE.read_bytes()).hexdigest())
 
@@ -260,6 +271,7 @@ class ScriptShapeTests(unittest.TestCase):
 
 
 class NoPythonTests(SetupTestCase):
+    @needs_archive
     def test_no_python_installs_private_copy_and_launches(self):
         result = self.run_setup("Y\r\n")
         self.assertEqual(0, result.code, result.output)
@@ -289,12 +301,14 @@ class NoPythonTests(SetupTestCase):
         self.assertFalse(self.record.exists())
         self.assert_nothing_installed()
 
+    @needs_archive
     def test_unclear_answer_asks_again(self):
         result = self.run_setup('maybe & "\r\nY\r\n')
         self.assertEqual(0, result.code, result.output)
         self.assertIn("Please type Y for yes or N for no.", result.output)
         self.assert_private_installed()
 
+    @needs_archive
     def test_corrupted_archive_is_rejected_and_deleted(self):
         corrupted = self.work / "corrupted.zip"
         data = bytearray(ARCHIVE.read_bytes())
@@ -392,6 +406,7 @@ class DetectionTests(SetupTestCase):
         self.assertFalse(self.runtime.exists())
         self.assert_no_shadow_used()
 
+    @needs_archive
     def test_windowsapps_stub_is_skipped_without_running(self):
         marker = self.work / "stub-ran.txt"
         stub_dir = self.work / "AppData" / "Local" / "Microsoft" / "WindowsApps"
@@ -418,11 +433,14 @@ class DetectionTests(SetupTestCase):
     def test_hung_candidate_times_out_and_moves_on(self):
         shim_dir = self.work / "hung"
         shim_dir.mkdir()
+        # The shim hangs for two minutes; the probe limit is shortened so a slow runner, which probes the same
+        # shim several times, still finishes far sooner than the shim would.
         (shim_dir / "python.cmd").write_text(
-            f'@"{SYSTEM_ROOT}\\System32\\ping.exe" -n 45 127.0.0.1 >nul\r\n', encoding="ascii")
+            f'@"{SYSTEM_ROOT}\\System32\\ping.exe" -n 120 127.0.0.1 >nul\r\n', encoding="ascii")
+        self.patch_setup(('set "EC_PROBE_TIMEOUT=10"', 'set "EC_PROBE_TIMEOUT=3"'))
         started = time.monotonic()
         result = self.run_setup("N\r\n", path_extra=[shim_dir])
-        self.assertLess(time.monotonic() - started, 40)
+        self.assertLess(time.monotonic() - started, 100)
         self.assertEqual(0, result.code, result.output)
         self.assertIn("Install it now", result.output)
 
@@ -450,6 +468,7 @@ class DetectionTests(SetupTestCase):
         self.assert_launched_with(self.private_exe)
         self.assert_no_shadow_used()
 
+    @needs_archive
     def test_damaged_private_python_is_replaced_after_asking(self):
         self.private_exe.parent.mkdir(parents=True)
         self.private_exe.write_bytes(b"not a program")
@@ -471,6 +490,7 @@ class AwkwardProfileTests(SetupTestCase):
         self.put_package(self.weird_install)
         self.weird_setup = self.weird_install / LAUNCHER_NAME
 
+    @needs_archive
     def test_install_and_launch(self):
         result = self.run_setup("Y\r\n", script=self.weird_setup)
         self.assertEqual(0, result.code, result.output)
@@ -501,6 +521,7 @@ class AwkwardProfileTests(SetupTestCase):
         self.assertFalse(self.record.exists())
         self.assert_nothing_installed()
 
+    @needs_private_python
     def test_python_on_a_path_with_special_characters(self):
         python_dir = self.work / "Py & Tools (x64)"
         shutil.copytree(PRIVATE_FIXTURE, python_dir)
@@ -513,6 +534,7 @@ class AwkwardProfileTests(SetupTestCase):
 class AccentedProfileTests(SetupTestCase):
     profile_name = "Jos\u00e9 N\u00fa\u00f1ez"
 
+    @needs_archive
     def test_install_and_launch(self):
         result = self.run_setup("Y\r\n")
         self.assertEqual(0, result.code, result.output)

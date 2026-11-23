@@ -8,6 +8,7 @@
 // Run 1 is real. Runs 2 to 5 are copied from the bundled Northwind samples so `generate` can pass; then the `build` step
 // opens and its AI window must start by itself (nothing is pasted there). Real-CLI use needs the user's approval
 // (AGENTS.md); this was approved on 2026-11-19: one `generate` run 1 and one `build` start per tool.
+if (process.platform !== 'win32') { console.log('SKIP: this runs on Windows only.'); process.exit(0); }
 const { chromium } = require('../../tests/frontend/.tmp/node_modules/@playwright/test');
 const { spawn, execFileSync } = require('child_process');
 const fs = require('fs');

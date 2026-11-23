@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -17,7 +18,7 @@ import helpers
 from helpers import FakePty, FakeTerminal
 
 from eval_coach import preflight as pf
-from eval_coach import project, runner
+from eval_coach import hostos, project, runner
 from eval_coach.engine import Engine, EngineError
 from eval_coach.preflight import Result, SystemRunner
 from eval_coach.terminal import TerminalManager
@@ -108,6 +109,10 @@ class Base(unittest.TestCase):
         self.engine.setup({"project_path": str(self.project_dir), "starter": "northwind"})
 
 
+WINDOWS_ONLY = unittest.skipUnless(sys.platform == "win32", "uses the Windows pins and paths; the Mac equivalents are the Mac* classes")
+
+
+@WINDOWS_ONLY
 class Environment(Base):
     def test_prepends_found_python_when_no_private_copy(self):
         self.engine.python_path = r"C:\Found Python\python.exe"
@@ -180,6 +185,7 @@ class Compare(unittest.TestCase):
                 self.assertEqual(pf.node_is_new_enough(pf.parse_node_version(text)), ok)
 
 
+@WINDOWS_ONLY
 class Python(Base):
     def test_passes_with_a_working_python(self):
         self.run_check_all()
@@ -235,6 +241,7 @@ class Python(Base):
         self.assertIn("did not finish", item["detail"])
 
 
+@WINDOWS_ONLY
 class Node(Base):
     def setUp(self):
         super().setUp()
@@ -276,6 +283,7 @@ class Node(Base):
         self.assertIn("about 41 MB", body)
 
 
+@WINDOWS_ONLY
 class Install(Base):
     def setUp(self):
         super().setUp()
@@ -425,6 +433,7 @@ class Install(Base):
         self.engine.preflight.wait_for_job(10)
 
 
+@WINDOWS_ONLY
 class Promptfoo(Base):
     def setUp(self):
         super().setUp()
@@ -559,6 +568,7 @@ class Cli(Base):
         self.assertEqual(self.terminal.typed, [])
 
 
+@WINDOWS_ONLY
 class BackgroundTest(Base):
     """Choosing an AI starts a quiet one-shot test. Only the exit status decides, and it never records a failure."""
 
@@ -768,6 +778,7 @@ class BackgroundTest(Base):
         self.assertEqual(call["timeout"], 9)
 
 
+@WINDOWS_ONLY
 class DetectAis(Base):
     """Item 6: the checks find which supported AIs resolve, without starting any."""
 
@@ -831,6 +842,7 @@ class DetectAis(Base):
         self.assertTrue(engine.get_state()["preflight"]["custom_ai"])
 
 
+@WINDOWS_ONLY
 class Recipes(Base):
     def test_recipe_needs_consent(self):
         self.assert_code("consent_required", self.engine.preflight_recipe, "claude-winget", False)
@@ -891,6 +903,7 @@ class Recipes(Base):
         self.assertEqual([r["id"] for r in recipes], ["fake"])
 
 
+@WINDOWS_ONLY
 class WorkingTest(Base):
     def setUp(self):
         super().setUp()
@@ -1078,6 +1091,7 @@ class ProjectFolder(Base):
         self.setup_project()
 
 
+@WINDOWS_ONLY
 class Lock(Base):
     def pass_everything(self):
         self.engine.preflight_cli("fake-cli")
@@ -1181,6 +1195,7 @@ class RealRunner(unittest.TestCase):
         self.assertTrue(result.cancelled)
 
 
+@WINDOWS_ONLY
 class TerminalOutputIsIgnored(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="eval-coach-pf-"))
@@ -1236,6 +1251,382 @@ class Shutdown(Base):
         self.engine.preflight.shutdown()
         self.assertTrue(job.cancel.is_set())
         released.set()
+
+
+class MacBase(unittest.TestCase):
+    """Preflight on a Mac, run on any system: the platform is injected and every program is a fake."""
+
+    MACOS = "14.5"
+    MACHINE = "arm64"
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="eval-coach-mac-"))
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.home = self.tmp / "home"
+        self.user = self.tmp / "user"
+        self.user.mkdir()
+        self.fake = FakeRunner()
+        self.fake.which_map = {"python3": "/usr/local/bin/python3"}
+        self.fake.programs["python3"] = text_result("Python 3.13.18\n")
+        self.terminal = FakeTerminal()
+        self.pre = self.build()
+
+    def build(self, **kwargs):
+        options = dict(runner=self.fake, platform="darwin", machine=self.MACHINE, user_home=str(self.user),
+                       mac_version_text=self.MACOS, python_path="/opt/py/bin/python3")
+        options.update(kwargs)
+        return pf.Preflight(self.home, self.terminal, **options)
+
+    def check_all(self):
+        self.pre.start_check_all()
+        self.pre.wait_for_job(10)
+
+    def item(self, item_id):
+        return next(i for i in self.pre.view(None, None)["items"] if i["id"] == item_id)
+
+    def path_entries(self, env=None):
+        return (env or self.pre.env())["PATH"].split(os.pathsep)
+
+
+class MacPython(MacBase):
+    def test_the_python_page_shows_the_path_and_version(self):
+        self.check_all()
+        item = self.item("python")
+        self.assertEqual(item["status"], "passed")
+        self.assertIn("3.13.18", item["detail"])
+        self.assertIn("/usr/local/bin/python3", item["detail"])
+        self.assertEqual(self.fake.calls_named("python3")[0]["argv"], ["/usr/local/bin/python3", "--version"])
+
+    def test_python_below_3_9_asks_to_start_again(self):
+        self.fake.programs["python3"] = text_result("Python 3.8.10\n")
+        self.check_all()
+        item = self.item("python")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("3.8.10", item["detail"])
+        self.assertIn("start eval-coach again", item["next"])
+
+    def test_no_python_asks_to_start_again(self):
+        self.fake.which_map = {}
+        self.check_all()
+        item = self.item("python")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("start eval-coach again", item["next"])
+
+    def test_a_working_python_is_found_when_python3_is_too_old(self):
+        self.fake.which_map = {"python3": "/usr/bin/python3-old", "python": "/usr/local/bin/python"}
+        self.fake.programs["python3-old"] = text_result("Python 3.8.10\n")
+        self.fake.programs["python"] = text_result("Python 3.13.18\n")
+        self.check_all()
+        item = self.item("python")
+        self.assertEqual(item["status"], "passed")
+        self.assertIn("/usr/local/bin/python", item["detail"])
+
+    def test_apples_stub_is_never_run(self):
+        self.fake.which_map = {"python3": "/usr/bin/python3"}
+        with mock.patch.object(pf.os.path, "exists", return_value=False):
+            self.check_all()
+        self.assertEqual(self.item("python")["status"], "failed")
+        self.assertEqual(self.fake.calls_named("python3"), [], "running the stub would open Apple's installer")
+
+    def test_apples_python_is_used_when_the_command_line_tools_exist(self):
+        self.fake.which_map = {"python3": "/usr/bin/python3"}
+        with mock.patch.object(pf.os.path, "exists", return_value=True):
+            self.check_all()
+        self.assertEqual(self.item("python")["status"], "passed")
+
+    def test_the_private_python_comes_first_on_the_path(self):
+        private = self.home / "runtime" / "python" / "bin"
+        private.mkdir(parents=True)
+        (private / "python3").write_bytes(b"x")
+        self.assertEqual(self.path_entries()[0], str(private))
+
+    def test_the_found_python_comes_first_without_a_private_copy(self):
+        self.assertEqual(self.path_entries()[0], os.path.dirname(os.path.abspath("/opt/py/bin/python3")))
+
+
+class MacPathDiscovery(MacBase):
+    class PathTerminal(FakeTerminal):
+        """check_command succeeds only when a file with that name sits in a folder of the given PATH."""
+
+        def check_command(self, command, env=None):
+            for folder in (env or {}).get("PATH", "").split(os.pathsep):
+                if folder and (Path(folder) / command).is_file():
+                    return
+            raise FileNotFoundError(command)
+
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch.dict(os.environ, {"PATH": str(self.tmp / "empty")})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.terminal = self.PathTerminal()
+        self.pre = self.build()
+
+    def test_an_ai_installed_while_the_app_is_open_is_found(self):
+        self.assertEqual(self.pre.view(None, None)["cli"]["found"], [])
+        local = self.user / ".local" / "bin"
+        local.mkdir(parents=True)
+        (local / "claude").write_bytes(b"x")
+        self.check_all()
+        view = self.pre.view(None, None)
+        self.assertEqual(view["cli"]["found"], ["claude"])
+        self.assertIn(str(local), self.path_entries())
+
+    def test_the_ai_s_own_folder_from_the_recipes_is_searched(self):
+        own = self.user / "own-ai" / "bin"
+        own.mkdir(parents=True)
+        (own / "devin").write_bytes(b"x")
+        recipes = {"recipes": [{"id": "devin", "name": "Devin CLI", "cli_command": "devin", "shell": "cmd",
+                                "command": "x", "needs_mb": 1, "plain": "p", "source": "s",
+                                "platforms": {"windows": {"available": True},
+                                              "mac": {"shell": "zsh", "path_dirs": ["own-ai/bin"]}}}]}
+        self.home.mkdir(parents=True, exist_ok=True)
+        (self.home / "cli-recipes.json").write_text(json.dumps(recipes), encoding="utf-8")
+        self.pre = self.build()
+        self.check_all()
+        self.assertEqual(self.pre.view(None, None)["cli"]["found"], ["devin"])
+
+    def test_nothing_is_started_by_the_search(self):
+        local = self.user / ".local" / "bin"
+        local.mkdir(parents=True)
+        (local / "copilot").write_bytes(b"x")
+        self.check_all()
+        self.assertEqual([c for c in self.fake.calls if self.fake.name_of(c["argv"]) == "copilot"], [])
+        self.assertEqual(self.terminal.starts, [])
+
+
+class MacNodeInstall(MacBase):
+    def setUp(self):
+        super().setUp()
+        self.pre.set_track("promptfoo")
+        self.fake.which_map = {"python3": "/usr/local/bin/python3"}
+        self.payload = b"pretend node tarball" * 100
+        self.sha = hashlib.sha256(self.payload).hexdigest()
+        self.pin_name = "mac-arm64" if self.MACHINE == "arm64" else "mac-x64"
+        pin = hostos.NODE_PINS[self.pin_name]._replace(sha256=self.sha)
+        patcher = mock.patch.dict(hostos.NODE_PINS, {self.pin_name: pin})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.pin = pin
+
+        def curl(argv, env, cwd):
+            (Path(cwd) / argv[argv.index("--output") + 1]).write_bytes(self.payload)
+            return Result(code=0)
+
+        def tar(argv, env, cwd):
+            target = Path(cwd) / argv[argv.index("-C") + 1] / self.pin.folder / "bin"
+            target.mkdir(parents=True)
+            (target / "node").write_bytes(b"binary")
+            return Result(code=0)
+
+        self.fake.programs["curl"] = curl
+        self.fake.programs["tar"] = tar
+        self.fake.programs["node"] = text_result("v26.13.0\n")
+
+    def install(self):
+        self.pre.start_install("node", True)
+        self.pre.wait_for_job(10)
+
+    def test_the_build_for_this_chip_is_downloaded_unpacked_and_put_in_place(self):
+        self.install()
+        self.assertEqual(self.item("node")["status"], "passed", self.item("node"))
+        curl = self.fake.calls_named("curl")[0]["argv"]
+        self.assertEqual(curl[0], "/usr/bin/curl")
+        self.assertNotIn("--ssl-no-revoke", curl)
+        self.assertEqual(curl[-1], self.pin.url)
+        self.assertIn("darwin-arm64", curl[-1])
+        tar = self.fake.calls_named("tar")[0]["argv"]
+        self.assertEqual(tar[:2], ["/usr/bin/tar", "-xzf"])
+        self.assertTrue((self.home / "runtime" / "node" / "bin" / "node").is_file())
+        self.assertFalse((self.home / "runtime" / f"{self.pin.folder}.tar.gz").exists())
+        self.assertFalse((self.home / "runtime" / "node.new").exists())
+        self.assertIn(str(self.home / "runtime" / "node" / "bin"), self.path_entries())
+
+    def test_a_wrong_fingerprint_installs_nothing(self):
+        def tampered(argv, env, cwd):
+            (Path(cwd) / argv[argv.index("--output") + 1]).write_bytes(b"tampered")
+            return Result(code=0)
+
+        self.fake.programs["curl"] = tampered
+        self.install()
+        item = self.item("node")
+        self.assertEqual(item["status"], "failed")
+        self.assertIn("fingerprint", item["detail"])
+        self.assertEqual(self.fake.calls_named("tar"), [])
+        self.assertFalse((self.home / "runtime" / "node").exists())
+        self.assertFalse((self.home / "runtime" / f"{self.pin.folder}.tar.gz").exists())
+
+    def test_the_download_must_fit_the_mac_disk_need(self):
+        self.fake.free = 100 * 10**6
+        self.install()
+        self.assertEqual(self.item("node")["status"], "failed")
+        self.assertEqual(self.fake.calls, [])
+
+    def test_the_consent_text_has_the_mac_sizes_and_no_windows_words(self):
+        self.fake.which_map = {"python3": "/usr/local/bin/python3"}
+        self.check_all()
+        body = self.item("node")["install"]["consent"]["body"]
+        self.assertIn("58 MB", body)
+        self.assertNotIn("registry", body)
+        self.assertNotIn("113 MB", body)
+
+    def test_npx_runs_the_private_npx_script_directly(self):
+        node = self.home / "runtime" / "node"
+        (node / "bin").mkdir(parents=True)
+        (node / "bin" / "node").write_bytes(b"x")
+        script = node / "lib" / "node_modules" / "npm" / "bin" / "npx-cli.js"
+        script.parent.mkdir(parents=True)
+        script.write_text("//", encoding="utf-8")
+        self.fake.which_map["node"] = str(node / "bin" / "node")
+        self.assertEqual(self.pre.npx_argv(self.pre.env()), [str(node / "bin" / "node"), str(script)])
+
+
+class MacNodeInstallOnIntel(MacNodeInstall):
+    MACHINE = "x86_64"
+
+    def test_the_build_for_this_chip_is_downloaded_unpacked_and_put_in_place(self):
+        self.pin_name = "mac-x64"
+        self.pin = hostos.NODE_PINS["mac-x64"]
+        self.assertIn("darwin-x64", self.pin.url)
+        self.install()
+        self.assertIn("darwin-x64", self.fake.calls_named("curl")[0]["argv"][-1])
+
+
+class MacOldMacos(MacBase):
+    MACOS = "13.2.1"
+
+    def setUp(self):
+        super().setUp()
+        self.pre.set_track("promptfoo")
+
+    def test_nothing_is_downloaded_and_the_script_track_is_suggested(self):
+        with self.assertRaises(pf.PreflightError) as caught:
+            self.pre.start_install("node", True)
+        self.assertEqual(caught.exception.code, "node_needs_newer_macos")
+        self.assertIn("13.2.1", caught.exception.message)
+        self.assertIn("13.5", caught.exception.message)
+        self.assertEqual(self.fake.calls, [])
+
+    def test_the_node_page_says_why_and_offers_no_install(self):
+        self.check_all()
+        item = self.item("node")
+        self.assertEqual(item["status"], "needs_you")
+        self.assertIn("13.5", item["detail"])
+        self.assertIn("13.2.1", item["detail"])
+        self.assertIn("Script track", item["next"])
+        self.assertIsNone(item["install"])
+
+    def test_the_track_choice_says_the_promptfoo_track_needs_a_newer_macos(self):
+        hint = self.pre.view(None, None)["track_options"]["promptfoo"]["hint"]
+        self.assertIn("13.5", hint)
+        self.assertIn("Script track", hint)
+
+    def test_a_node_already_on_the_computer_still_counts(self):
+        self.fake.which_map["node"] = "/opt/homebrew/bin/node"
+        self.fake.programs["node"] = text_result("v24.1.0\n")
+        self.check_all()
+        self.assertEqual(self.item("node")["status"], "passed")
+
+
+class MacCurrentMacosShowsNoOldMacosText(MacBase):
+    def test_track_hint_is_unchanged(self):
+        hint = self.pre.view(None, None)["track_options"]["promptfoo"]["hint"]
+        self.assertNotIn("13.5", hint)
+
+
+class MacRecipes(MacBase):
+    def recipes(self):
+        return {r["id"]: r for r in self.pre.recipes}
+
+    def test_only_the_mac_installs_are_offered(self):
+        self.assertEqual(sorted(self.recipes()), ["claude-installer", "copilot", "devin", "other"])
+
+    def test_commands_run_in_zsh_and_need_no_powershell(self):
+        recipes = self.recipes()
+        self.assertEqual(recipes["copilot"]["command"], "curl -fsSL https://gh.io/copilot-install | bash")
+        self.assertEqual(recipes["claude-installer"]["command"], "curl -fsSL https://claude.ai/install.sh | bash")
+        self.assertEqual(recipes["devin"]["command"], "curl -fsSL https://cli.devin.ai/install.sh | bash")
+        self.assertNotIn("requires", recipes["copilot"])
+        for name in ("copilot", "claude-installer", "devin"):
+            self.assertEqual(recipes[name]["shell"], "zsh")
+            self.assertNotIn("winget", recipes[name]["command"])
+
+    def test_the_recipe_runs_through_a_login_zsh(self):
+        argv = self.pre.recipe_argv("devin", True)
+        self.assertEqual(argv, ["/bin/zsh", "-o", "pipefail", "-lc", "curl -fsSL https://cli.devin.ai/install.sh | bash"])
+
+    def test_the_choose_page_lists_one_install_per_tool(self):
+        tools = self.pre.view(None, None)["cli"]["tools"]
+        self.assertEqual([t["cli_command"] for t in tools], ["copilot", "claude", "devin"])
+        self.assertTrue(all(t["install"]["command"].startswith("curl -fsSL https://") for t in tools))
+        self.assertEqual([t["other_installs"] for t in tools], [[], [], []])
+
+    def test_every_tool_keeps_its_model_data(self):
+        for name in ("copilot", "claude-installer", "devin"):
+            self.assertIn("sonnet", self.recipes()[name]["models"])
+
+    def test_an_override_written_for_windows_is_not_run_by_zsh(self):
+        self.home.mkdir(parents=True, exist_ok=True)
+        (self.home / "cli-recipes.json").write_text(json.dumps({"recipes": [
+            {"id": "copilot", "name": "Copilot", "cli_command": "copilot", "shell": "cmd",
+             "command": "winget install GitHub.Copilot", "needs_mb": 1, "plain": "p", "source": "s"}]}), encoding="utf-8")
+        self.pre = self.build()
+        self.assertEqual(sorted(self.recipes()), ["claude-installer", "copilot", "devin", "other"])
+        self.assertEqual(self.recipes()["copilot"]["shell"], "zsh")
+
+    def test_an_override_with_a_mac_entry_is_still_used(self):
+        self.home.mkdir(parents=True, exist_ok=True)
+        (self.home / "cli-recipes.json").write_text(json.dumps({"recipes": [
+            {"id": "mine", "name": "Mine", "cli_command": "mine", "shell": "cmd", "command": "x", "needs_mb": 1,
+             "plain": "p", "source": "s", "platforms": {"windows": {}, "mac": {"shell": "zsh", "command": "y"}}}]}),
+            encoding="utf-8")
+        self.pre = self.build()
+        self.assertEqual(list(self.recipes()), ["mine"])
+        self.assertEqual(self.recipes()["mine"]["command"], "y")
+
+
+class RecipePlatforms(unittest.TestCase):
+    """The shipped recipes: Windows values are the committed baseline, and every recipe says where it is offered."""
+
+    def setUp(self):
+        self.shipped = json.loads(resources_text("content/cli-recipes.json"))["recipes"]
+
+    def test_every_recipe_names_both_platforms(self):
+        for recipe in self.shipped:
+            self.assertEqual(set(recipe["platforms"]), {"windows", "mac"}, recipe["id"])
+
+    def test_windows_values_equal_the_baseline(self):
+        baseline = json.loads((helpers.GOLDEN / "cli-recipes-windows.json").read_text(encoding="utf-8"))["recipes"]
+        without = [{k: v for k, v in r.items() if k != "platforms"} for r in self.shipped]
+        self.assertEqual(without, baseline)
+
+    def test_windows_offers_exactly_the_baseline_recipes(self):
+        baseline = json.loads((helpers.GOLDEN / "cli-recipes-windows.json").read_text(encoding="utf-8"))["recipes"]
+        with tempfile.TemporaryDirectory() as tmp:
+            offered = pf.Preflight(Path(tmp) / "home", FakeTerminal(), runner=FakeRunner(), platform="win32").recipes
+        self.assertEqual(offered, baseline)
+
+    def test_a_mac_recipe_changes_only_what_differs(self):
+        for recipe in self.shipped:
+            mac = recipe["platforms"]["mac"]
+            for field in mac:
+                self.assertIn(field, ("available", "shell", "command", "needs_mb", "plain", "requires", "path_dirs",
+                                      "source"), recipe["id"])
+
+
+def resources_text(name):
+    from eval_coach import resources
+    return resources.read_text(name)
+
+
+class MacTerminalWords(unittest.TestCase):
+    def test_the_words_of_the_mac_run_have_no_windows_install_help(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pre = pf.Preflight(Path(tmp) / "home", FakeTerminal(), runner=FakeRunner(), platform="darwin",
+                               machine="arm64", mac_version_text="14.5")
+            text = json.dumps(pre.content)
+        self.assertNotIn("Company Portal or Software Center", text)
+        self.assertNotIn("platform_overrides", text)
 
 
 if __name__ == "__main__":

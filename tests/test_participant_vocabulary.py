@@ -81,6 +81,51 @@ def without_allowed(text):
     return text
 
 
+class NoBareCliOnEveryPlatform(unittest.TestCase):
+    """The same rule, on the words each computer actually shows (tokens put in, Mac overrides laid over)."""
+
+    @staticmethod
+    def rendered_strings(platform):
+        found = []
+
+        def walk(name, value, path):
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    walk(name, item, f"{path}/{key}" if path else key)
+            elif isinstance(value, list):
+                for index, item in enumerate(value):
+                    walk(name, item, f"{path}/{index}")
+            elif isinstance(value, str):
+                found.append((name, path, value))
+
+        from eval_coach import resources
+        with resources.platform_words(platform):
+            for file in sorted(CONTENT.glob("*.json")):
+                if file.name in ("platform.json", "cli-recipes.json"):
+                    continue
+                walk(file.name, json.loads(resources.read_text("content/" + file.name)), "")
+        return found
+
+    def test_no_string_says_cli_on_either_platform(self):
+        for platform in ("windows", "mac"):
+            offenders = [f"{platform} {name} {path}: {text[:90]}" for name, path, text in self.rendered_strings(platform)
+                         if BARE_CLI.search(without_allowed(text))]
+            self.assertEqual(offenders, [])
+
+    def test_the_platform_table_itself_is_scanned_for_both_platforms(self):
+        scanned = {(name, path) for name, path, _ in content_strings()}
+        self.assertIn(("platform.json", "tokens/paste_key/mac"), scanned)
+        self.assertIn(("platform.json", "tokens/paste_key/windows"), scanned)
+
+    def test_a_mac_entry_with_a_bare_cli_would_be_caught(self):
+        self.assertTrue(BARE_CLI.search(without_allowed("Press Command-V in your CLI.")))
+
+    def test_the_mac_words_are_plain(self):
+        text = " ".join(t for _, _, t in self.rendered_strings("mac"))
+        for banned in ("Command Prompt", "PowerShell 5", "File Explorer", "Ctrl+"):
+            self.assertNotIn(banned, text)
+
+
 class NoBareCli(unittest.TestCase):
     def test_no_content_string_says_cli_outside_a_product_name(self):
         offenders = [f"{name} {path}: {text[:90]}" for name, path, text in content_strings()

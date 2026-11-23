@@ -26,14 +26,14 @@ TEST_CASES_NAME = "test-cases.md"
 _KINDS = ("prompt", "test_cases")
 _NAMES = {"prompt": PROMPT_NAME, "test_cases": TEST_CASES_NAME}
 
-_messages_cache = None
+_messages_cache = {}
 
 
 def _messages():
-    global _messages_cache
-    if _messages_cache is None:
-        _messages_cache = json.loads(resources.read_text("content/import-checks.json"))
-    return _messages_cache
+    key = resources.current_platform()
+    if key not in _messages_cache:
+        _messages_cache[key] = json.loads(resources.read_text("content/import-checks.json"))
+    return _messages_cache[key]
 
 
 def _item(severity, code, criterion=None, kind=None, **fields):

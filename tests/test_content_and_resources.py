@@ -166,6 +166,9 @@ class Content(unittest.TestCase):
 
 class PreflightContent(unittest.TestCase):
     def setUp(self):
+        words = resources.platform_words("windows")
+        words.__enter__()
+        self.addCleanup(words.__exit__, None, None, None)
         self.preflight = json.loads(resources.read_text("content/preflight.json"))
         self.recipes = json.loads(resources.read_text("content/cli-recipes.json"))
 
@@ -219,6 +222,7 @@ class PreflightContent(unittest.TestCase):
                          "Read input.txt, write its contents in uppercase to output.txt, then run python "
                          "--version and write what it prints to version.txt. Do nothing else.")
 
+    @unittest.skipUnless(sys.platform == "win32", "the Mac pins are checked in test_launcher_manifest")
     def test_pinned_values_match_the_manifest(self):
         from eval_coach import preflight
         manifest = json.loads((ROOT / "spikes" / "phase0-preflight" / "runtime-manifest.json").read_text(encoding="utf-8"))
@@ -234,6 +238,9 @@ class GuidedSetupContent(unittest.TestCase):
     """The recipe words and the AI window lesson that setup shows."""
 
     def setUp(self):
+        words = resources.platform_words("windows")
+        words.__enter__()
+        self.addCleanup(words.__exit__, None, None, None)
         self.preflight = json.loads(resources.read_text("content/preflight.json"))
         self.recipes = json.loads(resources.read_text("content/cli-recipes.json"))["recipes"]
         self.lesson = self.preflight["ai_window_lesson"]

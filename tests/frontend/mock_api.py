@@ -18,6 +18,10 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "app"))
+from eval_coach import resources  # noqa: E402  platform words are put in as the server does
 from urllib.parse import parse_qs, urlsplit
 
 import mock_course
@@ -27,17 +31,17 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "app" / "eval_coach"
 # MOCK_WEB_ROOT serves another copy of the web files, for comparing the interface before and after a change.
 WEB_ROOT = Path(os.environ.get("MOCK_WEB_ROOT") or PACKAGE_ROOT / "web")
 CONTENT_ROOT = PACKAGE_ROOT / "content"
-PREFLIGHT_TEXT = json.loads((CONTENT_ROOT / "preflight.json").read_text(encoding="utf-8"))
-SETTINGS_FULL = json.loads((CONTENT_ROOT / "settings.json").read_text(encoding="utf-8"))
+PREFLIGHT_TEXT = json.loads(resources.read_text("content/preflight.json"))
+SETTINGS_FULL = json.loads(resources.read_text("content/settings.json"))
 SETTINGS_TEXT = {k: v for k, v in SETTINGS_FULL.items() if k != "errors"}
-AI_MODEL_TEXT = json.loads((CONTENT_ROOT / "lesson-ui.json").read_text(encoding="utf-8"))["ai_model"]
-SERIES = json.loads((CONTENT_ROOT / "series.json").read_text(encoding="utf-8"))
+AI_MODEL_TEXT = json.loads(resources.read_text("content/lesson-ui.json"))["ai_model"]
+SERIES = json.loads(resources.read_text("content/series.json"))
 # Part 1 is a real Part with its own course; the mock only needs its row on the Series map (its screens are
 # tested against the real engine in part1.spec.js).
-PART1_LESSONS = json.loads((CONTENT_ROOT / "part-1-lessons.json").read_text(encoding="utf-8"))["lessons"]
+PART1_LESSONS = json.loads(resources.read_text("content/part-1-lessons.json"))["lessons"]
 PART1_ITEMS = 9
 # Part 2 is the same: only its row on the Series map is mocked (its screens run against the real engine in part2.spec.js).
-PART2_LESSONS = json.loads((CONTENT_ROOT / "part-2-lessons.json").read_text(encoding="utf-8"))["lessons"]
+PART2_LESSONS = json.loads(resources.read_text("content/part-2-lessons.json"))["lessons"]
 PART2_ITEMS = 8
 BACKUP_FOLDER = "C:\\Users\\tester\\.eval-coach\\reset-backup"
 CSP = "default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'"
@@ -48,9 +52,9 @@ PF_ORDER = ["generate", "build", "fixtures", "fixtures-config", "readback", "pre
 STEP_ORDER = list(SCRIPT_ORDER)  # changed in place when a scenario or the preflight picks the promptfoo track
 TRACK = {"name": "script"}
 mock_course.ACTIVE_STEPS = STEP_ORDER  # the course list shows the steps of the current track
-STEPS_CONTENT = json.loads((CONTENT_ROOT / "steps.json").read_text(encoding="utf-8"))["steps"]
+STEPS_CONTENT = json.loads(resources.read_text("content/steps.json"))["steps"]
 # The real loader puts the shared paste words under each paste-mode step's own ui.
-_PASTE_UI = json.loads((CONTENT_ROOT / "steps.json").read_text(encoding="utf-8"))["paste_ui"]
+_PASTE_UI = json.loads(resources.read_text("content/steps.json"))["paste_ui"]
 for _text in STEPS_CONTENT.values():
     if _text.get("cli_mode") == "paste":
         _text["ui"] = {**_PASTE_UI, **_text.get("ui", {})}
