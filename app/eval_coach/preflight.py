@@ -495,9 +495,9 @@ class Preflight:
         return hostos.extra_path_dirs(self.platform, home=self.platform_home, extra=extra)
 
     def _pin(self):
-        """The pinned Node.js build for this platform. The module values win on the real platform so tests can patch them."""
+        """The pinned Node.js build for this platform. The module values win on Windows so tests can patch them."""
         pin = hostos.node_pin(self.platform, self.machine)
-        if self.platform == sys.platform:
+        if self.platform == "win32" == sys.platform:
             pin = pin._replace(version=NODE_VERSION, url=NODE_URL, sha256=NODE_SHA256, folder=NODE_FOLDER,
                                download_bytes=NODE_DOWNLOAD_BYTES)
         return pin
