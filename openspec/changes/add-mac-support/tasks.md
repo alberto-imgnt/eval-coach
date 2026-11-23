@@ -53,7 +53,7 @@ Verification commands are from AGENTS.md. Run the two backend suites one after t
 ## 8. Integration checks
 
 - [x] 8.1 Windows regression: run both backend suites one after the other, the interface tests, the build smoke test and the stand-in end to end. Verify: `python -m unittest discover -s tests`, then the embedded 3.13 command, then `node tests/frontend/.tmp/node_modules/@playwright/test/cli.js test --config tests/frontend/playwright.config.js`, `python tools\build_pyz.py --smoke`, and `node e2e-work\harness\run-all.js --fresh` (output to a file), all as in AGENTS.md.
-- [ ] 8.2 Real Mac pass (issue task 7.6): unzip, approve once, double-click, setup wizard, AI window, one quiet test and one visible run for each of the three AIs, then Quit leaves no process behind. Verify: a checklist of the above with results written into `docs/SETUP.md` or the pull request. Each real-AI run needs the user's single-use approval after the full command text is verified.
+- [x] 8.2 Real Mac pass (issue task 7.6): unzip, approve once, double-click, setup wizard, AI window, one quiet test and one visible run for each of the three AIs, then Quit leaves no process behind. Verify: a checklist of the above with results written into `docs/SETUP.md` or the pull request. Each real-AI run needs the user's single-use approval after the full command text is verified.
 
 ## Workflow follow-up
 
