@@ -465,7 +465,69 @@ function renderPair(ctx, step) {
   ];
 }
 
+function renderInputs(ctx, step) {
+  const { data, ui } = step;
+  const editable = !ctx.readOnly && step.status !== 'done';
+  const saveKey = `part-save-${step.id}`;
+  const busy = ctx.busy(saveKey) || ctx.busy('check');
+  const submit = (body) => ctx.actions.partSave(step.id, body, []);
+  return [
+    ...Object.entries(data.files).map(([key, file]) => {
+      const active = file.choices.some((choice) => choice.id === file.source) ? file.source : 'keep';
+      return h(
+        'section',
+        { key, id: `inputs-${key}`, class: 'block' },
+        h('h2', null, ui[key]),
+        h('p', { class: 'hint' }, fmt(ui.active, { name: file.name }), ' — ', file.label),
+        plainText(`inputs-${key}-text`, file.text, ui[key]),
+        file.state ? h('p', { class: 'hint' }, file.state) : null,
+        editable
+          ? h(
+              'fieldset',
+              { class: 'field' },
+              h('legend', { class: 'field-label' }, ui[key]),
+              file.choices.map((choice) =>
+                h(
+                  'label',
+                  { class: 'radio-card', key: choice.id },
+                  h('input', {
+                    type: 'radio',
+                    name: `inputs-${key}`,
+                    value: choice.id,
+                    checked: choice.id === active,
+                    disabled: busy || !choice.available,
+                    onChange: () => submit({ use: { [key]: choice.id } }),
+                  }),
+                  h('span', null,
+                    h('strong', { class: 'block' }, choice.label),
+                    choice.reason || choice.warning
+                      ? h('span', { class: 'hint block' }, choice.reason || choice.warning)
+                      : null),
+                ),
+              ),
+            )
+          : null,
+      );
+    }),
+    ...data.notes.map((note) => h('p', { class: 'callout callout-attn', key: note }, note)),
+    h('p', { class: 'hint', key: 'practice' }, ui.practice_note),
+    editable
+      ? h('div', { class: 'row', key: 'input-actions' },
+          data.both ? actionButton(ctx, {
+            label: ui.both, busyKey: saveKey, busyLabel: ui.saving, disabled: busy,
+            onClick: () => submit({ both: 'mine' }),
+          }) : null,
+          actionButton(ctx, {
+            id: 'continue', label: ui.continue, busyKey: 'check', busyLabel: ui.continuing,
+            kind: 'primary', disabled: busy || !step.ready, onClick: () => ctx.actions.finishStep(),
+          }),
+        )
+      : null,
+  ];
+}
+
 export const PART_STEP_PANELS = {
+  inputs: { render: renderInputs },
   cold: { render: renderRunPanel, collect: collectRunPanel },
   rewrite: { render: renderRunPanel, collect: collectRunPanel },
   score: { render: renderScoreForm, collect: collectScoreForm },

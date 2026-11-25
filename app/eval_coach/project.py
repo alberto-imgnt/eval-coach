@@ -33,6 +33,7 @@ PART1_NOTES = "kit/part1/rough-notes.txt"
 # Part 2 keeps the participant's worksheet and test case file under <project>\part-2\. It runs nothing, so it has no scratch folder.
 PART2_DIR = "part-2"
 PART2_FILES = {"worksheet": "worksheet.json", "test_cases": "test-cases.md"}
+REPLACED_INPUTS = "part-3/replaced"
 
 _CATCH_UP = re.compile(rb"(?im)^[ \t]*<!--\s*catch-up copy.*?-->[ \t]*\r?\n(?:[ \t]*\r?\n)?")
 

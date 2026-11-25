@@ -143,11 +143,26 @@ class SeriesIntentFraming(unittest.TestCase):
         self.assertIn("does not guarantee every future answer", body)
         self.assertIn("NOT CHECKED", body)
 
-    def test_the_baseline_lesson_says_a_score_that_did_not_move_means_no_help(self):
+    def test_the_baseline_lesson_distinguishes_a_measured_gain_from_other_benefits(self):
         body = self.baseline["body"]
         self.assertIn("Part 4", body)
         self.assertIn("Part 5", body)
-        self.assertIn("If the score did not move, the change did not help", body)
+        self.assertIn("no measured gain on these rules", body)
+        self.assertIn("a simpler prompt can be worth keeping at the same score", body)
+        self.assertIn("qualities no rule checks", body)
+        self.assertIn("A total can hide a rule that got worse", body)
+        self.assertIn("lost coverage, not a gain", body)
+        self.assertIn("before you see its score", body)
+
+    def test_lessons_steps_and_glossary_avoid_unwarranted_claims_about_scores(self):
+        banned = re.compile(r"\b(?:did not help|no benefit|did better|pick your best answer)\b", re.I)
+        for path in sorted(CONTENT.glob("*.json")):
+            if not path.stem.endswith(("lessons", "steps", "glossary")):
+                continue
+            with self.subTest(file=path.name):
+                data = json.loads(path.read_text(encoding="utf-8"))
+                for text in strings(data):
+                    self.assertNotRegex(" ".join(text.split()), banned)
 
     def test_the_baseline_lesson_points_the_method_at_the_participants_own_work(self):
         body = self.baseline["body"]
@@ -263,12 +278,15 @@ class TierThreeStageThree(unittest.TestCase):
         self.assertIn("Your prompt file is the start of the Prompt", note)
         self.assertIn("test cases, your checker and the fixtures that tested it are the start of the Evaluations", note)
         self.assertIn("Iteration 0 is the first entry of the Log", note)
-        self.assertIn("at least two rounds of improvement", note)
+        self.assertIn("at least two documented iterations", note)
+        self.assertIn("two rounds after Iteration 0", note)
+        self.assertIn("Iteration 0 does not count as one", note)
 
-    def test_the_note_names_the_later_parts(self):
+    def test_the_note_keeps_the_three_thresholds_separate(self):
         note = note_of(self.data)
-        self.assertRegex(note, r"Part 4 adds those rounds and checks that a known-good answer scores 95% or more")
-        self.assertRegex(note, r"Part 5 checks that every instruction")
+        self.assertRegex(note, r"Part 4[^.]*known-good answer[^.]*95% or more")
+        self.assertIn("overall score across five answers is a separate coaching target, not a gate", note)
+        self.assertRegex(note, r"Part 5 audits each instruction[^.]*90% or more")
 
     def test_the_note_is_short(self):
         self.assertLessEqual(len(note_of(self.data).split()), NOTE_MAX_WORDS)
@@ -276,7 +294,7 @@ class TierThreeStageThree(unittest.TestCase):
     def test_the_evaluation_approach_is_the_participants_choice(self):
         note = note_of(self.data)
         self.assertIn("Scripts, promptfoo files and written test cases are all accepted", note)
-        self.assertIn("file names and layout here are only this course's way of organizing the work", note)
+        self.assertIn("file names and layout are course choices", note)
 
     def test_the_note_says_it_is_orientation_and_not_required_and_carries_no_date(self):
         note = note_of(self.data)
@@ -321,6 +339,81 @@ class TierThreeStageThree(unittest.TestCase):
             with self.subTest(artifact=artifact):
                 self.assertRegex(section, rf"\b{artifact}\b")
         self.assertNotIn("a written evaluation framework with at least three criteria", plan.lower())
+
+
+CONTENT_RULES = ROOT / "docs" / "CONTENT-RULES.md"
+SPEC = ROOT / "docs" / "SPEC.md"
+MAP_HEADING = "## Stage 3 traceability map"
+MAP_COLUMNS = ("Artifact", "What the program asks (paraphrased)", "Exercise (Part, step)", "Evidence it produces", "Status")
+PARTICIPANT_FILES = ("lessons.json", "part-1-lessons.json", "part-2-lessons.json", "steps.json", "part-1-steps.json",
+                     "part-2-steps.json", "glossary.json", "lesson-ui.json", "series.json")
+
+
+def doc_text(path):
+    return path.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+
+def section_of(path, heading):
+    return doc_text(path).split(heading, 1)[1].split("\n## ", 1)[0]
+
+
+def map_rows():
+    """The header and the rows of the traceability map in docs/CONTENT-RULES.md, each row as {column: cell}."""
+    lines = [line for line in section_of(CONTENT_RULES, MAP_HEADING).splitlines() if line.startswith("|")]
+    header = [cell.strip() for cell in lines[0].strip("|").split("|")]
+    return header, [dict(zip(header, (cell.strip() for cell in line.strip("|").split("|")))) for line in lines[2:]]
+
+
+class StageThreeTraceabilityMap(unittest.TestCase):
+    def test_the_map_has_its_columns_a_date_a_source_and_a_status_on_every_row(self):
+        header, rows = map_rows()
+        self.assertEqual(tuple(header), MAP_COLUMNS)
+        text = section_of(CONTENT_RULES, MAP_HEADING)
+        self.assertRegex(text, r"Checked on 20\d\d-\d\d-\d\d against")
+        self.assertIn("What We Examine", text)
+        for row in rows:
+            with self.subTest(row=row["What the program asks (paraphrased)"][:40]):
+                self.assertRegex(row["Status"], r"^(Examiner requirement|Course convention|The program says)")
+
+    def test_each_artifact_has_a_row_with_an_exercise_and_an_evidence_entry(self):
+        _, rows = map_rows()
+        for artifact in ARTIFACTS:
+            with self.subTest(artifact=artifact):
+                mine = [row for row in rows if row["Artifact"] == artifact]
+                self.assertTrue(mine, f"no row for the {artifact}")
+                for row in mine:
+                    self.assertTrue(row["Exercise (Part, step)"], row)
+                    self.assertTrue(row["Evidence it produces"], row)
+
+    def test_no_participant_text_carries_the_map_row_labels(self):
+        labels = ("Examiner requirement", "Course convention", "What We Examine", "traceability map",
+                  "Evidence it produces", "Exercise (Part, step)")
+        for name in PARTICIPANT_FILES:
+            path = CONTENT / name
+            if not path.exists():
+                continue
+            text = path.read_text(encoding="utf-8").lower()
+            for label in labels:
+                with self.subTest(file=name, label=label):
+                    self.assertNotIn(label.lower(), text)
+
+
+class ThresholdRules(unittest.TestCase):
+    def test_the_rules_name_the_three_thresholds_and_the_evidence_words(self):
+        text = doc_text(CONTENT_RULES)
+        for phrase in ("measured gain on these rules", "No measured gain on these rules", "observation",
+                       "known-good check", "five-answer overall score", "load-bearing audit",
+                       "Iteration 0 is not one of the two documented rounds"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+
+    def test_the_spec_holds_the_unbuilt_handoff_contract(self):
+        section = section_of(SPEC, "## Evidence handoff (contract for Parts 4 and 5)")
+        self.assertIn("Not yet built", section)
+        for code in ("prompt_changed", "rules_changed", "checker_changed", "answers_changed", "results_missing",
+                     "log_mismatch", "coverage_changed"):
+            with self.subTest(code=code):
+                self.assertIn(code, section)
 
 
 if __name__ == "__main__":

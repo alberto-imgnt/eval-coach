@@ -538,13 +538,26 @@ class RewriteAndCompare(PartOneBase):
 
     def test_a_higher_a_lower_and_an_equal_second_score_are_described(self):
         self.do_rewrite()
-        for yes, expected in ((4, "went up by 2"), (1, "went down by 1"), (2, "stayed the same")):
+        for yes, expected in ((4, "went up by 2"), (1, "went down by 1"), (2, "hand score stayed the same")):
             self.engine.step_submit("rescore", {"answers": marks(yes)})
             compare = self.data("rescore")["compare"]
             with self.subTest(yes=yes):
                 self.assertIn(expected, compare["change_text"])
                 self.assertEqual(compare["change"], yes - 2)
                 self.assertEqual(len(compare["notes"]), 2 if yes < 2 else 1)
+                self.assertIn("an observation, not proof", compare["notes"][0])
+
+    def test_equal_or_lower_scores_pass_with_neutral_written_answers(self):
+        self.do_rewrite()
+        for yes, reflection in ((2, "The same two marks passed."), (1, "The second answer left out the blocker.")):
+            with self.subTest(second_score=yes):
+                self.engine.step_submit("rescore", {"answers": marks(yes), "reflections": {"added": "Context"}})
+                gate_item = self.detail("rescore")["gate"]["items"][-1]
+                self.assertFalse(gate_item["ok"])
+                self.assertIn("Write what differed", gate_item["detail"])
+                self.engine.step_submit("rescore", {"reflections": {"better": reflection}})
+                self.assertTrue(self.detail("rescore")["ready"])
+                self.engine.step_submit("rescore", {"reflections": {"better": ""}})
 
     def test_a_worse_score_points_to_the_missing_part_without_blaming_the_labels(self):
         self.do_rewrite()

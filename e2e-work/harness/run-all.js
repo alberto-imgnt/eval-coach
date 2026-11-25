@@ -17,9 +17,9 @@ const SPIKE = path.join(ROOT, 'spikes', 'phase0-preflight');
 const PYTHON = path.join(SPIKE, 'runtime', 'python-embed-3.13.17-nopth', 'python.exe');
 const PYZ = process.env.E2E_PYZ || path.join(WORK, 'eval-coach-e2e.pyz');
 
-const SCRIPT_SEQUENCE = ['mission', 'setup', 'hook', 'several-runs', 'generate', 'rules', 'restart', 'build', 'trust',
+const SCRIPT_SEQUENCE = ['mission', 'setup', 'hook', 'several-runs', 'inputs', 'generate', 'rules', 'restart', 'build', 'trust',
   'fixtures', 'readback', 'predict', 'key', 'surprise', 'run', 'fix', 'baseline-why', 'baseline', 'part1', 'part2', 'migrate', 'model', 'quit'];
-const PF_SEQUENCE = ['mission', 'setup', 'hook', 'several-runs', 'generate', 'rules', 'restart', 'build', 'trust',
+const PF_SEQUENCE = ['mission', 'setup', 'hook', 'several-runs', 'inputs', 'generate', 'rules', 'restart', 'build', 'trust',
   'fixtures', 'fixtures-config', 'readback', 'predict', 'key', 'surprise', 'run', 'fix', 'baseline-why', 'baseline', 'live', 'part1', 'part2', 'migrate', 'model', 'quit'];
 
 const args = process.argv.slice(2);

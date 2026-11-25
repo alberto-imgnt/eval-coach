@@ -57,10 +57,11 @@ def rough_notes():
     return resources.read_text(project.PART1_NOTES).replace("\r\n", "\n").strip("\n")
 
 
-def run_copy(prompt, divider, instruction):
+def run_copy(prompt, divider, instruction=None):
     """The text the participant pastes into the AI window, and the whole of prompt.md: their words, a plain divider,
     the rough notes and the closing instruction."""
-    return prompt.rstrip() + "\n\n" + divider + "\n\n" + rough_notes() + "\n\n" + instruction + "\n"
+    task = prompt.rstrip() + "\n\n" + divider + "\n\n" + rough_notes()
+    return task + ("\n\n" + instruction if instruction is not None else "") + "\n"
 
 
 def requirements(engine, text):

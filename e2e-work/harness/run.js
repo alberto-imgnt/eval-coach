@@ -293,6 +293,50 @@ async function waitCliRunningFalse() {
   await L.waitFor(async () => !(await L.apiState()).terminal.running, 10000, 'CLI to stop');
 }
 
+// Part 3's first step: it shows the pair that will be scored and starts no AI. The participant keeps the Practice
+// task files, and nothing in their project changes (no copy is made, because nothing was replaced).
+async function stageInputs() {
+  const base = launchCount();
+  const files = ['prompt-v0.md', 'test-cases.md'].map((name) => path.join(PROJECT, name));
+  const before = files.map(sha);
+  const { browser, page } = await L.openBrowser();
+  try {
+    await openApp(page);
+    L.assertion('on the inputs step', /choose your inputs/i.test(await heading(page)), await heading(page));
+    L.assertion('inputs is the current step and generate is still locked', (await L.apiState()).current_step === 'inputs' && (await L.apiState()).steps.find((x) => x.id === 'generate').status === 'locked');
+    for (const key of ['prompt', 'test_cases']) {
+      L.assertion(`inputs: ${key} is shown in full and labelled as the Practice task`, /practice task/i.test(await page.locator(`#inputs-${key} > p.hint`).first().innerText()) && (await page.locator(`#inputs-${key}-text`).innerText()).trim().length > 0);
+    }
+    L.assertion('inputs: the Part 1 and Part 2 files are not offered yet, with a reason', (await page.locator('#inputs-prompt input[value="part1"]').isDisabled()) && (await page.locator('#inputs-test_cases input[value="part2"]').isDisabled()) && /finish/i.test(await page.locator('#inputs-prompt').innerText()));
+    L.assertion('inputs: no AI window, no line to paste, no Send', (await page.locator('#cli-start, #cli-send, .paste-box').count()) === 0 && !(await L.apiState()).terminal.running && launchCount() === base);
+    for (const [route, label] of [['/api/step/start', 'Start'], ['/api/step/send', 'Send'], ['/api/step/skip', 'Skip']]) {
+      const r = await postApi(route, { step: 'inputs' });
+      L.assertion(`inputs: ${label} is refused as not supported`, r.status === 400 && r.body.error.code === 'not_supported', JSON.stringify(r.body));
+    }
+    const locked = await postApi('/api/step/start', { step: 'generate' });
+    L.assertion('inputs: generate cannot start before this step is done', locked.status === 400 && locked.body.error.code === 'step_locked', JSON.stringify(locked.body));
+    // Choosing "Keep the active file" changes nothing, because the Practice task is already what the project holds.
+    await L.clickAndWait(page, '#inputs-prompt input[value="keep"]', '/api/step/submit');
+    L.assertion('inputs: choosing to keep the active file writes nothing', files.map(sha).join() === before.join() && !exists(path.join(PROJECT, 'part-3', 'replaced')));
+    L.assertion('inputs: Continue is offered', await page.locator('#continue').isEnabled());
+  } finally { await browser.close(); }
+
+  // Continue is pressed through the API so the page does not move on to generate, which would open its AI window.
+  const done = await postApi('/api/step/check', { step: 'inputs' });
+  L.assertion('inputs: Continue finishes the step', done.status === 200 && done.body.state.step.status === 'done', JSON.stringify(done.body).slice(0, 300));
+  const after = await L.apiState();
+  L.assertion('inputs: generate is now the current step', after.current_step === 'generate' && after.steps.find((x) => x.id === 'inputs').status === 'done');
+  L.assertion('inputs: the track did not change', after.preflight.track === (L.PF ? 'promptfoo' : 'script'), after.preflight.track);
+  L.assertion('inputs: the files are byte for byte what they were and no copy was made', files.map(sha).join() === before.join() && !exists(path.join(PROJECT, 'part-3', 'replaced')));
+  const progress = JSON.parse(fs.readFileSync(path.join(PROJECT, '.learning', 'progress.json'), 'utf8'));
+  const choice = progress.steps.inputs.choice;
+  L.assertion('inputs: only sources and hashes are recorded', ['prompt', 'test_cases'].every((k) => Object.keys(choice[k]).sort().join() === 'sha256,source' && choice[k].source === 'practice' && choice[k].sha256 === before[k === 'prompt' ? 0 : 1]), JSON.stringify(choice));
+  L.assertion('inputs: progress.json holds no file text', !JSON.stringify(progress).includes('Test input') && !JSON.stringify(progress).includes('Mon: standup'));
+  const again = await postApi('/api/step/submit', { step: 'inputs', data: { use: { prompt: 'practice' } } });
+  L.assertion('inputs: a choice after Continue is refused', again.status === 400 && again.body.error.code === 'step_done', JSON.stringify(again.body));
+  L.assertion('inputs: no AI window was started', launchCount() === base);
+}
+
 async function stageGenerate() {
   const { browser, page } = await L.openBrowser();
   try {
@@ -821,7 +865,7 @@ async function stageServe() {
 }
 
 const LESSON_STAGES = require('./lesson-stages');
-const STAGES = { serve: stageServe, resume: stageResume, setup: stageSetup, generate: stageGenerate, restart: stageRestart, build: stageBuild, fixtures: stageFixtures, readback: stageReadback, predict: stagePredict, key: stageKey, run: stageRun, fix: stageFix, quit: stageQuit, ...LESSON_STAGES };
+const STAGES = { serve: stageServe, resume: stageResume, setup: stageSetup, inputs: stageInputs, generate: stageGenerate, restart: stageRestart, build: stageBuild, fixtures: stageFixtures, readback: stageReadback, predict: stagePredict, key: stageKey, run: stageRun, fix: stageFix, quit: stageQuit, ...LESSON_STAGES };
 
 (async () => {
   const name = process.argv[2];

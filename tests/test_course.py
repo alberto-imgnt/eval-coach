@@ -84,6 +84,9 @@ class Gating(CourseBase):
         self.assertEqual(error.message, self.engine.lesson_text["ui"]["locked_tip"])
         self.assert_code("step_locked", self.engine.step_send, "generate")
         self.finish("several-runs")
+        self.assertEqual(self.state()["current_step"], "inputs")
+        self.assert_code("step_locked", self.engine.step_start, "generate")
+        self.engine.step_check("inputs")
         self.assertEqual(self.status_of("generate"), "active")
         self.assertEqual(self.state()["current_step"], "generate")
         self.engine.step_start("generate")
@@ -101,7 +104,7 @@ class Gating(CourseBase):
         self.assertEqual(self.status_of("several-runs"), "skipped")
         self.finish("mission")
         self.finish("hook")
-        self.assertEqual(self.status_of("generate"), "active")
+        self.assertEqual(self.status_of("inputs"), "active")
 
     def test_lessons_after_a_step_wait_for_that_step(self):
         self.setup_project()
@@ -433,7 +436,8 @@ class Skipping(CourseBase):
         self.mark_skipped("several-runs")
         self.finish("mission")
         self.finish("hook")
-        self.assertEqual(self.status_of("generate"), "active")
+        self.assertEqual(self.status_of("inputs"), "active")
+        self.engine.step_check("inputs")
         self.mark_step_done("generate")
         self.assertEqual(self.status_of("rules"), "active")
         self.assert_code("cannot_skip", self.engine.lesson_skip, "rules")
@@ -497,6 +501,7 @@ OLD_LESSON_IDS = ("loop", "generate-why", "build-why", "choices", "verify", "com
 def old_ids_progress(done):
     """Progress as the 11-lesson course wrote it: records, review items and per-lesson state for every old id."""
     data = new_progress("C:/p", "cli", "northwind")
+    del data["steps"]["inputs"]
     data["done"] = list(done)
     block = data["lessons"]
     block["seed"] = "abc"
@@ -523,12 +528,13 @@ class MigrationState(unittest.TestCase):
     def old(self, done):
         data = new_progress("C:/p", "cli", "northwind")
         del data["lessons"]
+        del data["steps"]["inputs"]
         data["done"] = list(done)
         return data
 
     def test_old_progress_loads_and_keeps_completed_steps(self):
         data = validate_progress(self.old(["generate", "build"]))
-        self.assertEqual(data["done"], ["generate", "build"])
+        self.assertEqual(data["done"], ["inputs", "generate", "build"])
         self.assertEqual(data["lessons"]["records"], [])
         self.assertEqual(data["lessons"]["review"], {"items": {}})
         self.assertIsNone(data["lessons"]["seed"])
@@ -571,7 +577,7 @@ class MigrationState(unittest.TestCase):
         data = self.old(["generate", "build", "fixtures", "readback", "predict"])
         del data["steps"]["key"]
         loaded = validate_progress(data, sealed_key_exists=False)
-        self.assertEqual(loaded["done"], ["generate", "build", "fixtures", "readback", "predict"])
+        self.assertEqual(loaded["done"], ["inputs", "generate", "build", "fixtures", "readback", "predict"])
         self.assertIn("rules", loaded["lessons"]["per_lesson"])
         self.assertIn("trust", loaded["lessons"]["per_lesson"])
         self.assertNotIn("surprise", loaded["lessons"]["per_lesson"])
@@ -605,10 +611,13 @@ class MigrationState(unittest.TestCase):
     def test_the_course_order_matches_the_lessons_the_content_must_define(self):
         self.assertEqual(LESSON_IDS, ("mission", "hook", "several-runs", "rules", "trust", "surprise", "baseline-why"))
         self.assertEqual([i for k, i in COURSE if k == "step"], list(STEP_IDS))
+        for track in ("script", "promptfoo"):
+            order = [item for _, item in store.course_items(track)]
+            self.assertEqual(order[order.index("several-runs"):][:3], ["several-runs", "inputs", "generate"])
 
     def test_progress_written_with_the_old_lesson_ids_loads_and_keeps_the_steps(self):
         data = validate_progress(old_ids_progress(["generate", "build"]))
-        self.assertEqual(data["done"], ["generate", "build"])
+        self.assertEqual(data["done"], ["inputs", "generate", "build"])
         block = data["lessons"]
         self.assertEqual(block["seed"], "abc")
         for old in OLD_LESSON_IDS:
@@ -642,6 +651,7 @@ class MigrationEngine(CourseBase):
         path = self.project / ".learning" / "progress.json"
         data = json.loads(path.read_text(encoding="utf-8"))
         del data["lessons"]
+        del data["steps"]["inputs"]
         data["done"] = list(done)
         path.write_text(json.dumps(data), encoding="utf-8")
         self.paths = project.Paths(self.home, self.project)
@@ -651,13 +661,13 @@ class MigrationEngine(CourseBase):
         engine = self.new_engine()
         state = engine.get_state()
         self.assertEqual(state["current_item"], {"kind": "lesson", "id": "trust"})
-        self.assertEqual([s["status"] for s in state["steps"][:3]], ["done", "done", "locked"])
+        self.assertEqual([s["status"] for s in state["steps"][:4]], ["done", "done", "done", "locked"])
         statuses = {i["id"]: i["status"] for i in state["course"]}
         for lesson in ("mission", "hook", "several-runs", "rules"):
             self.assertEqual(statuses[lesson], "skipped")
         self.assertEqual(state["review"], {"due": 0, "postponed": False})
         self.assertEqual(engine._lessons_block()["review"]["items"], {})
-        self.assertEqual(engine.progress["done"], ["generate", "build"])
+        self.assertEqual(engine.progress["done"], ["inputs", "generate", "build"])
 
     def test_migrated_lessons_schedule_no_reviews_even_after_a_long_time(self):
         self.write_old_progress(["generate", "build"])
@@ -677,12 +687,43 @@ class MigrationEngine(CourseBase):
         engine = self.new_engine()
         self.assertEqual(engine.get_state()["current_item"], {"kind": "lesson", "id": "mission"})
 
+    def test_a_saved_run_locks_existing_inputs_without_replacing_evidence(self):
+        self.write_old_progress([])
+        preflight_path = self.home / "preflight.json"
+        preflight = store.read_json(preflight_path)
+        store.write_json_atomic(preflight_path, {**preflight, "track": "promptfoo"})
+        # A legacy answer can exist before Generate is marked done.
+        self.paths.run_file(1).write_bytes(b"Saved answer")
+        before = {path: path.read_bytes() for path in
+                  (self.paths.progress_file, self.paths.prompt, self.paths.test_cases, self.paths.run_file(1))}
+        engine = self.new_engine()
+        self.assertEqual(engine.progress["done"], ["inputs"])
+        self.assertEqual(engine.progress["track"], "promptfoo")
+        self.assertEqual(engine.get_state()["current_step"], "generate")
+        self.assertEqual(engine.progress["steps"]["inputs"]["choice"]["prompt"],
+                         {"source": "existing", "sha256": store.file_sha256(self.paths.prompt)})
+        self.assertEqual({path: path.read_bytes() for path in before}, before)
+
+    def test_migration_preserves_each_finished_prefix_on_both_tracks(self):
+        self.write_old_progress([])
+        raw = store.read_json(self.paths.progress_file)
+        for track in ("script", "promptfoo"):
+            order = store.step_ids(track)[1:]
+            for n in range(len(order) + 1):
+                with self.subTest(track=track, finished=n):
+                    saved = {**raw, "done": list(order[:n]), "track": track}
+                    loaded = validate_progress(saved, paths=self.paths)
+                    self.assertEqual(loaded["done"], (["inputs"] if n else []) + saved["done"])
+                    if n:
+                        self.assertEqual(loaded["steps"]["inputs"]["choice"]["test_cases"],
+                                         {"source": "existing", "sha256": store.file_sha256(self.paths.test_cases)})
+
     def test_the_migrated_progress_is_saved_with_the_new_block_on_the_next_write(self):
         self.write_old_progress(["generate"])
         self.engine = self.new_engine()
         self.finish("rules")
         saved = json.loads((self.project / ".learning" / "progress.json").read_text(encoding="utf-8"))
-        self.assertEqual(saved["done"], ["generate"])
+        self.assertEqual(saved["done"], ["inputs", "generate"])
         self.assertEqual(saved["lessons"]["per_lesson"]["hook"]["status"], "skipped")
         self.assertEqual(saved["lessons"]["per_lesson"]["rules"]["status"], "done")
 
@@ -697,8 +738,8 @@ class MigrationEngine(CourseBase):
         self.write_old_ids_progress(["generate", "build"])
         engine = self.new_engine()
         state = engine.get_state()
-        self.assertEqual(engine.progress["done"], ["generate", "build"])
-        self.assertEqual([s["status"] for s in state["steps"][:3]], ["done", "done", "locked"])
+        self.assertEqual(engine.progress["done"], ["inputs", "generate", "build"])
+        self.assertEqual([s["status"] for s in state["steps"][:4]], ["done", "done", "done", "locked"])
         self.assertEqual(state["current_item"], {"kind": "lesson", "id": "trust"})
         statuses = {i["id"]: i["status"] for i in state["course"]}
         self.assertEqual((statuses["mission"], statuses["hook"]), ("done", "done"))
@@ -717,7 +758,7 @@ class MigrationEngine(CourseBase):
         text = json.dumps(saved["lessons"])
         for old in OLD_LESSON_IDS:
             self.assertNotIn(f'"{old}"', text)
-        self.assertEqual(saved["done"], ["generate", "build"])
+        self.assertEqual(saved["done"], ["inputs", "generate", "build"])
 
     def test_a_pending_file_with_only_the_mission_merges_into_a_new_project(self):
         self.finish("mission")
@@ -760,13 +801,15 @@ class NoCourse(CourseBase):
 
     def test_steps_open_as_before(self):
         state = self.state()
-        self.assertEqual(state["current_step"], "generate")
-        self.assertEqual(state["current_item"], {"kind": "step", "id": "generate"})
+        self.assertEqual(state["current_step"], "inputs")
+        self.assertEqual(state["current_item"], {"kind": "step", "id": "inputs"})
         self.assertEqual([(i["kind"], i["id"]) for i in state["course"]], [("step", s) for s in STEP_IDS])
+        self.engine.step_check("inputs")
         self.engine.step_start("generate")
         self.assertEqual(self.terminal.starts[-1]["cwd"], str(self.paths.blind))
 
     def test_steps_unlock_one_after_another(self):
+        self.engine.step_check("inputs")
         self.mark_step_done("generate")
         self.assertEqual(self.state()["current_step"], "build")
 
@@ -1103,6 +1146,7 @@ class StepQuestions(CourseBase):
         self.assertTrue(self.question()["passed"])
 
     def test_the_answer_survives_a_restart(self):
+        self.mark_step_done("inputs")
         self.mark_step_done("generate")
         item = self.course.step_checks["generate"]
         self.engine.step_question_answer("generate", ch.correct_option(item))

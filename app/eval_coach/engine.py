@@ -135,9 +135,8 @@ class Engine:
         except (CorruptStateError, OSError):
             self._warn(self._corrupt_message(paths))
 
-    @staticmethod
-    def _read_progress(paths):
-        return store.load_progress(paths.progress_file, paths.sealed_key.is_file())
+    def _read_progress(self, paths):
+        return store.load_progress(paths.progress_file, paths.sealed_key.is_file(), paths, self.preflight.track)
 
     def _save(self):
         store.save_progress(self.paths.progress_file, self.progress)
@@ -1157,7 +1156,7 @@ class Engine:
             if paths is not None:
                 reset_lib.prune_empty(paths.project, reset_lib.PROJECT_FOLDER_CONTENTS
                                       + (reset_lib.PROJECT_SKILLS_DIR, reset_lib.PROJECT_PART1_DIR,
-                                         reset_lib.PROJECT_PART2_DIR))
+                                         reset_lib.PROJECT_PART2_DIR, project.REPLACED_INPUTS))
             self.paths = None
             self.progress = None
             self.preflight.reset_state()

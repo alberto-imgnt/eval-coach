@@ -25,6 +25,68 @@
     "ready_hint": "Wait until your AI is ready for a message, then paste the text and press Enter."
   },
   "steps": {
+    "inputs": {
+      "kind": "choose_inputs",
+      "title": "Choose your inputs",
+      "goal": "Check which prompt and test cases Part 3 will use before you collect answers.",
+      "why": [
+        "Your scores only tell you something useful when the prompt and test cases are for the same task.",
+        "You can keep the files already in your project or choose the work you saved in Parts 1 and 2."
+      ],
+      "instructions": [
+        "Read the active prompt and test cases below. Choose a different source only if you want to change a file.",
+        "The app saves a copy of each file it replaces. Your original files from Parts 1 and 2 and from setup stay as they were.",
+        "Press Continue to keep this pair for Part 3. You cannot switch these choices afterward."
+      ],
+      "troubleshooting": [
+        {"problem": "A file from an earlier Part is not available.", "fix": "Read the reason beside that choice. You can keep a usable file already in your project or choose the Practice task."}
+      ],
+      "gate": {
+        "prompt": {"label": "Prompt ready"},
+        "test_cases": {"label": "Test cases ready"}
+      },
+      "ui": {
+        "prompt": "Prompt",
+        "test_cases": "Test cases",
+        "active": "Active file: {name}",
+        "keep": "Keep the active file",
+        "practice": "Practice task",
+        "own": "Files you brought",
+        "project": "A file in your project folder",
+        "existing": "Files already in your project when you started Part 3",
+        "part1": "Your Part 1 rewrite",
+        "part2": "Your Part 2 test cases",
+        "practice_note": "The Practice task is a fallback for practice only. It cannot be your submission.",
+        "changed_after_answer": "This rewrite changed after its answer was saved. Use it only if you want the updated version.",
+        "mismatch": "These files may be for different tasks. Check the task input in both files before you continue.",
+        "own_task_mix": "Part 1 and Part 2 use the Practice task. Check whether these files match the task you brought.",
+        "unchanged": "The chosen source is unchanged.",
+        "changed": "The chosen source has changed since you continued.",
+        "gone": "The chosen source is no longer available.",
+        "both": "Use both of my files",
+        "saving": "Saving choices…",
+        "continue": "Continue",
+        "continuing": "Continuing…"
+      },
+      "reasons": {
+        "skipped": "You skipped {part}, so that file is not offered.",
+        "unfinished": "Finish the {part} step that saves this file before using it here.",
+        "missing": "The file could not be found.",
+        "unreadable": "The file could not be read.",
+        "blank": "The file has no text.",
+        "too_large": "The file is larger than 1 MB.",
+        "not_text": "The file needs to be a plain text file.",
+        "no_input": "Add the task notes under a heading called Test input.",
+        "no_criteria": "The app could not find any criteria in the test cases. Write each criterion as a heading such as “### C1: Length”, with a Requirement line and a Threshold line under it.",
+        "few_criteria": "The test cases have {count} of the {min} criteria the app needs. Add {missing} more, each with a Requirement and a Threshold.",
+        "no_content_criterion": "None of the criteria checks what the answer says. Add at least one whose threshold names the terms, labels or facts the answer must include."
+      },
+      "messages": {
+        "bad_input": "Choose a listed source for each file you want to change.",
+        "unavailable": "That source cannot be used. {reason}",
+        "save_failed": "The files could not be saved safely. Check the project folder and try again."
+      }
+    },
     "generate": {
       "title": "Collect your answers",
       "cli_mode": "paste",
@@ -533,10 +595,10 @@
       "tracks": {
         "promptfoo": {
           "why": [
-            "The baseline is the starting number for the next iteration. In Part 4 you change the prompt, run the same config, and compare the new numbers with these.",
+            "The baseline is your starting point. In Part 4 you change the prompt, run the same config, and compare each rule. A total can hide a rule that got worse. One comparison is an observation, not proof. A flat or lower score is no measured gain on these rules. A simpler prompt can still be worth keeping at the same score, and the score says nothing about qualities no rule checks.",
             "It is a pass rate across five runs, not one answer, because the model varies from run to run. For example, 4 of 5 is 80%.",
             "It is logged only after your thresholds are settled. If a threshold changes later, the logged numbers used the earlier wording, so they no longer mean the same thing. That is why the first look was never your baseline.",
-            "NOT CHECKED means not covered. A NOT CHECKED criterion stays in the log, marked as not checked, and is left out of the overall total. It is a gap to be honest about, not a pass.",
+            "NOT CHECKED means not covered. Keep it visible in the log and out of the overall total. If a rule moves to NOT CHECKED, that is lost coverage, not a gain.",
             "Never edit the config to make a failing output pass. A failing result is the information. If a result looks wrong, change the threshold in test-cases.md and let your AI update promptfooconfig.yaml to match.",
             "The app runs your config on the five runs itself, with promptfoo and no AI, and compares its numbers with your log. Your AI writes the log. The app only reads it and never changes it."
           ],
@@ -547,7 +609,7 @@
             "Press Run my checker on the five runs. The app runs your promptfoo config itself and shows the pass rate for each criterion. A non-zero exit code is normal. It only means at least one check failed or is NOT CHECKED.",
             "Compare the app's count with the entry your AI wrote. The numbers should be the same. If your AI logged a different number, say so in the terminal and ask it to correct the entry, or fix the number yourself in iteration-log.md. The app never edits your log.",
             "Press Check my work.",
-            "Before Part 4, keep your whole project folder. Look at your five runs and pick the one you think is best. It becomes your known-good output, and your checks should score it 95% or more. If they do not, that tells you something about the config, not the prompt.",
+            "Before Part 4, keep your whole project folder. Choose a known-good answer from the written requirements before you see its score. The config should score it 95% or more. If not, investigate the config or the written rules without loosening a rule just to pass.",
             "Optional: name the criterion that failed most often in your baseline and write one guess why. It becomes your hypothesis in Part 4."
           ],
           "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The runs are the tests named run-1 to run-5. The prompt file is prompt-v0.md. The model was {model}.",
@@ -580,10 +642,10 @@
       },
               "goal": "Record Iteration 0: your pass rate for each criterion across your saved runs. Your AI writes the log, and the app counts the same runs itself to confirm it.",
               "why": [
-                "The baseline is the starting number for the next iteration. In Part 4 you change the prompt, run the same checker, and compare the new numbers with these. If the score does not move, the change did not help.",
+                "The baseline is your starting point. In Part 4 you change the prompt, run the same checker, and compare each rule. A total can hide a rule that got worse. One comparison is an observation, not proof. A flat or lower score is no measured gain on these rules. A simpler prompt can still be worth keeping at the same score, and the score says nothing about qualities no rule checks.",
                 "It is a pass rate across five runs, not one answer, because the model varies from run to run. For example, 4 of 5 is 80%.",
                 "It is logged only after your thresholds are settled. If a threshold changes later, the logged numbers used the earlier wording, so they no longer mean the same thing. That is why the first look was never your baseline.",
-                "NOT CHECKED means not covered. A NOT CHECKED criterion stays in the log, marked as not checked, and is left out of the overall total. It is a gap to be honest about, not a pass.",
+                "NOT CHECKED means not covered. Keep it visible in the log and out of the overall total. If a rule moves to NOT CHECKED, that is lost coverage, not a gain.",
                 "Never edit the checker to make a failing output pass. A failing result is the information. If a result looks wrong, change the threshold in test-cases.md and let your AI update check.py to match.",
                 "The app runs your checker on the five runs itself, with no AI, and compares its numbers with your log. Your AI writes the log. The app only reads it and never changes it."
               ],
@@ -594,7 +656,7 @@
                 "Press Run my checker on the five runs. The app runs check.py itself and shows the pass rate for each criterion. Exit code 1 is normal. It only means at least one check failed or is NOT CHECKED.",
                 "Compare the app's count with the entry your AI wrote. The numbers should be the same. If your AI logged a different number, say so in the terminal and ask it to correct the entry, or fix the number yourself in iteration-log.md. The app never edits your log.",
                 "Press Check my work.",
-                "Before Part 4, keep your whole project folder. Look at your five runs and pick the one you think is best. It becomes your known-good output, and your checker should score it 95% or more. If it does not, that tells you something about the checker, not the prompt.",
+                "Before Part 4, keep your whole project folder. Choose a known-good answer from the written requirements before you see its score. The checker should score it 95% or more. If not, investigate the checker or the written rules without loosening a rule just to pass.",
                 "Optional: name the criterion that failed most often in your baseline and write one guess why. It becomes your hypothesis in Part 4."
               ],
               "line_template": "Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are runs/run-1.txt to runs/run-5.txt. The prompt file is prompt-v0.md. The model was {model}.",

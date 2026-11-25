@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "change": "curriculum-handoffs-stage3-alignment",
+  "tree": "33e382817cb77e08ed3b3a73a3d89031b680dce6",
+  "excludes": [
+    "openspec"
+  ],
+  "head": "aefd618169785054d2e8cd82245602c28a1bbca0",
+  "checks": [
+    {
+      "name": "backend",
+      "command": "python -m unittest discover -s tests",
+      "exit_code": 0,
+      "tests": 1888,
+      "finished": "2026-11-24T20:45:06Z"
+    },
+    {
+      "name": "interface",
+      "command": "node tests/frontend/.tmp/node_modules/@playwright/test/cli.js test --config tests/frontend/playwright.config.js",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-24T20:55:32Z"
+    },
+    {
+      "name": "build",
+      "command": "python tools/build_pyz.py --smoke",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-24T20:55:37Z"
+    },
+    {
+      "name": "e2e",
+      "command": "cmd /c node e2e-work\\harness\\run-all.js --fresh > e2e-work\\_gate_e2e.txt 2>&1",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-24T21:01:00Z"
+    },
+    {
+      "name": "e2e-promptfoo",
+      "command": "cmd /c node e2e-work\\harness\\run-all.js --fresh --track promptfoo > e2e-work\\_gate_pf.txt 2>&1",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-24T21:07:00Z"
+    },
+    {
+      "name": "backend-embedded",
+      "command": "spikes\\phase0-preflight\\runtime\\python-embed-3.13.17-nopth\\python.exe -m unittest discover -s tests",
+      "exit_code": 0,
+      "tests": 1888,
+      "finished": "2026-11-24T21:15:05Z"
+    }
+  ]
+}

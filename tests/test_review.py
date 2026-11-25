@@ -173,6 +173,7 @@ class ReviewQueue(CourseBase):
     def complete_three(self):
         """Hook, several-runs and rules: eleven retrieval items from three lessons."""
         self.complete("mission", "hook", "several-runs")
+        self.mark_step_done("inputs")
         self.mark_step_done("generate")
         self.complete("rules")
 

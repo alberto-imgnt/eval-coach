@@ -3,6 +3,15 @@
   "mission": "Understand how to turn the test cases, criteria and thresholds from Part 2 into reusable parts, and how those parts fit into an evaluated AI process.",
   "step_checks": [
     {
+      "id": "sc-inputs",
+      "step": "inputs",
+      "prompt": "Why check the prompt and the test cases before collecting answers?",
+      "options": [
+        {"id": "a", "text": "So the answers and rules cover the same task", "correct": true, "feedback": "Right. A score makes sense only when the rules cover the task the prompt asked for."},
+        {"id": "b", "text": "So your AI reads the rules before it answers", "correct": false, "feedback": "Your AI sees only the prompt when it answers. The test cases are for scoring later."}
+      ]
+    },
+    {
       "id": "sc-generate",
       "step": "generate",
       "prompt": "Your five answers are saved in your project. What made them fair to score?",
@@ -672,7 +681,7 @@
       "win": "You can explain what a pass rate across answers tells you and what it does not, and you know what to keep for Part 4.",
       "minutes": 6,
       "skippable": false,
-      "body": "**In the method.** Keep a record, so every change can be compared with where you started.\n\n**The idea.** A baseline is your starting score: for each rule, how many of your five answers passed, such as 4 of 5, or 80%. It must be a pass rate, because one answer tells you only about itself. A rule that could not be judged stays in the record as NOT CHECKED, outside the total.\n\nRecord it after your rules are settled, because changing a rule later would change what the logged numbers mean.\n\n**What a score tells you.** It describes how one prompt did against one set of rules. It does not guarantee every future answer, and it says nothing about qualities no rule checks.\n\n**What comes next.** In Part 4 you change the prompt, check again with the same rules and compare with this score. If the score did not move, the change did not help. Part 5 removes the instructions that do no work.\n\n**Your own work.** The same method fits any task that repeats, has clear requirements and can be checked by rules, such as a message after a client call, a summary of a long thread or a job description. In Part 6 you pick your own. It is live: bring ideas to office hours or the AIR discussion. Practice task is practice only.\n\n**How this course does it.** Pick your best answer as your known-good output. Your checker should score it 95% or more; if not, look at the checker, not the prompt. Other approaches work too.\n\n**How this fits the Stage 3 certification.** Stage 3 asks for three things: the Prompt, the Evaluations and the Log. Your prompt file is the start of the Prompt. Your test cases, your checker and the fixtures that tested it are the start of the Evaluations. Iteration 0 is the first entry of the Log, which needs at least two rounds of improvement. Part 4 adds those rounds and checks that a known-good answer scores 95% or more. Part 5 checks that every instruction in your prompt earns its place. Scripts, promptfoo files and written test cases are all accepted, and the file names and layout here are only this course's way of organizing the work. This note is for orientation only. The program's own instructions decide what to submit, and nothing here is needed to finish this course.",
+      "body": "**In the method.** Keep a record so you can compare changes.\n\n**The idea.** A baseline is your starting score. Record it after the rules are settled: for each rule, count how many answers passed, such as 4 of 5. Keep NOT CHECKED visible and outside the total.\n\n**What a score tells you.** It does not guarantee every future answer or tell you about qualities no rule checks. A total can hide a rule that got worse. A rule that moves to NOT CHECKED is lost coverage, not a gain.\n\n**What comes next.** In Part 4 you edit the prompt and compare each rule using the same checks. One comparison is an observation, not proof. A flat or lower score is no measured gain on these rules, but a simpler prompt can be worth keeping at the same score. Part 5 removes instructions that do no work.\n\n**Your own work.** Pick a task that repeats, has clear requirements and can be checked by rules: a message after a client call, a summary of a long thread or a job description. In Part 6 you pick your own. It is live: bring ideas to office hours or the AIR discussion. Practice task is practice only.\n\n**How this course does it.** Choose a known-good answer from the written requirements before you see its score. If it scores low, investigate the checker or the rules. Other approaches work too.\n\n**How this fits the Stage 3 certification.** Stage 3 asks for three things: the Prompt, the Evaluations and the Log. Your prompt file is the start of the Prompt. Your test cases, your checker and the fixtures that tested it are the start of the Evaluations. Iteration 0 is the first entry of the Log. Stage 3 asks for at least two documented iterations. In Part 4, log two rounds after Iteration 0. Iteration 0 does not count as one. Part 4 checks that a known-good answer can score 95% or more. The overall score across five answers is a separate coaching target, not a gate. Part 5 audits each instruction: 90% or more must serve a rule to meet the criterion. Scripts, promptfoo files and written test cases are all accepted. The file names and layout are course choices. The program's instructions decide what to submit; nothing here is needed to finish this course.",
       "activities": [
         {
           "id": "baseline-total",
@@ -718,15 +727,15 @@
           "options": [
             {"id": "a", "text": "Your score on run one from the first look", "correct": false, "feedback": "The first look happens before your thresholds are settled, so it cannot be this."},
             {"id": "b", "text": "Your score on both fixtures after the spec fix", "correct": false, "feedback": "Fixtures test the checker. They are never logged as a score for your prompt."},
-            {"id": "c", "text": "Your pass rate per criterion across the five runs", "correct": true, "feedback": "Right. It is recorded as Iteration 0, and Part 4 tries to beat it."},
+            {"id": "c", "text": "Your pass rate per criterion across the five runs", "correct": true, "feedback": "Right. Iteration 0 records those rates so you can compare each rule after a change in Part 4."},
             {"id": "d", "text": "Your score on the one answer you liked best", "correct": false, "feedback": "A baseline uses every run, including the ones you would rather not keep."}
           ]
         },
         {
           "id": "r-baseline-2",
-          "prompt": "Before Part 4, what do you do with your five runs?",
+          "prompt": "How do you choose a known-good answer to check in Part 4?",
           "options": [
-            {"id": "a", "text": "Pick the best one as your known-good output", "correct": true, "feedback": "Right. Your checker should score it 95% or more."},
+            {"id": "a", "text": "Choose one that meets the requirements before scoring", "correct": true, "feedback": "Right. Use the written requirements first. Then see if your checker scores that answer 95% or more."},
             {"id": "b", "text": "Delete them so the next runs start clean", "correct": false, "feedback": "Keep your whole project folder. Part 4 builds on all of it."},
             {"id": "c", "text": "Merge them into one long file for checking", "correct": false, "feedback": "Each run is scored on its own. Merging them would destroy what a pass rate measures."},
             {"id": "d", "text": "Rewrite them until the checker passes them all", "correct": false, "feedback": "The runs record what the prompt produced. Rewriting them would make your baseline meaningless."}
@@ -737,7 +746,7 @@
           "prompt": "The output you picked as known-good scores below 95% on your checker. What does that point to?",
           "options": [
             {"id": "a", "text": "Something about the prompt, not about the checker", "correct": false, "feedback": "This output is one you chose because you believe it is good, so the prompt that wrote it has already done its job."},
-            {"id": "b", "text": "Something about the checker, not about the prompt", "correct": true, "feedback": "Right. If an output you trust scores low, look at the checker."},
+            {"id": "b", "text": "Something about the checker or the written rules", "correct": true, "feedback": "Right. Investigate the checker or the written rules. Do not loosen a rule just to raise the score."},
             {"id": "c", "text": "The model got worse since you ran it", "correct": false, "feedback": "The file has not changed since you saved it, so the model is not involved."},
             {"id": "d", "text": "The five runs sit in the wrong folder", "correct": false, "feedback": "Where the files are kept does not change how the checker scores one of them."}
           ]

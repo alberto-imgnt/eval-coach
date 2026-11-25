@@ -117,7 +117,7 @@ class BundledCourse(unittest.TestCase):
     def test_course_order_is_the_documented_one(self):
         self.assertEqual(
             [i for k, i in COURSE],
-            ["mission", "hook", "several-runs", "generate", "rules", "build", "trust", "fixtures", "readback",
+            ["mission", "hook", "several-runs", "inputs", "generate", "rules", "build", "trust", "fixtures", "readback",
              "predict", "key", "surprise", "run", "fix", "baseline-why", "baseline"])
         self.assertEqual(list(LESSON_IDS), NEW_LESSONS)
 

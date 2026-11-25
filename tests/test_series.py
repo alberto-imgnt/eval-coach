@@ -270,7 +270,7 @@ class SeriesState(CourseBase):
         part1 = next(p for p in now["parts"] if p["id"] == "part-1")
         part3 = next(p for p in now["parts"] if p["id"] == "part-3")
         self.assertEqual((part1["state"], part1["done"], part1["total"]), ("in_progress", 3, 9))
-        self.assertEqual((part3["state"], part3["done"], part3["total"]), ("not_started", 0, 16))
+        self.assertEqual((part3["state"], part3["done"], part3["total"]), ("not_started", 0, 17))
         self.assertNotIn("ui", part1)  # the interface words go to course_text, not to the map
 
     def test_a_part_one_row_has_no_coming_soon_state(self):
