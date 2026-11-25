@@ -28,8 +28,8 @@ FIX_LINE = ("I changed test-cases.md. Update promptfooconfig.yaml to match, chan
             "threshold changed. Then run the two fixtures again.")
 BASELINE_LINE = ("Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The runs are the tests "
                  "named run-1 to run-5. The prompt file is prompt-v0.md. The model was {model}.")
-PF_STEPS = ["generate", "build", "fixtures", "fixtures-config", "readback", "predict", "key", "run", "fix", "baseline"]
-SCRIPT_STEPS = ["generate", "build", "fixtures", "readback", "predict", "key", "run", "fix", "baseline"]
+PF_STEPS = ["inputs", "generate", "build", "fixtures", "fixtures-config", "readback", "predict", "key", "run", "fix", "baseline"]
+SCRIPT_STEPS = ["inputs", "generate", "build", "fixtures", "readback", "predict", "key", "run", "fix", "baseline"]
 
 
 class PfCase(base.EngineCase):
@@ -162,7 +162,7 @@ class Steps(PfCase):
 
 class Text(PfCase):
     def texts(self, track):
-        self.setup_project()
+        self.setup_project(choose_inputs=False)
         self.engine.preflight.set_track(track)
         return {step: self.engine._text(step) for step in store.step_ids(track)}
 
@@ -196,7 +196,7 @@ class Text(PfCase):
                     self.assertNotRegex(string, r"(?i)promptfoo")
 
     def test_script_text_is_exactly_the_shared_text(self):
-        self.setup_project()
+        self.setup_project(choose_inputs=False)
         for step in SCRIPT_STEPS:
             self.engine.preflight.set_track("script")
             self.assertIs(self.engine._text(step), self.engine.content["steps"][step])
@@ -641,7 +641,7 @@ class Baseline(PfCase):
 
 class TrackFixed(PfCase):
     def test_before_any_step_the_track_can_change_and_the_steps_follow(self):
-        self.setup_project()
+        self.setup_project(choose_inputs=False)
         self.engine.preflight_track("script")
         self.assertEqual(self.step_ids(), SCRIPT_STEPS)
         self.engine.preflight_track("promptfoo")
@@ -708,7 +708,7 @@ class TrackFixed(PfCase):
         self.assertEqual(reopened.get_state()["current_step"], "fix")
 
     def test_progress_validation_knows_both_orders(self):
-        pf_done = ["generate", "build", "fixtures", "fixtures-config", "readback"]
+        pf_done = ["inputs", "generate", "build", "fixtures", "fixtures-config", "readback"]
         data = new_progress("p", "c", "northwind")
         data["track"] = "promptfoo"
         data["done"] = pf_done
@@ -716,7 +716,7 @@ class TrackFixed(PfCase):
         data["track"] = None  # the extra step alone says which track it is
         self.assertEqual(validate_progress(data)["done"], pf_done)
         script = new_progress("p", "c", "northwind")
-        script["done"] = ["generate", "build", "fixtures", "readback"]
+        script["done"] = ["inputs", "generate", "build", "fixtures", "readback"]
         self.assertEqual(validate_progress(script)["done"], script["done"])
         script["track"] = "promptfoo"
         with self.assertRaises(CorruptStateError):

@@ -601,7 +601,7 @@ def load_step_content():
     missing or invalid file, a step with no text, a step id two Parts share, or a step `kind` nobody handles.
     """
     problems = []
-    from . import criteria_steps, part_steps  # noqa: F401  importing them registers the step kinds the Parts use
+    from . import criteria_steps, input_step, part_steps  # noqa: F401  registers the step kinds
     content, ui = None, {}
     for part in state.PARTS:
         try:

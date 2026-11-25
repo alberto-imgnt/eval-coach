@@ -53,11 +53,13 @@ class EngineCase(unittest.TestCase):
     def new_engine(self):
         return Engine(self.home, self.terminal, poll_interval=0.01)
 
-    def setup_project(self, **extra):
+    def setup_project(self, *, choose_inputs=True, **extra):
         body = {"project_path": str(self.project), "cli_command": "mycli --model sonnet", "starter": "northwind"}
         body.update(extra)
         self.engine.setup(body)
         self.paths = Paths(self.home, self.project)
+        if choose_inputs and self.engine._status("inputs") == "active":
+            self.engine.step_check("inputs")
 
     def state(self, step=None):
         return self.engine.get_state(step)
@@ -166,8 +168,11 @@ class EngineCase(unittest.TestCase):
 
 class WalkAllSteps(EngineCase):
     def test_full_walk(self):
-        self.setup_project()
+        self.setup_project(choose_inputs=False)
         self.assertTrue(self.state()["configured"])
+        self.assertEqual(self.state()["current_step"], "inputs")
+        self.assert_code("step_locked", self.engine.step_start, "generate")
+        self.assertTrue(self.check("inputs")["ok"])
         self.assertEqual(self.state()["current_step"], "generate")
         self.assert_key_hidden()
 
@@ -309,7 +314,7 @@ class Sequence(EngineCase):
         self.assertFalse(self.state()["configured"])
         words = self.state()["step"]  # the step that is next to do shows its words only before setup
         self.assertTrue(words["preview"])
-        self.assertEqual((words["id"], words["status"], words["cli"], words["data"]), ("generate", "active", None, {}))
+        self.assertEqual((words["id"], words["status"], words["cli"], words["data"]), ("inputs", "active", None, {}))
 
     def test_done_steps_stay_viewable(self):
         self.to_step("build")
@@ -661,6 +666,7 @@ class ResumeOlderProgress(EngineCase):
         """Rewrite progress.json as an older version would have left it."""
         data = json.loads(self.paths.progress_file.read_text(encoding="utf-8"))
         data["steps"].pop("key")
+        data["steps"].pop("inputs")
         data["done"] = self.OLD_ORDER[:self.OLD_ORDER.index(done_upto) + 1]
         self.paths.progress_file.write_text(json.dumps(data), encoding="utf-8")
 
@@ -676,7 +682,7 @@ class ResumeOlderProgress(EngineCase):
 
     def assert_loaded(self, expected_done):
         self.assertTrue(self.state()["configured"], self.state()["setup"]["warnings"])
-        self.assertEqual(self.done_list(), expected_done)
+        self.assertEqual(self.done_list(), ["inputs", *expected_done])
         self.assertEqual(self.state()["setup"]["warnings"], [])
 
     def test_predict_done_and_key_sealed_marks_key_done(self):
@@ -752,10 +758,10 @@ class ResumeOlderProgress(EngineCase):
         self.to_step("fix")
         self.reopen()
         self.engine.setup({"project_path": str(self.project), "cli_command": ""})
-        self.assertEqual(self.done_list(), ["generate", "build", "fixtures", "readback", "predict", "key", "run"])
+        self.assertEqual(self.done_list(), ["inputs", "generate", "build", "fixtures", "readback", "predict", "key", "run"])
         self.paths.sealed_key.unlink()
         self.reopen()
-        self.assertEqual(self.done_list(), ["generate", "build", "fixtures", "readback", "predict", "key", "run"])
+        self.assertEqual(self.done_list(), ["inputs", "generate", "build", "fixtures", "readback", "predict", "key", "run"])
 
     def test_older_progress_keeps_the_key_withheld_until_a_run(self):
         self.to_step("fix")

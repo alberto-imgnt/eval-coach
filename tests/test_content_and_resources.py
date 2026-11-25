@@ -119,7 +119,7 @@ class Content(unittest.TestCase):
 
     def test_every_step_is_complete(self):
         self.assertEqual(list(self.steps),
-                         ["generate", "build", "fixtures", "fixtures-config", "readback", "predict", "key", "run", "fix",
+                         ["inputs", "generate", "build", "fixtures", "fixtures-config", "readback", "predict", "key", "run", "fix",
                           "baseline", "live"])
         for step_id, step in self.steps.items():
             for field in ("title", "goal", "why", "instructions", "troubleshooting", "gate"):

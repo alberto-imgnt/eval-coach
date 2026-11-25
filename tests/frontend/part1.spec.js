@@ -128,7 +128,7 @@ test('opening Part 1 shows its own header, course list and groups, and Part 3 ke
   await page.locator('#series-open-part-3').click();
   await expect(page.locator('.brand-sub')).toHaveText('Part 3 · Running evals and baseline');
   await expect(page.locator('.course-group').first()).toHaveText('Why check AI work');
-  await expect(page.locator('.course-item')).toHaveCount(16);
+  await expect(page.locator('.course-item')).toHaveCount(17);
   await page.locator('#back-to-series').click();
   await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
   await page.locator('#series-open-part-1').click();
@@ -466,7 +466,7 @@ test('a lower second score is explained without blaming the labels, and the writ
   await expect(page.locator('#compare-notes')).toContainText('A lower second score can happen');
   await expect(page.locator('#compare-notes')).toContainText('still missing');
   await expect(page.locator('#check-work')).toHaveCount(0);
-  await expect(page.locator('.check-items li').nth(1)).toContainText('Write what your labels made you add');
+  await expect(page.locator('.check-items li').nth(1)).toContainText('Write what you added when you used labels');
   await expect(page.locator('#continue')).toHaveAttribute('aria-disabled', 'true');
   await page.locator('#reflection-added').fill('The reader and the length.');
   await page.locator('#reflection-better').fill('It is not better; the ask is still missing.');

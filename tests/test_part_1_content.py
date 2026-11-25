@@ -291,6 +291,10 @@ class Lessons(unittest.TestCase):
         self.assertIn(TAKEAWAY, body)
         self.assertIn("hold the same information under different labels", body)
         self.assertIn("The benefit comes from the structure", body)
+        self.assertIn("tends to give you four benefits", body)
+        self.assertIn("One comparison is an observation, not proof", body)
+        self.assertIn("In Part 3, you can choose your rewrite as the prompt to score", body)
+        self.assertNotRegex(body, r"(?i)your second prompt did better")
         self.assertIn("Real work does not come with a card of requirements. So how do you know the second answer is better?", body)
         self.assertRegex(body, r"(?i)two prompts and two outputs are saved in your project folder")
         question = body.index("how do you know the second answer is better?")
@@ -499,7 +503,8 @@ class Steps(unittest.TestCase):
         self.assertRegex(compare["worse_note"], r"(?i)rather than blaming")
         reflections = steps_data()["rescore"]["reflections"]
         self.assertEqual([r["id"] for r in reflections], ["added", "better"])
-        self.assertRegex(reflections[0]["label"], r"(?i)what did your labels make you add")
+        self.assertIn("What did you add when you used labels?", reflections[0]["label"])
+        self.assertIn("What differed between the answers?", reflections[1]["label"])
 
     def test_the_own_step_says_what_is_private_and_starts_no_cli(self):
         own = steps_data()["own"]

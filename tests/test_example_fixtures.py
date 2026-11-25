@@ -277,7 +277,7 @@ class ExampleFixturesPromptfoo(PfCase):
 
     def test_the_troubleshooting_entry_is_on_both_tracks_for_the_fixtures_step(self):
         self.setup_project()
-        self.engine.progress["done"] = ["generate", "build"]
+        self.engine.progress["done"] = ["inputs", "generate", "build"]
         self.engine._save()
         text = self.state("fixtures")["step"]["troubleshooting"]
         self.assertTrue([t for t in text if "Practice task" in t["problem"]])
@@ -288,7 +288,7 @@ class ExampleFixturesHttp(ServerCase):
 
     def to_fixtures(self):
         self.setup_project()
-        self.engine.progress["done"] = ["generate", "build"]
+        self.engine.progress["done"] = ["inputs", "generate", "build"]
         self.engine._save()
         self.work = Path(self.engine.paths.work_fixtures)
 
@@ -334,7 +334,7 @@ class ExampleFixturesHttp(ServerCase):
         self.setup_project()
         status, body = self.post(self.ROUTE, {"step": "fixtures"})
         self.assertEqual((status, body["error"]["code"]), (400, "step_locked"))
-        self.engine.progress["done"] = ["generate", "build"]
+        self.engine.progress["done"] = ["inputs", "generate", "build"]
         self.engine._save()
         status, body = self.post("/api/step/start", {"step": "fixtures"})
         self.assertEqual(status, 200, body)
@@ -349,7 +349,7 @@ class ExampleFixturesHttp(ServerCase):
         status, body = self.post("/api/setup", dict(OWN_FILES, project_path=str(self.tmp / "own"),
                                                     cli_command="cli", starter="own"))
         self.assertEqual(status, 200, body)
-        self.engine.progress["done"] = ["generate", "build"]
+        self.engine.progress["done"] = ["inputs", "generate", "build"]
         self.engine._save()
         status, body = self.post(self.ROUTE, {"step": "fixtures", "replace": True})
         self.assertEqual((status, body["error"]["code"]), (400, "example_fixtures_northwind_only"))

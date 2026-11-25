@@ -59,7 +59,7 @@
     "journey_done_steps": "{done} of {total} steps done",
     "course_groups": [
       {"id": "why", "label": "Why check AI work", "items": ["mission", "hook"]},
-      {"id": "collect", "label": "Collect answers", "items": ["several-runs", "generate"]},
+      {"id": "collect", "label": "Collect answers", "items": ["several-runs", "inputs", "generate"]},
       {"id": "rules", "label": "Turn it into rules", "items": ["rules", "build"]},
       {"id": "test", "label": "Test the checker", "items": ["trust", "fixtures", "fixtures-config", "readback", "predict", "key"]},
       {"id": "read", "label": "Read results and improve", "items": ["surprise", "run", "fix"]},

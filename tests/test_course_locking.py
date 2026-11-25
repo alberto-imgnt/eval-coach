@@ -88,7 +88,7 @@ class PartGate(LockBase):
         self.assertEqual(self.series_row("part-3")["state"], "not_started")
 
     def test_a_participant_already_ahead_is_held_but_keeps_their_work(self):
-        self.engine.progress["done"][:] = ["generate"]
+        self.engine.progress["done"][:] = ["inputs", "generate"]
         self.engine._save()
         self.assertEqual(set(self.statuses(PART_3).values()), {"locked"})
         self.finish_part(PART_1)
@@ -102,6 +102,14 @@ class PartGate(LockBase):
 
 
 class WithinAPart(LockBase):
+    def test_demo_access_does_not_skip_the_input_choice(self):
+        self.engine._demo_on = True
+        self.finish_before("inputs")
+        self.assertEqual(self.statuses(PART_3)["inputs"], "active")
+        self.assert_code("step_locked", self.engine.step_start, "generate")
+        self.engine.step_check("inputs")
+        self.assertEqual(self.statuses(PART_3)["generate"], "active")
+
     def test_only_the_next_item_opens_in_an_open_part(self):
         statuses = self.statuses(PART_1)
         self.assertEqual([k for k, v in statuses.items() if v == "active"], ["p1-mission"])
@@ -116,7 +124,7 @@ class WithinAPart(LockBase):
     def test_the_key_step_is_refused_and_the_sealed_key_is_never_read(self):
         self.finish_part(PART_1)
         self.finish_part(PART_2)
-        self.engine.progress["done"][:] = ["generate", "build", "fixtures", "readback"]
+        self.engine.progress["done"][:] = ["inputs", "generate", "build", "fixtures", "readback"]
         self.engine._save()
         self.paths.sealed_key.parent.mkdir(parents=True, exist_ok=True)
         self.paths.sealed_key.write_text("SEALED-KEY-TEXT", encoding="utf-8")

@@ -1,6 +1,6 @@
 // Run from the repo root (tooling lives in tests/frontend/.tmp, not globally):
 //   node tests/frontend/.tmp/node_modules/@playwright/test/cli.js test --config tests/frontend/playwright.config.js
-// Three groups: ui.spec.js runs against the mock API, and part1.spec.js and part2.spec.js against the real app (real_server.py).
+// Three groups: ui.spec.js runs against the mock API, and part1.spec.js, part2.spec.js and part3-inputs.spec.js against the real app (real_server.py).
 const { defineConfig } = require('./.tmp/node_modules/@playwright/test');
 
 const PORT = Number(process.env.UI_TEST_PORT) || 38917;
@@ -20,6 +20,7 @@ module.exports = defineConfig({
     { name: 'mock', testMatch: /ui\.spec\.js$/, use: { ...shared, baseURL: `http://127.0.0.1:${PORT}` } },
     { name: 'part1', testMatch: /part1\.spec\.js$/, use: { ...shared, baseURL: `http://127.0.0.1:${REAL_PORT}` } },
     { name: 'part2', testMatch: /part2\.spec\.js$/, use: { ...shared, baseURL: `http://127.0.0.1:${REAL_PORT}` } },
+    { name: 'part3inputs', testMatch: /part3-inputs\.spec\.js$/, use: { ...shared, baseURL: `http://127.0.0.1:${REAL_PORT}` } },
     { name: 'locking', testMatch: /locking\.spec\.js$/, use: { ...shared, baseURL: `http://127.0.0.1:${REAL_PORT}` } },
   ],
   webServer: [

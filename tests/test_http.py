@@ -63,10 +63,13 @@ class ServerCase(unittest.TestCase):
         status, headers, raw = self.request("POST", path, body if body is not None else {}, **kw)
         return status, json.loads(raw)
 
-    def setup_project(self):
+    def setup_project(self, choose_inputs=True):
         status, body = self.post("/api/setup", {"project_path": str(self.tmp / "project"),
                                                 "cli_command": "cli", "starter": "northwind"})
         self.assertEqual(status, 200, body)
+        if choose_inputs and body["state"]["current_step"] == "inputs":  # Part 3 opens with "Choose your inputs"; Continue keeps the files as they are
+            status, body = self.post("/api/step/check", {"step": "inputs"})
+            self.assertEqual(status, 200, body)
         return body
 
 
@@ -267,16 +270,16 @@ class Routes(ServerCase):
                                       "course", "optional_steps", "current_item", "review", "course_text",
                                       "series", "settings", "ai_model", "demo"})
         self.assertEqual([(i["kind"], i["id"], i["status"]) for i in state["course"]],
-                         [("step", s, "active" if s == "generate" else "locked") for s in
-                          ("generate", "build", "fixtures", "readback", "predict", "key", "run", "fix", "baseline")])
-        self.assertEqual(state["current_item"], {"kind": "step", "id": "generate"})  # next to do; hands-on is still refused
+                         [("step", s, "active" if s == "inputs" else "locked") for s in
+                          ("inputs", "generate", "build", "fixtures", "readback", "predict", "key", "run", "fix", "baseline")])
+        self.assertEqual(state["current_item"], {"kind": "step", "id": "inputs"})  # next to do; hands-on is still refused
         self.assertIsNone(state["current_step"])
         self.assertEqual(state["review"], {"due": 0, "postponed": False})
         self.assertIn("continue", state["course_text"])
         self.assertFalse(state["configured"])
         self.assertEqual(state["terminal"], {"running": False, "label": "", "exit_code": None, "owner": None})
         self.assertEqual([s["id"] for s in state["steps"]],
-                         ["generate", "build", "fixtures", "readback", "predict", "key", "run", "fix", "baseline"])
+                         ["inputs", "generate", "build", "fixtures", "readback", "predict", "key", "run", "fix", "baseline"])
 
     def test_ok_and_error_envelopes(self):
         body = self.setup_project()

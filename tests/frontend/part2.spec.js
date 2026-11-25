@@ -173,7 +173,7 @@ test('the Series map shows Part 2 with a state and an open control, Parts 4 and 
   expect([parts['part-2'].done, parts['part-2'].total]).toEqual([0, 8]);
   expect(parts['part-1'].total).toBe(9);
   expect(parts['part-1'].done).toBeGreaterThan(0);
-  expect(parts['part-3'].total).toBe(16);
+  expect(parts['part-3'].total).toBe(17);
   expect(parts['part-3'].done).toBe(0);
   await expect(page.locator('#series-part-1 .series-count')).toHaveText(`${parts['part-1'].done} of 9 done`);
   await expect(row.locator('.series-count')).toHaveCount(0);

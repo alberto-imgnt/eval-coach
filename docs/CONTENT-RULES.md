@@ -118,3 +118,42 @@ Rules for using the hierarchy:
 - "Explain it" is part of tier 1: knowing the concept and running it is not enough unless the participant can also say it in plain words to a non-technical reader.
 
 **Reading of "priority order".** The order is tier 1 core knowledge > tier 2 context > tier 3 certification. A tier 1 idea is placed, worded and sized before a tier 2 or tier 3 item, and a lower-tier item is the one that is shortened or cut. The order ranks content; it does not make lower tiers optional to the point of omission, so each tier still gets its place, in proportion (for example a Stage 3 note is short and optional, a mission is at most 450 words and a lesson at most 300).
+
+## Evidence wording and the three thresholds
+Set by OpenSpec change `curriculum-handoffs-stage3-alignment` (issue #16). Every lesson, step, glossary entry and later Part follows it.
+
+- **Three phrases for a result.** An **observation** is one comparison (Part 1's two prompts, one run of Part 3), which can suggest and never prove. A **measured gain on these rules** is a higher score on the same rules. **No measured gain on these rules** is an equal or lower score. Participant text never says "did not help", "no benefit" or "did better" about a result, and never says to "pick your best answer" as the known-good output (a scan in `tests/test_learning_priorities.py` enforces both lists).
+- **A total can hide a worse rule.** Read each rule, not only the total. A rule that moves to NOT CHECKED is lost coverage, not a gain. A simpler prompt at the same score can be worth keeping.
+- **A known-good answer is chosen from the written requirements before its score is seen.** If the checker scores it under 95%, investigate the checker or the requirements; never loosen a rule to make it pass.
+- **Three thresholds, never merged.** (1) The *known-good check* (Part 4): a known-good answer scores 95% or more. (2) The *five-answer overall score* (Part 4): a coaching target, never a gate. (3) The *load-bearing audit* (Part 5): audit complete is one result, and meeting the 90% criterion (exact fraction, never rounded) is another. The full contract, with the attempt manifest and the kept pointer, is in `docs/SPEC.md` "Evidence handoff (contract for Parts 4 and 5)".
+- **Iteration 0 is not one of the two documented rounds.** The program asks for at least two documented iterations. This course has the participant log two rounds after Iteration 0, which meets that either way, and says it is a course convention.
+
+## Stage 3 traceability map
+Checked on 2026-11-24 against the certification program's "What We Examine" page, from a screenshot the user supplied. The program's wording is paraphrased here, not quoted, and the page governs if it differs. The page does not mention five answers, Iteration 0, `check.py` or a coaching target, so those stay course conventions. This map is for maintainers: no participant text carries its row labels, and Stage 3 is named only in `baseline-why`'s optional note.
+
+| Artifact | What the program asks (paraphrased) | Exercise (Part, step) | Evidence it produces | Status |
+|---|---|---|---|---|
+| Prompt | A markdown file with the practitioner's prompt, using structured prompting (RTCC or similar) | Part 1 `rewrite`, `own` | `part-1\prompt-framework.md` and `part-1\own-after.md`; carried into Part 3's `prompt-v0.md` by `inputs` | Examiner requirement |
+| Prompt | Deliberate instruction design | Part 1 `rewrite`; Part 5 audit | The labelled prompt; the audit map (Part 5, not built) | Examiner requirement |
+| Prompt | At least 90% of instructions are load-bearing, each serving at least one criterion | Part 5 audit | The audit map with the exact fraction (Part 5, not built) | Examiner requirement |
+| Prompt | No dead weight or filler | Part 5 cut | The cut prompt and its log entry (Part 5, not built) | Examiner requirement |
+| Evaluations | Scripts, promptfoo YAML or documented test cases | Part 2 `test-file`; Part 3 `build` | `part-2\test-cases.md`; `check.py` or `promptfooconfig.yaml` | Examiner requirement (the Script and promptfoo tracks are the course's two options) |
+| Evaluations | At least 3 distinct criteria, not variations of one check | Part 2 `draft`, `test-file` | The worksheet and a test cases file that passes the blocking checks | Examiner requirement |
+| Evaluations | Substantive quality checks, not window dressing | Part 2 `thresholds`; Part 3 `fixtures`, `predict`, `run`, `fix` | Thresholds, two fixtures, locked predictions and the run compared with them | Examiner requirement |
+| Evaluations | Capable of 95% or more when the prompt performs well | Part 4 known-good check | A known-good answer and its per-rule score in the log (Part 4, not built) | Examiner requirement. The figure is about what a good answer can score, not a target for every answer |
+| Evaluations | Runs on mid-tier models or lower | Sonnet or Haiku choice; Part 3 `generate` | The recorded model (`models_used`) and the model named in the log | Examiner requirement |
+| Evaluations | Clear pass or fail thresholds or scoring rubrics | Part 2 `thresholds` | The threshold column of the test cases | Examiner requirement |
+| Log | At least 2 documented iterations | Part 4 | Iteration entries in `iteration-log.md` | The program says 2 or more iterations. Two rounds after Iteration 0 is a course convention that meets it either way |
+| Log | Each iteration has baseline scores, hypothesis, change, measured results and reasoning | Part 3 `baseline`; Part 4 | `iteration-log.md`, read by the log parser | Examiner requirement |
+| Log | Evidence of the red, green, refactor cycle | Part 4 | Log entries that show a failing check, a fix and a cleanup (Part 4, not built) | Examiner requirement |
+| Log | Chronological progression with cause and effect | Part 4; Part 5 audit entry | Entries in order, each with its reasoning (Part 4 and 5, not built) | Examiner requirement |
+| Package | A ZIP with the three artifacts; a README is optional | Part 5 package | The package built from the kept attempt (Part 5, not built) | Examiner requirement |
+| (none) | Five saved answers per version, the Script track's `check.py`, Iteration 0 numbering, the 95% five-answer coaching target, the attempt manifest | Parts 3 to 5 | `runs\`, `check.py`, `iteration-log.md`, `progress.json` `parts.part-4` | Course convention |
+
+## Pilot plan
+Recorded only. Running it with learners, and any real-AI run, each need the user's separate approval.
+
+- **Task.** One task the participant has not seen in the course, with a short set of rough notes and five written requirements, so nothing in the course text answers it.
+- **What is observed.** Three abilities, each seen in the participant's own files and not in a quiz: (1) they write a structured prompt and requirements for the unseen task; (2) they run the course's loop on it (five answers, the checker, the per-rule results, a baseline) and read the results rule by rule; (3) they explain the baseline to a non-technical reader in their own words.
+- **One rerun by a second person.** A second person takes the participant's files only (no app, no original folder) and reruns the check on the saved answers, and gets the same per-rule results.
+- **Recorded.** What each person could and could not do, and where they stopped; no scores and no certification claim.

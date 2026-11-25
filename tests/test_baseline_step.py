@@ -518,7 +518,7 @@ class OlderProgress(BaselineCase):
         self.rewrite_without_baseline()
         self.engine = self.new_engine()
         self.assertEqual([s["id"] for s in self.state()["steps"] if s["status"] == "done"],
-                         ["generate", "build", "fixtures", "readback", "predict", "key", "run"])
+                         ["inputs", "generate", "build", "fixtures", "readback", "predict", "key", "run"])
         self.assertEqual(self.status("fix"), "active")
         self.assertEqual(self.status("baseline"), "locked")
 

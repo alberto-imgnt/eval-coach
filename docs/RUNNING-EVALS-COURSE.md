@@ -14,6 +14,7 @@ Part 1 (structured prompting) and Part 2 (defining evaluation criteria) have the
 | `mission` | lesson, one page, no activities | the goal, why it matters to you, what you will do, what you leave with (no map of the Parts; the series framing is in Part 1's `p1-mission` only) |
 | `hook` | lesson, AI window (`hook-compare`) | turn it into rules: a fixed rule beats an AI opinion |
 | `several-runs` | lesson (skippable) | score the result: one answer proves little |
+| `inputs` | step, no AI | choose which prompt and test cases Part 3 will score: the active pair with where each came from, the Part 1 rewrite and the Part 2 file as explicit choices, and the Practice task as the labelled fallback (never a submission) |
 | `generate` | step | |
 | `rules` | lesson, rule labs, practice run (`build-try`) | turn it into rules: from "looks good" to a rule, and what a rule cannot check |
 | `build` | step | |

@@ -1,6 +1,7 @@
 """Atomic JSON persistence and the progress.json schema."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import threading
@@ -10,13 +11,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
-STEP_IDS = ("generate", "build", "fixtures", "readback", "predict", "key", "run", "fix", "baseline")
+STEP_IDS = ("inputs", "generate", "build", "fixtures", "readback", "predict", "key", "run", "fix", "baseline")
 SCHEMA_VERSION = 1
 
 # Every lesson and step in teaching order. Preflight is a screen between mission and hook.
 COURSE = (
     ("lesson", "mission"), ("lesson", "hook"), ("lesson", "several-runs"),
-    ("step", "generate"),
+    ("step", "inputs"), ("step", "generate"),
     ("lesson", "rules"),
     ("step", "build"),
     ("lesson", "trust"),
@@ -35,9 +36,9 @@ EXTRA_STEP = "fixtures-config"
 # An optional step on the promptfoo track only. It is not in the step order, so it never gates anything and
 # never keeps the course from being finished; it is reachable once the baseline step is done.
 OPTIONAL_STEP = "live"
-PROMPTFOO_STEP_IDS = STEP_IDS[:3] + (EXTRA_STEP,) + STEP_IDS[3:]
 PROMPTFOO_COURSE = tuple(
     entry for item in COURSE for entry in ((item, ("step", EXTRA_STEP)) if item == ("step", "fixtures") else (item,)))
+PROMPTFOO_STEP_IDS = tuple(item for kind, item in PROMPTFOO_COURSE if kind == "step")
 
 
 def step_ids(track="script"):
@@ -292,6 +293,7 @@ def new_progress(project_path, cli_command, starter):
         "lessons": new_lessons_block(),
         "parts": {},  # step progress of every Part but Part 3, each created on first use
         "steps": {
+            "inputs": {"last_check": None, "choice": {"prompt": {}, "test_cases": {}}},
             "generate": {"model_name": "", "models_used": [], "auto_started": False, "last_check": None},
             "build": {"checklist": {}, "auto_started": False, "last_check": None},
             "fixtures": {"auto_started": False, "last_check": None},
@@ -369,6 +371,40 @@ def _add_lessons_block(data):
     return dict(data, lessons=block)
 
 
+def file_sha256(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for block in iter(lambda: file.read(65536), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _add_inputs_step(data, paths, selected_track):
+    steps = data.get("steps") if isinstance(data, dict) else None
+    done = data.get("done") if isinstance(data, dict) else None
+    if not isinstance(steps, dict) or "inputs" in steps or not isinstance(done, list) or "inputs" in done:
+        return data
+    generate = steps.get("generate")
+    started = isinstance(generate, dict) and generate.get("auto_started") is True
+    if not (done or started or (paths is not None and any(paths.run_file(n).is_file() for n in range(1, 6)))):
+        return data
+    choice = {}
+    for key in ("prompt", "test_cases"):
+        digest = None
+        if paths is not None:
+            path = getattr(paths, key)
+            try:
+                digest = file_sha256(path)
+            except FileNotFoundError:
+                pass
+        choice[key] = {"source": "existing", "sha256": digest}
+    track = data.get("track")
+    if track is None and (not done or EXTRA_STEP in done):
+        track = "promptfoo" if EXTRA_STEP in done else selected_track
+    return dict(data, done=["inputs", *done], track=track,
+                steps={**steps, "inputs": {"last_check": None, "choice": choice}})
+
+
 def prune_lessons_block(block):
     """Drop everything saved for a lesson that is no longer in the course. Returns True if anything went."""
     known = set(all_lesson_ids())
@@ -427,12 +463,13 @@ def _validate_parts(data):
         data["parts"][part_id] = saved
 
 
-def validate_progress(data, sealed_key_exists=False):
+def validate_progress(data, sealed_key_exists=False, paths=None, selected_track=None):
     """Return a complete progress dict, or raise CorruptStateError."""
     default = new_progress("", "", "")
     # A progress.json from before the baseline step has no `baseline` entry; it gets the default one
     # here, and the step simply comes next after fix. Nothing is marked done that was not.
-    data = _merge_defaults(_add_lessons_block(_add_key_step(data, sealed_key_exists)), default, "progress")
+    data = _add_inputs_step(_add_key_step(data, sealed_key_exists), paths, selected_track)
+    data = _merge_defaults(_add_lessons_block(data), default, "progress")
     _validate_parts(data)
     if prune_lessons_block(data["lessons"]) and isinstance(data["done"], list):
         _migrate_new_lessons(data["lessons"], data["done"], data["parts"])
@@ -446,11 +483,15 @@ def validate_progress(data, sealed_key_exists=False):
     expected = list(ids[: len(data["done"])])
     if list(data["done"]) != expected:
         raise CorruptStateError("progress lists finished steps out of order.")
+    if "inputs" in data["done"] and all(
+        data["steps"]["inputs"]["choice"][key].get("source") == "existing" for key in ("prompt", "test_cases")
+    ):
+        _migrate_new_lessons(data["lessons"], data["done"])
     return data
 
 
-def load_progress(path, sealed_key_exists=False):
-    return validate_progress(read_json(path), sealed_key_exists)
+def load_progress(path, sealed_key_exists=False, paths=None, selected_track=None):
+    return validate_progress(read_json(path), sealed_key_exists, paths, selected_track)
 
 
 def save_progress(path, progress):

@@ -239,27 +239,27 @@
       "why": [
         "The same five things make the two scores fair to compare.",
         "Putting both runs side by side shows what the labels changed, and what they did not.",
-        "One run each is a quick look, not proof. It cannot show how much answers vary from one try to the next."
+        "One run each gives you an observation, not proof that one prompt works better. It cannot show how much answers vary from one try to the next."
       ],
       "instructions": [
         "Read the second answer next to the five things you knew.",
         "For each of the five, choose Yes if the answer did it and No if it did not.",
         "Look at your two runs side by side.",
-        "Write what your labels made you add, and what made the second answer better. If it was not better, write which part of the prompt is still missing.",
+        "Write what you added when you used labels and what differed between the answers. If the second score did not go up, ask which part of the prompt might still be missing.",
         "When the list of what is still missing is empty, press Continue."
       ],
       "fields": [],
       "reflections": [
-        {"id": "added", "label": "What did your labels make you add?"},
-        {"id": "better", "label": "What made the second answer better? If it was not, which part of the prompt is still missing?"}
+        {"id": "added", "label": "What did you add when you used labels?"},
+        {"id": "better", "label": "What differed between the answers? If the second score did not go up, which part of the prompt might still be missing?"}
       ],
       "troubleshooting": [
-        {"problem": "The second score is not higher than the first.", "fix": "That can happen. Look at which of the five the second answer missed and ask which part of the prompt is still missing."}
+        {"problem": "The second score stayed the same or fell.", "fix": "That can happen. Compare the five marks one by one. If the second answer missed something, ask which part of the prompt might still be missing."}
       ],
       "gate": {
         "rows": {"label": "Five answers given", "ok": "", "fail": "{count} of 5 are answered. Choose Yes or No for each one."},
-        "added": {"label": "Added things written", "ok": "", "fail": "Write what your labels made you add."},
-        "better": {"label": "Comparison written", "ok": "", "fail": "Write what made the second answer better, or what is still missing."}
+        "added": {"label": "Added things written", "ok": "", "fail": "Write what you added when you used labels."},
+        "better": {"label": "Differences described", "ok": "", "fail": "Write what differed between the answers, or say what stayed the same."}
       },
       "messages": {"bad_answers": "Those answers are not in the form this step expects."},
       "compare": {
@@ -271,9 +271,9 @@
         "score_label": "Score",
         "score_empty": "Not scored yet",
         "change_up": "Your score went up by {n}.",
-        "change_same": "Your score stayed the same.",
+        "change_same": "Your hand score stayed the same. Check the five marks to see what changed.",
         "change_down": "Your score went down by {n}.",
-        "variation_note": "One run each cannot show how much answers vary from one try to the next. Part 3 measures that.",
+        "variation_note": "One run each cannot show how much answers vary from one try to the next. Part 3 measures that. This comparison is an observation, not proof.",
         "worse_note": "A lower second score can happen. Ask which part of the prompt is still missing, rather than blaming the labels."
       },
       "ui": {

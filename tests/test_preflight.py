@@ -157,6 +157,7 @@ class Environment(Base):
         helpers.write_passed_preflight(self.home)
         engine = self.build_engine()
         engine.setup({"project_path": str(self.project_dir), "cli_command": "fake-cli", "starter": "northwind"})
+        engine.step_check("inputs")
         engine.step_start("generate")
         start = self.terminal.starts[-1]
         self.assertIn("npm_config_cache", start["env"])
@@ -1117,7 +1118,8 @@ class Lock(Base):
         self.setup_project()
         state = self.state
         self.assertTrue(state["preflight"]["passed"])
-        self.assertEqual(state["current_step"], "generate")
+        self.assertEqual(state["current_step"], "inputs")
+        self.engine.step_check("inputs")
         self.engine.step_start("generate")
 
     def test_preflight_passing_stops_any_preflight_cli_session(self):
@@ -1134,12 +1136,12 @@ class Lock(Base):
         engine = self.build_engine()
         state = engine.get_state()
         self.assertTrue(state["preflight"]["passed"])
-        self.assertEqual(state["current_step"], "generate")
+        self.assertEqual(state["current_step"], "inputs")
 
     def test_existing_project_resumes_after_preflight_passes(self):
         self.pass_everything()
         self.setup_project()
-        self.engine.progress["done"].append("generate")
+        self.engine.progress["done"].extend(["inputs", "generate"])
         self.engine._save()
         (self.home / "preflight.json").unlink()
         engine = self.build_engine()
@@ -1155,7 +1157,7 @@ class Lock(Base):
         state = engine.get_state()
         self.assertTrue(state["preflight"]["passed"])
         self.assertEqual(state["current_step"], "build", "the saved step is kept")
-        self.assertEqual(engine.progress["done"], ["generate"])
+        self.assertEqual(engine.progress["done"], ["inputs", "generate"])
 
     def test_corrupt_preflight_file_starts_over_and_says_so(self):
         (self.home / "preflight.json").write_text("{nope", encoding="utf-8")

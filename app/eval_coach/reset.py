@@ -78,6 +78,8 @@ def classify_project_path(rel, configuration=True):
         if rel.split("/", 1)[1] in PROJECT_PART2_FILES:
             return "move" if configuration else "keep"
         return None
+    if rel.startswith(project.REPLACED_INPUTS + "/"):
+        return "move" if configuration else "keep"
     if first in PROJECT_STARTING_FILES:
         return "move" if configuration else "keep"
     if first == PROJECT_SKILLS_DIR:
@@ -125,6 +127,10 @@ def build_plan(home, paths, configuration):
             if (root / PROJECT_PART1_DIR / name).is_file():
                 plan.append((root / PROJECT_PART1_DIR / name, f"project/{PROJECT_PART1_DIR}/{name}"))
         if configuration:
+            replaced = root / project.REPLACED_INPUTS
+            if replaced.is_dir():
+                for child in sorted(replaced.iterdir()):
+                    plan.append((child, f"project/{project.REPLACED_INPUTS}/{child.name}"))
             for name in PROJECT_PART2_FILES:
                 if (root / PROJECT_PART2_DIR / name).is_file():
                     plan.append((root / PROJECT_PART2_DIR / name, f"project/{PROJECT_PART2_DIR}/{name}"))

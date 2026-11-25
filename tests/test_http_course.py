@@ -335,7 +335,7 @@ class AnswerRoutes(CourseServer):
     def test_rule_run_over_http(self):
         self.setup_project()
         self.finish_lessons("mission", "hook", "several-runs")
-        self.engine.progress["done"].append("generate")
+        self.engine.progress["done"].extend(["inputs", "generate"])
         self.engine._save()
         status, body = self.post("/api/lesson/rule-run", {"lesson": "rules", "activity": "rules-lab",
                                                          "rule": "r-length", "text": "one two three"})
@@ -546,10 +546,10 @@ class StateShape(CourseServer):
         self.setup_project()
         self.finish_lessons("mission", "hook", "several-runs")
         _, state = self.get("/api/state")
-        self.assertEqual(state["current_step"], "generate")
-        self.assertEqual(state["current_item"], {"kind": "step", "id": "generate"})
-        self.assertEqual(state["step"]["id"], "generate")
-        self.assertEqual([s["id"] for s in state["steps"]][:2], ["generate", "build"])
+        self.assertEqual(state["current_step"], "inputs")
+        self.assertEqual(state["current_item"], {"kind": "step", "id": "inputs"})
+        self.assertEqual(state["step"]["id"], "inputs")
+        self.assertEqual([s["id"] for s in state["steps"]][:3], ["inputs", "generate", "build"])
         self.assertEqual(state["steps"][0]["status"], "active")
 
     def test_the_part_selector_defaults_to_part_three_and_refuses_an_unknown_part(self):

@@ -388,6 +388,26 @@ class ConfigurationResetTests(ResetBase):
         self.assertFalse(engine.get_state()["preflight"]["passed"])
 
 
+class InputBackupTests(CourseBase):
+    def test_progress_reset_keeps_replaced_inputs_and_configuration_reset_moves_them(self):
+        self.setup_project()
+        self.finish_before("inputs")
+        original = b"My saved prompt"
+        self.paths.prompt.write_bytes(original)
+        self.engine.step_submit("inputs", {"use": {"prompt": "practice"}})
+        self.engine.step_check("inputs")
+        relative = f"{project.REPLACED_INPUTS}/prompt-v0.md.{hashlib.sha256(original).hexdigest()[:8]}"
+        backup = self.project / relative
+        self.assertEqual(backup.read_bytes(), original)
+        self.assertEqual(reset.classify_project_path(relative, configuration=False), "keep")
+        self.assertEqual(reset.classify_project_path(relative, configuration=True), "move")
+        self.engine.reset_progress(True)
+        self.assertEqual(backup.read_bytes(), original)
+        self.engine.reset_configuration(True)
+        self.assertFalse(backup.parent.exists())
+        self.assertEqual((self.home / reset.BACKUP_NAME / "project" / relative).read_bytes(), original)
+
+
 class PartTwoFilesTests(ResetBase):
     """The worksheet and test cases are the participant's own work: kept by the progress reset, moved by the other."""
 

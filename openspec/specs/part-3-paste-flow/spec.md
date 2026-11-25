@@ -127,7 +127,7 @@ Each paste-flow step SHALL offer "Open a new AI chat". It SHALL start a new AI p
 - **THEN** the page shows no "Send to AI", "Start my AI" or "Start again"
 
 ### Requirement: Part 3's gates and teaching are unchanged
-Part 3 SHALL keep "Check my work", every gate item and its wording, every nudge, the answer-key deletion nudge, the predictions lock and the baseline mismatch messages. A step SHALL become done only through the same check as before. The step SHALL be judged only from files and by running the checker, never from the terminal. The model name SHALL still be recorded by the app at every start so the "Model name recorded" gate and the baseline line keep working. Source: AGENTS.md rules 3 and 9; series review item 10b.
+Part 3 SHALL keep "Check my work", every gate item and its wording, every nudge, the answer-key deletion nudge, the predictions lock and the baseline mismatch messages. A step SHALL become done only through the same check as before. The step SHALL be judged only from files and by running the checker, never from the terminal. The model name SHALL still be recorded by the app at every start so the "Model name recorded" gate and the baseline line keep working. The `inputs` step is not an AI step: the paste flow does not apply to it, and it is finished by its own Continue. Source: AGENTS.md rules 3 and 9; series review item 10b.
 
 #### Scenario: Check my work stays
 - **WHEN** the participant opens any Part 3 step that had it
@@ -146,6 +146,11 @@ Part 3 SHALL keep "Check my work", every gate item and its wording, every nudge,
 - **GIVEN** a step's AI window is still open
 - **WHEN** "Check my work" passes for that step
 - **THEN** that window is closed, so the next step can open its own by itself
+
+#### Scenario: The inputs step is not an AI step
+- **WHEN** the participant opens `inputs`
+- **THEN** it shows no AI line, no Copy and no "Open a new AI chat"
+- **AND** no AI window opens by itself
 
 ### Requirement: Part 3 words are plain and match the new flow
 Every Part 3 step's instructions, troubleshooting and gate failure lines SHALL describe the paste flow: the AI window opens by itself, wait until it is ready, copy, paste, then press Check my work. No Part 3 step SHALL name "Send to AI", "Start my AI", "Start again", "Press Send" or "Press Start", and none SHALL use a bare "CLI". Every word SHALL come from the content files. Source: AGENTS.md rule 10; `participant-vocabulary`.

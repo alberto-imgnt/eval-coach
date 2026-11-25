@@ -1,4 +1,4 @@
-"""The real app for the Part 1 and Part 2 interface tests (part1.spec.js, part2.spec.js).
+"""The real app for the Part 1 and Part 2 interface tests (part1.spec.js, part2.spec.js, part3-inputs.spec.js).
 
 It runs the real engine, the real course content and the real server, with a pseudo console that never starts a
 program. A second port takes a few control calls so a test can set up where the participant is and play the part
@@ -131,6 +131,20 @@ class Session:
                 engine.step_submit("test-file", {"build": True})
                 engine.step_check("test-file")
 
+    def reach_part_three(self, item):
+        """Finish the Part 3 lessons before `item`, the way a participant would (no Part 3 step is run)."""
+        for kind, name in state.COURSE:
+            if name == item:
+                return
+            if kind == "lesson":
+                for activity in self.course.get(name)["activities"]:
+                    if activity["type"] == "cli_compare":
+                        self.paths.hook_runs.mkdir(parents=True, exist_ok=True)
+                        for n in range(1, activity["runs"] + 1):
+                            self.paths.hook_run_file(n).write_text(f"Score {n}: pass.", encoding="utf-8")
+                    self.engine.lesson_answer(name, activity["id"], course_helpers.correct_answer(activity))
+                self.engine.lesson_complete(name)
+
     def write_output(self, step, text):
         work = self.paths.part1_work(step)
         work.mkdir(parents=True, exist_ok=True)
@@ -198,6 +212,8 @@ class Control(BaseHTTPRequestHandler):
                     holder.current.reach(body["reach"], **{k: body[k] for k in ("answer", "second_answer") if k in body})
                 if "reach2" in body:
                     holder.current.reach_part_two(body["reach2"])
+                if body.get("reach3"):
+                    holder.current.reach_part_three(body["reach3"])
             elif self.path == "/control/reach":
                 holder.current.reach(body["item"])
             elif self.path == "/control/reach2":

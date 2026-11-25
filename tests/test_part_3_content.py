@@ -77,6 +77,33 @@ class PasteSteps(unittest.TestCase):
             self.assertIn("Copy", text, step)
         self.assertIn("never opens your AI window by itself", "\n".join(strings(steps["live"]["instructions"])))
 
+    def test_both_baseline_tracks_teach_the_same_limits(self):
+        baseline = raw_steps()["baseline"]
+        for track, step in (("script", baseline), ("promptfoo", baseline["tracks"]["promptfoo"])):
+            with self.subTest(track=track):
+                why = " ".join(step["why"])
+                self.assertIn("compare each rule", why)
+                self.assertIn("no measured gain on these rules", why)
+                self.assertIn("lost coverage, not a gain", why)
+                instructions = " ".join(step["instructions"])
+                self.assertIn("from the written requirements before you see its score", instructions)
+
+    def test_the_inputs_step_starts_no_ai_and_has_every_word_the_panel_needs(self):
+        step = raw_steps()["inputs"]
+        self.assertEqual(step["kind"], "choose_inputs")
+        self.assertNotIn("cli_mode", step)
+        ui = step["ui"]
+        for key in ("keep", "practice", "own", "project", "existing", "part1", "part2", "practice_note",
+                    "changed_after_answer", "mismatch", "own_task_mix", "unchanged", "changed", "gone", "both"):
+            self.assertTrue(ui[key].strip(), key)
+        for key in ("skipped", "unfinished", "missing", "blank", "too_large", "not_text", "no_input"):
+            self.assertTrue(step["reasons"][key].strip(), key)
+        self.assertIn("cannot be your submission", ui["practice_note"])
+        self.assertEqual(sorted(step["gate"]), ["prompt", "test_cases"])
+        text = "\n".join(strings(step))
+        self.assertNotIn("Northwind", text)
+        self.assertNotIn("Open a new AI chat", text)
+
 
 if __name__ == "__main__":
     unittest.main()

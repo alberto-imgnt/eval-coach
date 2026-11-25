@@ -546,7 +546,7 @@ async function stageMission() {
   let s = await getState();
   check('before setup: not configured, current item is the mission lesson', s.configured === false && s.current_item && s.current_item.kind === 'lesson' && s.current_item.id === 'mission' && s.current_step === null, JSON.stringify(s.current_item));
   const map = courseMap(s);
-  check('course lists the lessons and steps in course order', s.course.map((c) => c.id).join(',') === `mission,hook,several-runs,generate,rules,build,trust,fixtures,readback,predict,key,surprise,run,fix,baseline-why,baseline`, s.course.map((c) => c.id).join(','));
+  check('course lists the lessons and steps in course order', s.course.map((c) => c.id).join(',') === `mission,hook,several-runs,inputs,generate,rules,build,trust,fixtures,readback,predict,key,surprise,run,fix,baseline-why,baseline`, s.course.map((c) => c.id).join(','));
   check('only the mission is open; everything after it is locked', map.mission === 'active' && s.course.filter((c) => c.id !== 'mission').every((c) => c.status === 'locked'), JSON.stringify(map));
   check('steps list is all locked', s.steps.every((x) => x.status === 'locked'));
   check('state has course text and a review summary', s.course_text && s.review && s.review.due === 0);
@@ -744,8 +744,8 @@ async function stageSeveralRuns() {
   await expectIncomplete('several-runs');
   await solveAll('several-runs', { trial: new Set(['generate-spot']) });
   const s = await completeLesson('several-runs');
-  await expectStepActive('generate');
-  check('after several-runs: generate step is the current step', s.current_step === 'generate' || (await getState()).current_step === 'generate');
+  await expectStepActive('inputs');
+  check('after several-runs: the inputs step is the current step and generate waits for it', (s.current_step === 'inputs' || (await getState()).current_step === 'inputs') && courseMap(await getState()).generate === 'locked');
   endStage('several-runs');
 }
 
@@ -945,7 +945,7 @@ const stepDetailOf = async (id) => (await get(`/api/state?step=${id}`)).json.ste
 async function stageFixturesConfig() {
   await enterStage('fixtures-config');
   const s0 = await getState();
-  check('fixtures-config: the course and the step list show the extra step after fixtures', s0.steps.map((x) => x.id).join(',') === 'generate,build,fixtures,fixtures-config,readback,predict,key,run,fix,baseline' && courseMap(s0)['fixtures-config'] === 'active' && courseMap(s0).readback === 'locked', s0.steps.map((x) => x.id).join(','));
+  check('fixtures-config: the course and the step list show the extra step after fixtures', s0.steps.map((x) => x.id).join(',') === 'inputs,generate,build,fixtures,fixtures-config,readback,predict,key,run,fix,baseline' && courseMap(s0)['fixtures-config'] === 'active' && courseMap(s0).readback === 'locked', s0.steps.map((x) => x.id).join(','));
   const detail = await stepDetailOf('fixtures-config');
   check('fixtures-config: the typed line is exact and the CLI starts in the project folder', detail.cli.line === FIXTURES_CONFIG_LINE && detail.cli.folder_label === 'Your project folder', detail.cli.line);
   check('fixtures-config: neither fixture is a test yet and the config has only the five runs', detail.data.config_exists === true && detail.data.tests.every((t) => t.present === false) && detail.data.fixtures_ready === true && detail.data.scan.length === 0, JSON.stringify(detail.data));
@@ -977,7 +977,7 @@ async function stageFixturesConfig() {
   const s1 = await getState();
   check('fixtures-config: the CLI was stopped and readback is next', s1.terminal.running === false && courseMap(s1).readback === 'active', JSON.stringify(courseMap(s1)));
   check('fixtures-config: no answer key exists after it either', L.answerKeyLocations().length === 0);
-  check('fixtures-config: progress.json is clean and records the promptfoo track', (() => { const r = L.assertProgressClean(); return !r.keyHit && !r.fixtureHit; })() && readJson(PROGRESS).track === 'promptfoo' && readJson(PROGRESS).done.join(',').startsWith('generate,build,fixtures,fixtures-config'));
+  check('fixtures-config: progress.json is clean and records the promptfoo track', (() => { const r = L.assertProgressClean(); return !r.keyHit && !r.fixtureHit; })() && readJson(PROGRESS).track === 'promptfoo' && readJson(PROGRESS).done.join(',').startsWith('inputs,generate,build,fixtures,fixtures-config'));
   check('fixtures-config: no violations (no flags, only the expected typed line, no answered prompts)', state.violations.length === 0, state.violations.join(' | '));
   endStage('fixtures-config');
 }
@@ -1155,7 +1155,7 @@ const LIVE_LINE = (cli, model) => `Read skills/build-promptfoo-config/SKILL.md a
 const LIVE_CONFIG = path.join(PROJECT, 'promptfooconfig.live.yaml');
 const PROVIDER_FILE = path.join(PROJECT, 'agent-provider.js');
 const KIT_PROVIDER = path.join(KIT, 'skills', 'build-promptfoo-config', 'agent-provider.js');
-const PF_STEP_LIST = 'generate,build,fixtures,fixtures-config,readback,predict,key,run,fix,baseline';
+const PF_STEP_LIST = 'inputs,generate,build,fixtures,fixtures-config,readback,predict,key,run,fix,baseline';
 
 async function stageLive() {
   requireStandIn();
@@ -1304,10 +1304,12 @@ async function stageMigrate() {
       const s = await getState();
       const map = courseMap(s);
       const progress = readJson(path.join(p.dir, '.learning', 'progress.json'));
-      check(`${p.name}: completed steps are kept`, JSON.stringify(progress.done) === JSON.stringify(p.done) && p.done.every((d) => map[d] === 'done'), JSON.stringify(map));
+      check(`${p.name}: completed steps are kept, and the inputs step is done in front of them`, JSON.stringify(progress.done) === JSON.stringify(['inputs', ...p.done]) && ['inputs', ...p.done].every((d) => map[d] === 'done'), JSON.stringify(map));
+      const kept = progress.steps.inputs.choice;
+      check(`${p.name}: inputs records the files already in the project, as sources and hashes only`, ['prompt', 'test_cases'].every((k) => kept[k].source === 'existing' && /^[0-9a-f]{64}$/.test(kept[k].sha256)) && !exists(path.join(p.dir, 'part-3', 'replaced')), JSON.stringify(kept));
       check(`${p.name}: step data is kept`, progress.steps.generate.model_name === 'sonnet' && progress.steps.build.checklist.c1 === true);
       check(`${p.name}: a lessons block was added`, progress.lessons && progress.lessons.seed === null && typeof progress.lessons.per_lesson === 'object' && progress.lessons.review && Object.keys(progress.lessons.review.items).length === 0);
-      const furthest = ['mission', 'hook', 'several-runs', 'generate', 'rules', 'build', 'trust', 'fixtures', 'readback', 'predict', 'key', 'surprise', 'run', 'fix', 'baseline-why', 'baseline'];
+      const furthest = ['mission', 'hook', 'several-runs', 'inputs', 'generate', 'rules', 'build', 'trust', 'fixtures', 'readback', 'predict', 'key', 'surprise', 'run', 'fix', 'baseline-why', 'baseline'];
       const lastDone = furthest.indexOf(p.done[p.done.length - 1]);
       const earlier = furthest.slice(0, lastDone).filter((id) => lessonDef(id));
       const later = furthest.slice(lastDone + 1).filter((id) => lessonDef(id));
