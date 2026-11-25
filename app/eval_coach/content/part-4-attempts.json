@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "errors": {
+    "no_baseline": "Finish Part 3 first. Your Iteration 0 files and results are the starting point for every attempt.",
+    "no_start_files": "{files} was not found in your project folder, so there is nothing to copy for attempt {n}. Finish Part 3 first.",
+    "unknown_attempt": "There is no attempt {n}.",
+    "undecided": "Attempt {n} is still waiting for your decision. Choose keep or undo for it before you start another.",
+    "hypothesis_needed": "Write and save your hypothesis for attempt {n} first. It says what you expect your change to do, and it has to exist before you run anything.",
+    "hypothesis_blank": "Write your hypothesis before you save it.",
+    "hypothesis_locked": "Attempt {n} has already been run, so its hypothesis cannot change now. A hypothesis written after the result is not a prediction.",
+    "hypothesis_changed": "The hypothesis saved for attempt {n} was changed outside the app. Save it again in the hypothesis step.",
+    "bad_text": "That text could not be saved.",
+    "answers_missing": "Attempt {n} needs five saved answers before it can be scored. Missing or empty: {files}.",
+    "file_missing": "{name} was not found in the folder for attempt {n}.",
+    "scan_failed": "{messages}",
+    "checker_failed": "{error}",
+    "changed_while_running": "A file for attempt {n} changed while the checker was running, so the result was not saved. Run it again.",
+    "already_decided": "Attempt {n} is already marked {decision}, so it cannot be scored again.",
+    "not_scored": "Score attempt {n} before you decide about it.",
+    "stale": "The {what} for attempt {n} changed after it was scored. Score it again before you decide.",
+    "bad_decision": "Choose keep or undo.",
+    "rerun_needed": "Your corrected checker gives different results on your original five answers. Run those five again with it and record a corrected Iteration 0 before comparing any attempt.",
+    "known_good_needed": "Save your known-good answer first. Its score is shown only after you have chosen it.",
+    "known_good_blank": "Write your known-good answer before you save it.",
+    "no_run_test": "promptfooconfig.yaml has no test named run-1 to copy the checks from.",
+    "folder_busy": "The files for attempt {n} could not be saved: {error}",
+    "busy": "A checker is still running. Wait for it to finish."
+  },
+  "hash_names": {
+    "prompt": "prompt",
+    "test_cases": "rules",
+    "checker": "checker",
+    "runs": "answers"
+  },
+  "evidence": {
+    "gain": "measured gain on these rules",
+    "no_gain": "no measured gain on these rules",
+    "coverage_not_gain": "The set of rules changed, so this is not counted as a gain.",
+    "line": "Attempt {n}: {verdict}. The score went from {before} to {after}.",
+    "line_no_score": "Attempt {n}: not scored yet."
+  },
+  "coverage": {
+    "changed": "The set of rules is different from Iteration 0 ({details}). This is not counted as a gain.",
+    "added": "now also reports {ids}",
+    "removed": "no longer reports {ids}",
+    "lost": "{ids} became NOT CHECKED, so that coverage is lost"
+  },
+  "known_good": {
+    "meets": "Your known-good answer passes {passes} of {checked} checked results, which meets the 95% mark.",
+    "below": "Your known-good answer passes {passes} of {checked} checked results, which is under the 95% mark.",
+    "none_checked": "No result was checked for your known-good answer, so it cannot meet the 95% mark.",
+    "next_step": "Check the checker or the written requirements: open the rule that failed and decide whether the checker or the requirement is wrong. Do not loosen a rule to make the answer pass."
+  },
+  "five_answers": {
+    "met": "Your five answers pass {passes} of {total} checked results, which meets the 95% target.",
+    "below": "Your five answers pass {passes} of {total} checked results. The target is 95%. It is a goal and not a gate.",
+    "next_step": "Pick the rule that fails most often, write one hypothesis about it and change one thing."
+  },
+  "completion": {
+    "done": "You have documented {count} rounds after Iteration 0.",
+    "need_one": "You have documented {count} of 2 rounds after Iteration 0. One more round is needed.",
+    "need_two": "You have documented {count} of 2 rounds after Iteration 0. Two more rounds are needed."
+  },
+  "gate": {
+    "entry": {
+      "label": "Attempt {n} has one log entry",
+      "ok": "",
+      "fail": "{problem}"
+    },
+    "decision": {
+      "label": "Attempt {n} decision matches",
+      "ok": "The log and the app agree on the decision.",
+      "fail": "{problem}"
+    },
+    "hypothesis": {
+      "label": "Attempt {n} hypothesis is the saved one",
+      "ok": "The log's Hypothesis is the text you saved, ignoring spacing.",
+      "fail": "{problem}"
+    },
+    "scored": {
+      "label": "Attempt {n} was scored on the files it has now",
+      "ok": "",
+      "fail": "{problem}"
+    },
+    "counts": {
+      "label": "Attempt {n} pass counts match the app's count",
+      "ok": "Every pass count and the overall total match.",
+      "fail": "{problem}"
+    },
+    "not_checked": {
+      "label": "Attempt {n} NOT CHECKED criteria are listed",
+      "ok": "The log lists the same criteria as not checked.",
+      "fail": "{problem}"
+    },
+    "problems": {
+      "unusable": "{error} Fix iteration-log.md, then check again.",
+      "no_log": "iteration-log.md was not found in your project folder.",
+      "no_entry": "The log has no entry for attempt {n}. It should start with a heading such as Iteration {n}: your change.",
+      "two_entries": "The log has more than one entry for attempt {n}. Keep one in iteration-log.md.",
+      "decision_missing": "The log entry for attempt {n} has no Decision line. It should say kept, undone or pending.",
+      "decision_differs": "The log says attempt {n} was {log}. The app has it as {app}.",
+      "hypothesis_unsaved": "No hypothesis is saved for attempt {n}, so the log cannot be compared with it.",
+      "hypothesis_missing": "The log entry for attempt {n} has no Hypothesis. The saved one says: {saved}",
+      "hypothesis_differs": "The Hypothesis in the log for attempt {n} is not the one you saved. Saved: {saved} Log: {log}",
+      "not_scored": "Attempt {n} has not been scored yet.",
+      "stale": "The {what} for attempt {n} changed after it was scored. Score it again.",
+      "results_missing": "The saved results for attempt {n} could not be read. Score it again.",
+      "results_changed": "The saved results for attempt {n} do not match the app's record. Score it again.",
+      "wait_scored": "This is compared once attempt {n} has been scored."
+    },
+    "nudge_coverage": {
+      "label": "",
+      "text": "Attempt {n} reports a different set of rules from Iteration 0. It is flagged and is never counted as a gain."
+    }
+  }
+}

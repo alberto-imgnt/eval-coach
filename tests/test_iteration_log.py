@@ -179,6 +179,41 @@ class Variations(unittest.TestCase):
         self.assertEqual(entry["rows"], [])
 
 
+class DecisionLine(unittest.TestCase):
+    """A Part 4 entry carries a Decision line: kept, undone or pending (OpenSpec change part-4-attempt-engine)."""
+
+    def entry(self, line):
+        return parse_iteration_log("## Iteration 1: a change\n" + line + "\n- Hypothesis: it helps\n")[0]
+
+    def test_the_three_values_are_read_whatever_their_case_or_marks(self):
+        for text, expected in (("kept", "kept"), ("Undone", "undone"), ("PENDING", "pending"), ("**kept**", "kept"),
+                               ("`undone`", "undone")):
+            with self.subTest(text=text):
+                self.assertEqual(self.entry(f"- Decision: {text}")["decision"], expected)
+
+    def test_bold_and_bullet_forms_of_the_field_name(self):
+        for line in ("- **Decision:** kept", "* Decision: kept", "Decision: kept", "- __Decision__: kept"):
+            with self.subTest(line=line):
+                self.assertEqual(self.entry(line)["decision"], "kept")
+
+    def test_a_missing_field_comes_back_empty(self):
+        self.assertEqual(self.entry("- Date: 2026-11-25")["decision"], "")
+        self.assertEqual(self.entry("- Decision:")["decision"], "")
+
+    def test_an_unknown_value_is_returned_as_written_for_the_gate_to_report(self):
+        self.assertEqual(self.entry("- Decision: Keep it for now")["decision"], "Keep it for now")
+
+    def test_the_decision_does_not_disturb_the_other_fields(self):
+        entry = self.entry("- Decision: undone")
+        self.assertEqual((entry["hypothesis"], entry["decision"]), ("it helps", "undone"))
+        old = parse_iteration_log(read_golden("iteration-log-northwind.md"))[0]
+        self.assertEqual(old["decision"], "")
+
+    def test_the_decision_belongs_to_its_own_entry(self):
+        text = "## Iteration 1: a\n- Decision: kept\n## Iteration 2: b\n- Decision: undone\n## Iteration 3: c\n"
+        self.assertEqual([e["decision"] for e in parse_iteration_log(text)], ["kept", "undone", ""])
+
+
 class Unusable(unittest.TestCase):
     def test_these_logs_raise_a_clear_error(self):
         for text in ("", "   \n\n", "# Log\nNothing here.\n", "Iteration 0: baseline without a heading\n",

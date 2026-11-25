@@ -54,6 +54,8 @@ def file_for(name):
         return f"runs/run-{m.group(1)}.txt"
     if name.startswith("fixture-"):
         return f"fixtures/{name}.txt"
+    if name == "known-good":
+        return "known-good.txt"
     return f"examples/{name}.txt"
 
 
@@ -109,8 +111,9 @@ class FakePromptfoo:
         return 10**12
 
     def run(self, argv, timeout, env=None, cwd=None, on_tick=None, cancel=None):
+        out = argv[argv.index("-o") + 1] if "-o" in argv else "results.json"
         self.calls.append({"argv": list(argv), "timeout": timeout, "env": dict(env or {}), "cwd": cwd,
-                           "results_existed": (Path(cwd) / "results.json").exists()})
+                           "results_existed": (Path(cwd) / out).exists()})
         if self.mode == "not_started":
             return Result(code=-1, stderr="access denied", started=False)
         if self.mode == "timeout":
@@ -121,9 +124,9 @@ class FakePromptfoo:
             return Result(code=1, stderr="Error: Invalid config\n  tests[0] is not valid\n")
         config = (Path(cwd) / "promptfooconfig.yaml").read_text(encoding="utf-8-sig")
         if self.mode == "bad_json":
-            (Path(cwd) / "results.json").write_text("{not json", encoding="utf-8")
+            (Path(cwd) / out).write_text("{not json", encoding="utf-8")
             return Result(code=100, stdout="Writing output to results.json\n")
         data = build_results(cwd, config)
-        (Path(cwd) / "results.json").write_text(json.dumps(data), encoding="utf-8")
+        (Path(cwd) / out).write_text(json.dumps(data), encoding="utf-8")
         failed = any(not r["success"] for r in data["results"]["results"])
         return Result(code=100 if failed else 0, stdout="Results:\n  0 errors (0%)\nWriting output to results.json\n")

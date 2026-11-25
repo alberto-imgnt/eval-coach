@@ -20,6 +20,9 @@ RESULTS_NAME = "results.json"
 SUMMARY_SCRIPT = "kit/skills/build-promptfoo-config/summarize_results.py"
 EVAL_ARGS = ["--yes", f"promptfoo@{PROMPTFOO_VERSION}", "eval", "-c", CONFIG_NAME,
              "--no-cache", "--no-table", "--no-write", "-o", RESULTS_NAME]
+# A Part 4 attempt keeps its own `results.json` of per-criterion counts, so its promptfoo output goes to another name.
+ATTEMPT_OUTPUT = "eval-output.json"
+KNOWN_GOOD_FILE = "known-good.txt"
 # The first run on a slow disk can take a while; an echo eval itself takes a few seconds.
 EVAL_TIMEOUT = 600
 SUMMARY_TIMEOUT = 60
@@ -30,6 +33,7 @@ DEAD_PROXY = "http://127.0.0.1:9"
 
 REASON_PASS = "All checks for this criterion passed."
 _FIXTURE_TESTS = ("fixture-bad", "fixture-polished-but-wrong")
+KNOWN_GOOD_TEST = "known-good"
 _CACHE_MISS = re.compile(r"ENOTCACHED|ENOTFOUND|offline|EAI_AGAIN|ECONN|E404", re.I)
 
 
@@ -73,16 +77,23 @@ def file_for_test(name):
         return f"runs/run-{int(m.group(1))}.txt"
     if name in _FIXTURE_TESTS:
         return f"fixtures/{name}.txt"
+    if name == KNOWN_GOOD_TEST:
+        return KNOWN_GOOD_FILE
     return name
 
 
-def run_eval(project, env, npx_argv, runner=None, timeout=EVAL_TIMEOUT):
+def eval_args(output=RESULTS_NAME):
+    """The eval command's arguments, with promptfoo's own output written to `output`."""
+    return EVAL_ARGS[:-1] + [output]
+
+
+def run_eval(project, env, npx_argv, runner=None, timeout=EVAL_TIMEOUT, output=RESULTS_NAME):
     """Run the exact eval command in the project folder. Returns (exit_code, raw_output, error or None).
 
-    A non-zero exit code from failed checks is normal. results.json is deleted first, so one that exists
+    A non-zero exit code from failed checks is normal. The output file is deleted first, so one that exists
     afterwards was written by this run.
     """
-    results = os.path.join(str(project), RESULTS_NAME)
+    results = os.path.join(str(project), output)
     try:
         if os.path.exists(results):
             os.unlink(results)
@@ -93,7 +104,7 @@ def run_eval(project, env, npx_argv, runner=None, timeout=EVAL_TIMEOUT):
         return -1, "", ("The app could not find Node.js, which promptfoo needs. Open the setup page, finish the "
                         "Node.js and promptfoo items, choose Check everything again, then try again.")
     runner = runner or SystemRunner()
-    outcome = runner.run(list(npx_argv) + EVAL_ARGS, timeout=timeout, env=eval_env(env), cwd=str(project))
+    outcome = runner.run(list(npx_argv) + eval_args(output), timeout=timeout, env=eval_env(env), cwd=str(project))
     raw = ((outcome.stdout or "") + ("\n" + outcome.stderr if (outcome.stderr or "").strip() else ""))[:RAW_LIMIT]
     if not getattr(outcome, "started", True):
         return -1, raw, ("promptfoo could not be started: " + (outcome.stderr or "").strip()
@@ -107,20 +118,20 @@ def run_eval(project, env, npx_argv, runner=None, timeout=EVAL_TIMEOUT):
             return outcome.code, raw, ("promptfoo is not downloaded on this computer yet. Open the setup page, "
                                        "press Install for promptfoo, then try again.")
         detail = _tail(raw)
-        return outcome.code, raw, ("promptfoo stopped before it wrote results.json"
+        return outcome.code, raw, (f"promptfoo stopped before it wrote {output}"
                                    + (f":\n{detail}" if detail else ".")
                                    + "\nAsk your AI to fix the error in promptfooconfig.yaml without changing "
                                      "any threshold, then try again.")
     return outcome.code, raw, None
 
 
-def summarize(project, prefix, python=None, timeout=SUMMARY_TIMEOUT):
-    """Run the bundled summarize_results.py (never the participant's copy) on results.json. Returns (text, error)."""
-    results = os.path.join(str(project), RESULTS_NAME)
+def summarize(project, prefix, python=None, timeout=SUMMARY_TIMEOUT, output=RESULTS_NAME):
+    """Run the bundled summarize_results.py (never the participant's copy) on the eval output. Returns (text, error)."""
+    results = os.path.join(str(project), output)
     if not os.path.isfile(results):
-        return "", "results.json was not found, so there is nothing to summarize. Run the eval again."
+        return "", f"{output} was not found, so there is nothing to summarize. Run the eval again."
     script = resources.read_bytes(SUMMARY_SCRIPT)
-    argv = [python or sys.executable, "-", RESULTS_NAME] + ([prefix] if prefix else [])
+    argv = [python or sys.executable, "-", output] + ([prefix] if prefix else [])
     env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
     try:
         proc = subprocess.run(argv, input=script, cwd=str(project), capture_output=True, timeout=timeout,
@@ -138,9 +149,9 @@ def summarize(project, prefix, python=None, timeout=SUMMARY_TIMEOUT):
     return out, None
 
 
-def read_reasons(project):
-    """{test name: {metric: reason}} from results.json: the first failing check's reason, or a pass note."""
-    path = os.path.join(str(project), RESULTS_NAME)
+def read_reasons(project, output=RESULTS_NAME):
+    """{test name: {metric: reason}} from the eval output: the first failing check's reason, or a pass note."""
+    path = os.path.join(str(project), output)
     with open(path, "rb") as f:
         data = json.loads(f.read().decode("utf-8-sig"))
     rows = data["results"]["results"]
@@ -193,16 +204,16 @@ def criterion_names(project):
     return {c["id"]: c["name"] for c in parse_test_cases(text) if c.get("name")}
 
 
-def run_selection(project, prefix, expect, env, npx_argv, runner=None, python=None):
+def run_selection(project, prefix, expect, env, npx_argv, runner=None, python=None, output=RESULTS_NAME):
     """Run the eval, summarize the tests whose names start with prefix, and return a RunResult.
 
     `expect` lists the files the result must report on (for example runs/run-1.txt). The files in the result
     are the ones the tests read, so the rest of the app treats this like a checker run on those files.
     """
-    code, raw, error = run_eval(project, env, npx_argv, runner)
+    code, raw, error = run_eval(project, env, npx_argv, runner, output=output)
     if error:
         return _result(False, code, error, raw, [])
-    text, error = summarize(project, prefix, python)
+    text, error = summarize(project, prefix, python, output=output)
     if error:
         return _result(False, code, error, raw, [])
     try:
@@ -210,7 +221,7 @@ def run_selection(project, prefix, expect, env, npx_argv, runner=None, python=No
     except CheckerOutputError as exc:
         return _result(False, code, f"The app could not read the summary of the results: {exc}", raw, [])
     try:
-        _add_reasons(files, read_reasons(project))
+        _add_reasons(files, read_reasons(project, output))
     except (OSError, ValueError, KeyError, TypeError):
         return _result(False, code, "The app could not read results.json. Run the eval again.", raw, [])
     for entry in files:

@@ -22,10 +22,14 @@ def _run_script(project, env=None, **_options):
     return runner.run_checker(project, run_names(), env=env)
 
 
-def _run_promptfoo(project, env=None, npx_argv=None, runner=None, python=None, **_options):
-    """promptfoo track: one eval of the whole config, then the summary of the run-N tests."""
+def _run_promptfoo(project, env=None, npx_argv=None, runner=None, python=None, output=None, **_options):
+    """promptfoo track: one eval of the whole config, then the summary of the run-N tests.
+
+    `output` is the name promptfoo writes its own results to (a Part 4 attempt keeps another file named results.json).
+    """
     from . import promptfoo
-    return promptfoo.run_selection(project, "run-", run_names(), env, npx_argv, runner, python)
+    return promptfoo.run_selection(project, "run-", run_names(), env, npx_argv, runner, python,
+                                   output=output or promptfoo.RESULTS_NAME)
 
 
 # track -> function(project, env, **options) -> RunResult. The options are the track's own (the promptfoo runner

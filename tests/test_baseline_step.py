@@ -5,6 +5,7 @@ import json
 from unittest import mock
 
 import test_engine_gates as base
+from eval_coach import gates
 from test_engine_gates import EngineError, runner, tight_checker
 
 LINE = ("Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are runs/run-1.txt "
@@ -363,6 +364,22 @@ class Gate(BaselineCase):
         self.ready()
         self.write_log(log_text(self.summary, number=1, tweak={"C1": 1}) + "\n" + log_text(self.summary))
         self.assertTrue(self.check("baseline")["ok"])
+
+    def test_later_part_4_entries_and_their_decision_lines_change_nothing_about_the_gate(self):
+        self.ready()
+
+        def judged():  # the gate's own function, so a pass does not finish the step between the three readings
+            report = gates.Report(self.engine._text("baseline")["gate"])
+            return gates.check_baseline(self.paths, self.engine._baseline_facts(), report)
+
+        alone = judged()
+        later = (log_text(self.summary, number=1, tweak={"C1": 1}) + "- Decision: kept\n\n"
+                 + log_text(self.summary, number=2, tweak={"overall": "1 / 30"}) + "- Decision: undone\n")
+        self.write_log(log_text(self.summary) + "\n" + later)
+        self.assertEqual(judged(), alone)
+        self.write_log(later + "\n" + log_text(self.summary))
+        self.assertEqual(judged(), alone)
+        self.assertTrue(alone["ok"])
 
     def test_the_app_must_have_run_first(self):
         self.to_baseline()

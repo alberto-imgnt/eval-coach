@@ -34,6 +34,9 @@ PROJECT_PART1_PROMPTS = tuple(files[0] for files in project.PART1_FILES.values()
 # participant's own work: they stay after "Reset lesson progress" and move with "Reset app configuration".
 PROJECT_PART2_DIR = project.PART2_DIR
 PROJECT_PART2_FILES = tuple(project.PART2_FILES.values())
+# In the project folder, Part 4's attempts under part-4\. All of it is the participant's own work: it stays after
+# "Reset lesson progress" and moves with "Reset app configuration".
+PROJECT_PART4_DIR = project.PART4_DIR
 # In the project folder, moved only by "Reset app configuration".
 PROJECT_STARTING_FILES = ("prompt-v0.md", "test-cases.md")
 PROJECT_SKILLS_DIR = "skills"  # only the bundled skill files in it are moved
@@ -78,6 +81,8 @@ def classify_project_path(rel, configuration=True):
         if rel.split("/", 1)[1] in PROJECT_PART2_FILES:
             return "move" if configuration else "keep"
         return None
+    if first == PROJECT_PART4_DIR and "/" in rel:
+        return "move" if configuration else "keep"
     if rel.startswith(project.REPLACED_INPUTS + "/"):
         return "move" if configuration else "keep"
     if first in PROJECT_STARTING_FILES:
@@ -134,6 +139,8 @@ def build_plan(home, paths, configuration):
             for name in PROJECT_PART2_FILES:
                 if (root / PROJECT_PART2_DIR / name).is_file():
                     plan.append((root / PROJECT_PART2_DIR / name, f"project/{PROJECT_PART2_DIR}/{name}"))
+            if (root / PROJECT_PART4_DIR).is_dir():
+                plan.append((root / PROJECT_PART4_DIR, f"project/{PROJECT_PART4_DIR}"))
             for name in PROJECT_STARTING_FILES:
                 if (root / name).is_file():
                     plan.append((root / name, "project/" + name))
