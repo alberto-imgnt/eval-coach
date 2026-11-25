@@ -34,6 +34,9 @@ PART1_NOTES = "kit/part1/rough-notes.txt"
 PART2_DIR = "part-2"
 PART2_FILES = {"worksheet": "worksheet.json", "test_cases": "test-cases.md"}
 REPLACED_INPUTS = "part-3/replaced"
+# Part 4 keeps each attempt under part-4/attempts/<n>/ in the project. Part 3's own files are never written there.
+PART4_DIR = "part-4"
+ATTEMPTS_DIR = "attempts"
 
 _CATCH_UP = re.compile(rb"(?im)^[ \t]*<!--\s*catch-up copy.*?-->[ \t]*\r?\n(?:[ \t]*\r?\n)?")
 
@@ -91,6 +94,10 @@ class Paths:
         self.part1 = self.project / PART1_DIR
         self.part1_root = self.home / "part1"
         self.part2 = self.project / PART2_DIR
+        self.part4 = self.project / PART4_DIR
+
+    def attempt(self, n):
+        return AttemptPaths(self.project, n)
 
     def part2_file(self, which):
         return self.part2 / PART2_FILES[which]
@@ -124,6 +131,30 @@ class Paths:
 
     def hook_run_file(self, n):
         return self.hook_runs / f"run-{n}.txt"
+
+
+class AttemptPaths:
+    """Where one Part 4 attempt keeps its files. The folder is treated as a small project: it has the accessors the
+    checker runners and `baseline.runs_hash` read (`project` is the folder they run in), so the attempt is scored
+    exactly like Part 3's five runs without touching Part 3's files."""
+
+    def __init__(self, project, n):
+        self.n = n
+        self.project = Path(project) / PART4_DIR / ATTEMPTS_DIR / str(n)
+        self.prompt = self.project / "prompt.md"
+        self.test_cases = self.project / "test-cases.md"
+        self.check_py = self.project / "check.py"
+        self.config_yaml = self.project / "promptfooconfig.yaml"
+        self.runs = self.project / "runs"
+        self.hypothesis = self.project / "hypothesis.md"
+        self.known_good = self.project / "known-good.txt"
+        self.results = self.project / "results.json"
+
+    def run_file(self, n):
+        return self.runs / f"run-{n}.txt"
+
+    def checker(self, track="script"):
+        return self.config_yaml if track == "promptfoo" else self.check_py
 
 
 def default_home():

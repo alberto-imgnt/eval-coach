@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "change": "part-4-attempt-engine",
+  "tree": "ccfb9083ae6897e32fc31f90fb44b6b71eef7ae5",
+  "excludes": [
+    "openspec"
+  ],
+  "head": "27fbcc872478dafd706b8eb5bbcd32d78245d1b3",
+  "checks": [
+    {
+      "name": "backend",
+      "command": "python -m unittest discover -s tests",
+      "exit_code": 0,
+      "tests": 1999,
+      "finished": "2026-11-25T14:43:24Z"
+    },
+    {
+      "name": "backend-embedded",
+      "command": "spikes\\phase0-preflight\\runtime\\python-embed-3.13.17-nopth\\python.exe -m unittest discover -s tests",
+      "exit_code": 0,
+      "tests": 1999,
+      "finished": "2026-11-25T14:51:16Z"
+    },
+    {
+      "name": "build",
+      "command": "python tools/build_pyz.py --smoke",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-25T14:51:23Z"
+    }
+  ]
+}

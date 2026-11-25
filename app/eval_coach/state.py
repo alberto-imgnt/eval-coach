@@ -73,6 +73,7 @@ class Part:
     extra_steps: tuple = ()  # steps outside the course order that still belong to this Part
     new_steps: Optional[Callable[[], dict]] = None  # default saved record of each step (Parts other than Part 3)
     restart: Optional[Dict[str, StepOwns]] = None  # what each step owns; None means "Start this step again" is not offered
+    new_extra: Optional[Callable[[], dict]] = None  # more keys of the saved block besides `done` and `steps`
 
     def course_for(self, track="script"):
         return self.track_courses.get(track, self.course)
@@ -158,8 +159,33 @@ PART_2 = Part("part-2", 2, "p2-mission", COURSE_2, "content/part-2-lessons.json"
                   "test-file": StepOwns(files=("part-2/test-cases.md",)),
                   "reference": StepOwns(),
               })
+# Part 4: improving a prompt one change at a time. Its step ids are plain words that no other Part uses, and its
+# lesson id carries a `p4-` prefix. Its saved block also holds the attempt manifest (see attempts.py): hashes, counts
+# and ids only, never a text.
+COURSE_4 = (
+    ("lesson", "p4-mission"),
+    ("step", "hypothesis"), ("step", "revise"), ("step", "measure"), ("step", "known-good"), ("step", "decide"),
+)
+
+
+def new_part_4_steps():
+    """The saved record of each Part 4 step. Each attempt's own record is in the manifest, not here."""
+    return {step: {"last_check": None} for step in ("hypothesis", "revise", "measure", "known-good", "decide")}
+
+
+def new_part_4_extra():
+    """The attempt manifest and the two notes that gate comparing attempts with Iteration 0."""
+    return {"attempts": [], "rerun": None, "iteration_0": None}
+
+
+PART_4 = Part("part-4", 4, "p4-mission", COURSE_4, "content/part-4-lessons.json", "content/part-4-steps.json",
+              progress_key="part-4", new_steps=new_part_4_steps, new_extra=new_part_4_extra)
+
 # Part 3 stays first: its steps file also holds the messages every Part shares.
 PARTS = (PART_3, PART_1, PART_2)
+# Parts whose engine is built and whose saved progress is read, but whose course content has not shipped. They are
+# not in PARTS, so no lessons or step text is loaded for them and the Series map is unchanged.
+DARK_PARTS = (PART_4,)
 
 
 # Step kinds: a step whose content names a `kind` is handled by the object registered for it. A step with no
@@ -169,6 +195,11 @@ STEP_KINDS = {}
 
 def part_by_id(part_id):
     return next((p for p in PARTS if p.id == part_id), None)
+
+
+def known_part(part_id):
+    """A registered Part, or a dark one whose saved block is still read and checked."""
+    return part_by_id(part_id) or next((p for p in DARK_PARTS if p.id == part_id), None)
 
 
 def part_of(item_id):
@@ -318,7 +349,10 @@ def new_progress(project_path, cli_command, starter):
 def new_part_progress(part):
     """The saved progress of a Part other than Part 3: its finished steps and one record for each step."""
     steps = part.new_steps() if part.new_steps is not None else {}
-    return {"done": [], "steps": steps}
+    block = {"done": [], "steps": steps}
+    if part.new_extra is not None:
+        block.update(part.new_extra())
+    return block
 
 
 def _merge_defaults(value, default, where):
@@ -451,7 +485,7 @@ def _migrate_new_lessons(block, done, parts=None):
 def _validate_parts(data):
     """Check and complete each saved Part block. A Part this build does not know is left as it is."""
     for part_id, saved in data["parts"].items():
-        part = part_by_id(part_id)
+        part = known_part(part_id)
         if part is None or part.progress_key is None:
             continue
         saved = _merge_defaults(saved, new_part_progress(part), f"progress.parts.{part_id}")

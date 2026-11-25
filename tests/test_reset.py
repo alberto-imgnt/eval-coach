@@ -434,6 +434,39 @@ class PartTwoFilesTests(ResetBase):
         self.assertEqual(self.other.read_text(encoding="utf-8"), "not on a list")
 
 
+class PartFourAttemptsTests(ResetBase):
+    """Every file under part-4/ is the participant's own work: kept by the progress reset, moved by the other."""
+
+    def populate(self):
+        super().populate()
+        self.attempt = self.paths.attempt(1)
+        self.files = {self.attempt.prompt: "my prompt", self.attempt.run_file(1): "my answer",
+                      self.attempt.hypothesis: "my hypothesis", self.attempt.results: "{}"}
+        for path, text in self.files.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+
+    def test_every_attempt_file_is_on_the_inventory(self):
+        for rel in ("part-4/attempts/1/prompt.md", "part-4/attempts/2/runs/run-3.txt", "part-4/attempts/1/known-good.txt"):
+            self.assertEqual(reset.classify_project_path(rel, False), "keep", rel)
+            self.assertEqual(reset.classify_project_path(rel, True), "move", rel)
+        self.assertIsNone(reset.classify_project_path("part-4"))
+
+    def test_the_progress_reset_keeps_every_attempt_file(self):
+        self.reset_progress()
+        for path, text in self.files.items():
+            self.assertEqual(path.read_text(encoding="utf-8"), text)
+        self.assertFalse((self.backup() / "project" / "part-4").exists())
+
+    def test_the_configuration_reset_moves_the_attempts_into_the_backup(self):
+        self.reset_config()
+        self.assertFalse(self.paths.part4.exists())
+        moved = self.backup() / "project" / "part-4" / "attempts" / "1"
+        self.assertEqual((moved / "prompt.md").read_text(encoding="utf-8"), "my prompt")
+        self.assertEqual((moved / "runs" / "run-1.txt").read_text(encoding="utf-8"), "my answer")
+        self.assertEqual((moved / "hypothesis.md").read_text(encoding="utf-8"), "my hypothesis")
+
+
 class ReportingTests(ResetBase):
     def test_the_state_names_the_backup_folder_and_the_words(self):
         settings = self.engine.get_state()["settings"]

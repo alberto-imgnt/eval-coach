@@ -257,14 +257,17 @@ def _rows_counts(rows):
 _LOG_HEADING = re.compile(r"^\s*(#{1,6})\s*(.*?)\s*#*\s*$")
 _LOG_ENTRY = re.compile(r"^(?:\*\*|__)?\s*Iteration\s+(\d+)\b\s*(?:\*\*|__)?\s*(?:[:.\-–—]\s*)?(.*?)\s*$", re.I)
 _LOG_FIELD = re.compile(
-    r"^\s*(?:[-*+]\s+)?(?:\*\*|__)?\s*(Date|Prompt|Model|Runs|Overall|Not[ _-]?checked|Hypothesis|Change|Result|Reasoning)"
+    r"^\s*(?:[-*+]\s+)?(?:\*\*|__)?\s*(Date|Prompt|Model|Runs|Overall|Not[ _-]?checked|Hypothesis|Change|Result|Reasoning|Decision)"
     r"\s*(?:\*\*|__)?\s*:\s*(?:\*\*|__)?\s*(.*?)\s*$", re.I)
 _LOG_FRACTION = re.compile(r"(\d+)\s*(?:/|\bof\b|\bout of\b)\s*(\d+)", re.I)
 _LOG_ROW_ID = re.compile(r"^(?:\*\*|__)?\s*C\s*(\d+)\b\s*(?:\*\*|__)?\s*[:.\-–—]?\s*(.*?)\s*$", re.I)
 _LOG_NOT_CHECKED = re.compile(r"not\s*[-_]?\s*checked|^\s*n\s*/\s*a\s*$|^\s*[-–—]\s*$", re.I)
 _LOG_FIELD_KEYS = {"date": "date", "prompt": "prompt", "model": "model", "runs": "runs", "overall": "overall",
                    "notchecked": "not_checked", "hypothesis": "hypothesis", "change": "change",
-                   "result": "result", "reasoning": "reasoning"}
+                   "result": "result", "reasoning": "reasoning", "decision": "decision"}
+
+
+LOG_DECISIONS = ("kept", "undone", "pending")
 
 
 class IterationLogError(Exception):
@@ -311,7 +314,7 @@ def _log_entry(number, title, lines):
     entry = {"number": number, "title": title, "date": "", "prompt": "", "model": "", "runs": None,
              "runs_text": "", "overall": None, "overall_text": "", "not_checked_ids": [],
              "not_checked_count": None, "not_checked_text": "", "has_not_checked": False,
-             "rows": [], "hypothesis": "", "change": "", "result": "", "reasoning": ""}
+             "rows": [], "hypothesis": "", "change": "", "result": "", "reasoning": "", "decision": ""}
     for line in lines:
         stripped = line.strip()
         if stripped.startswith("|"):
@@ -342,6 +345,8 @@ def _log_entry(number, title, lines):
                 entry["not_checked_count"] = int(count.group(1))
             elif re.match(r"^(none|no|nil|zero)\b", value, re.I):
                 entry["not_checked_count"] = 0
+        elif key == "decision":
+            entry["decision"] = value.lower() if value.lower() in LOG_DECISIONS else value
         else:
             entry[key] = value
     return entry
@@ -352,8 +357,9 @@ def parse_iteration_log(text):
 
     Each entry: number, title, date, prompt, model, runs, overall (passes, total) or None,
     not_checked_ids, not_checked_count, rows [{id, name, passes, checked, not_checked, rate,
-    notes, failing_runs}]. A field that is missing or left empty comes back empty or None,
-    so the caller decides what it needs.
+    notes, failing_runs}], hypothesis, change, result, reasoning and decision. `decision` is `kept`, `undone` or
+    `pending` (lower-cased), or the text as written when it is anything else. A field that is missing or left
+    empty comes back empty or None, so the caller decides what it needs.
     """
     if not isinstance(text, str):
         raise IterationLogError("The log could not be read as text.")
