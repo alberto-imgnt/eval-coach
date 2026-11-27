@@ -351,7 +351,7 @@
       "line_template": "Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are {base}/attempts/{n}/runs/run-1.txt to {base}/attempts/{n}/runs/run-5.txt. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty.",
       "tracks": {
         "promptfoo": {
-          "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The config is {base}/attempts/{n}/promptfooconfig.yaml and the runs are the tests named run-1 to run-5. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty."
+          "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The config is {base}/attempts/{n}/promptfooconfig.yaml and the runs are the tests named run-1 to run-5. Save promptfoo's own output to {base}/attempts/{n}/eval-output.json and never to results.json. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty."
         }
       },
       "goal": "Keep or undo this round, then record it in your iteration log.",
@@ -647,7 +647,7 @@
       "line_template": "Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are {base}/attempts/{n}/runs/run-1.txt to {base}/attempts/{n}/runs/run-5.txt. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty.",
       "tracks": {
         "promptfoo": {
-          "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The config is {base}/attempts/{n}/promptfooconfig.yaml and the runs are the tests named run-1 to run-5. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty."
+          "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The config is {base}/attempts/{n}/promptfooconfig.yaml and the runs are the tests named run-1 to run-5. Save promptfoo's own output to {base}/attempts/{n}/eval-output.json and never to results.json. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty."
         }
       },
       "goal": "Keep or undo this round, then record it in your iteration log.",
@@ -951,7 +951,7 @@
       "line_template": "Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are {base}/attempts/{n}/runs/run-1.txt to {base}/attempts/{n}/runs/run-5.txt. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty.",
       "tracks": {
         "promptfoo": {
-          "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The config is {base}/attempts/{n}/promptfooconfig.yaml and the runs are the tests named run-1 to run-5. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty."
+          "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The config is {base}/attempts/{n}/promptfooconfig.yaml and the runs are the tests named run-1 to run-5. Save promptfoo's own output to {base}/attempts/{n}/eval-output.json and never to results.json. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty."
         }
       },
       "goal": "Keep or undo this round, then record it in your iteration log.",
