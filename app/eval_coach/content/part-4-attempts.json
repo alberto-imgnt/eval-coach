@@ -24,7 +24,15 @@
     "known_good_blank": "Write your known-good answer before you save it.",
     "no_run_test": "promptfooconfig.yaml has no test named run-1 to copy the checks from.",
     "folder_busy": "The files for attempt {n} could not be saved: {error}",
-    "busy": "A checker is still running. Wait for it to finish."
+    "busy": "A checker is still running. Wait for it to finish.",
+    "bad_start": "Choose your Part 3 baseline or the Practice task baseline.",
+    "start_fixed": "Your starting point is fixed now that round 1 exists. To use the other one, reset your lesson progress in Settings; your files are kept.",
+    "practice_busy": "The Practice files could not be saved: {error}"
+  },
+  "written_names": {
+    "change": "Change",
+    "result": "Result",
+    "reasoning": "Reasoning"
   },
   "hash_names": {
     "prompt": "prompt",
@@ -92,11 +100,17 @@
       "ok": "The log lists the same criteria as not checked.",
       "fail": "{problem}"
     },
+    "written": {
+      "label": "Attempt {n} has your Change, Result and Reasoning",
+      "ok": "Your own words are there.",
+      "fail": "{problem}"
+    },
     "problems": {
-      "unusable": "{error} Fix iteration-log.md, then check again.",
-      "no_log": "iteration-log.md was not found in your project folder.",
+      "unusable": "{error} Fix {log}, then check again.",
+      "no_log": "{log} was not found in your project folder.",
       "no_entry": "The log has no entry for attempt {n}. It should start with a heading such as Iteration {n}: your change.",
-      "two_entries": "The log has more than one entry for attempt {n}. Keep one in iteration-log.md.",
+      "two_entries": "The log has more than one entry for attempt {n}. Keep one in the log file.",
+      "written_missing": "The log entry for attempt {n} has no text for: {fields}. Write them in your own words.",
       "decision_missing": "The log entry for attempt {n} has no Decision line. It should say kept, undone or pending.",
       "decision_differs": "The log says attempt {n} was {log}. The app has it as {app}.",
       "hypothesis_unsaved": "No hypothesis is saved for attempt {n}, so the log cannot be compared with it.",

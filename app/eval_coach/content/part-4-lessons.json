@@ -1,0 +1,573 @@
+{
+  "version": 1,
+  "mission": "Understand how to improve a prompt one change at a time, and how to tell from a rerun of the same rules whether a change was worth keeping.",
+  "step_checks": [
+    {
+      "id": "sc-p4-starting-point",
+      "step": "starting-point",
+      "prompt": "Every round is compared with Iteration 0. Why does it come first?",
+      "options": [
+        {"id": "a", "text": "Each change needs a score to compare with", "correct": true, "feedback": "Right. Without a recorded starting score, a later score has nothing to be compared with."},
+        {"id": "b", "text": "The prompt will never need another change afterwards", "correct": false, "feedback": "The prompt can still change. Iteration 0 is only the score each later round is compared with."},
+        {"id": "c", "text": "The checker can then be skipped for good", "correct": false, "feedback": "The checker is used in every round. Iteration 0 is the score it gave at the start."},
+        {"id": "d", "text": "The log is then already full of rounds", "correct": false, "feedback": "The log holds only Iteration 0 at first. You add each round as you go."}
+      ]
+    },
+    {
+      "id": "sc-p4-known-good",
+      "step": "known-good",
+      "prompt": "Your known-good answer scored 95% or more. What does that show?",
+      "options": [
+        {"id": "a", "text": "The checker can recognize a good answer", "correct": true, "feedback": "Right. It shows the checker can tell a good answer when it sees one. It says nothing yet about how often your prompt makes one."},
+        {"id": "b", "text": "Your prompt makes good answers every time", "correct": false, "feedback": "This check is about the checker, not the prompt. The five-answer score is the separate check that looks at the prompt."},
+        {"id": "c", "text": "Your five answers will all pass now", "correct": false, "feedback": "The known-good answer is one answer you chose. It does not tell you how the five answers will score."},
+        {"id": "d", "text": "Every rule in the checker is perfect", "correct": false, "feedback": "One good score does not prove every rule is right. It shows the checker can recognize a good answer."}
+      ]
+    },
+    {
+      "id": "sc-p4-hypothesis-1",
+      "step": "hypothesis-1",
+      "prompt": "Why did you write the hypothesis before the edit?",
+      "options": [
+        {"id": "a", "text": "So the result cannot reshape what you expected", "correct": true, "feedback": "Right. A hypothesis written first cannot bend to fit the result, so you can compare what you expected with what happened."},
+        {"id": "b", "text": "So the edit step can be skipped entirely", "correct": false, "feedback": "The edit step still comes next. The hypothesis says what you expect it to do."},
+        {"id": "c", "text": "So the checker can score it more kindly", "correct": false, "feedback": "The checker follows its rules and does not read your hypothesis. The hypothesis is for you."},
+        {"id": "d", "text": "So the log looks more complete to readers", "correct": false, "feedback": "How the log looks is not the reason. The hypothesis is written first so the result cannot shape it."}
+      ]
+    },
+    {
+      "id": "sc-p4-edit-1",
+      "step": "edit-1",
+      "prompt": "The edit step asks for one change. Why only one?",
+      "options": [
+        {"id": "a", "text": "Then a score change has one likely cause", "correct": true, "feedback": "Right. With one change, any movement in a score points to that change. With several, you cannot tell which one did it."},
+        {"id": "b", "text": "Then the checker has fewer rules to read", "correct": false, "feedback": "The checker reads the same rules whatever you change. One change makes the result easier to explain."},
+        {"id": "c", "text": "Then your hypothesis can be left out entirely", "correct": false, "feedback": "The hypothesis is still written first. One change just makes it easier to check afterwards."},
+        {"id": "d", "text": "Then the five answers will come back faster", "correct": false, "feedback": "Speed is not the reason. One change means a score change has one likely cause."}
+      ]
+    },
+    {
+      "id": "sc-p4-measure-1",
+      "step": "measure-1",
+      "prompt": "Why are Iteration 0 and round 1 scored with the same rules?",
+      "options": [
+        {"id": "a", "text": "So the two scores can be fairly compared", "correct": true, "feedback": "Right. A score on different rules would not be a fair comparison with the one before it."},
+        {"id": "b", "text": "So the answers will match one another exactly", "correct": false, "feedback": "Answers still vary from one try to the next. The same rules only make the scores comparable."},
+        {"id": "c", "text": "So the rules never have to be read", "correct": false, "feedback": "You still read each rule's result. Keeping the rules the same just keeps the comparison fair."},
+        {"id": "d", "text": "So the model can be changed each round", "correct": false, "feedback": "The model should stay the same too. If it changes with the prompt, you cannot tell which one moved the score."}
+      ]
+    },
+    {
+      "id": "sc-p4-decide-1",
+      "step": "decide-1",
+      "prompt": "Before you decided to keep or undo round 1, what did you read?",
+      "options": [
+        {"id": "a", "text": "Every rule, and not only the total", "correct": true, "feedback": "Right. A total can rise while one rule gets worse, so you read each rule before you decide."},
+        {"id": "b", "text": "Only the total, since it sums everything", "correct": false, "feedback": "A total can hide a rule that got worse. Read each rule as well."},
+        {"id": "c", "text": "Only the rule your hypothesis was about", "correct": false, "feedback": "A change can move a rule you did not aim at. Read every rule."},
+        {"id": "d", "text": "Only the answers that looked best overall", "correct": false, "feedback": "Choosing answers by how they look would bend the evidence. Read the result for every rule."}
+      ]
+    },
+    {
+      "id": "sc-p4-hypothesis-2",
+      "step": "hypothesis-2",
+      "prompt": "Round 2 starts from your kept version. What should its hypothesis name?",
+      "options": [
+        {"id": "a", "text": "The rule you expect to move, and why", "correct": true, "feedback": "Right. Name the rule you expect to move and your reason, so you can check both afterwards."},
+        {"id": "b", "text": "The exact score you are certain to reach", "correct": false, "feedback": "No one can be certain of a score. Say which rule you expect to move and why."},
+        {"id": "c", "text": "Every change you might make in the future", "correct": false, "feedback": "A round tests one change. The hypothesis is about that change only."},
+        {"id": "d", "text": "Whatever the checker happens to tell you afterwards", "correct": false, "feedback": "A hypothesis is written before the score exists. It cannot wait for the result."}
+      ]
+    },
+    {
+      "id": "sc-p4-edit-2",
+      "step": "edit-2",
+      "prompt": "You changed your prompt for round 2. What stays the same?",
+      "options": [
+        {"id": "a", "text": "The input, the model and the rules", "correct": true, "feedback": "Right. Keep the input, the model and the rules the same, so a different score points at the prompt."},
+        {"id": "b", "text": "The hypothesis and the decision you make", "correct": false, "feedback": "Each round has its own hypothesis and its own decision. What stays the same is the input, the model and the rules."},
+        {"id": "c", "text": "The prompt and the answers it gives", "correct": false, "feedback": "The prompt just changed, and new answers will come from it. The input, the model and the rules stay the same."},
+        {"id": "d", "text": "The score and the rules you want", "correct": false, "feedback": "The score is what you measure, so it may change. The input, the model and the rules stay the same."}
+      ]
+    },
+    {
+      "id": "sc-p4-measure-2",
+      "step": "measure-2",
+      "prompt": "Round 2 scored higher once. What is one comparison called?",
+      "options": [
+        {"id": "a", "text": "An observation, which suggests but cannot prove", "correct": true, "feedback": "Right. One comparison can suggest that a change helped on these rules. It cannot prove it, because answers vary."},
+        {"id": "b", "text": "A proof that the change always works", "correct": false, "feedback": "One comparison cannot prove that. It is an observation that can suggest."},
+        {"id": "c", "text": "A guarantee about every answer you collect", "correct": false, "feedback": "Future answers will vary. One comparison guarantees nothing about them."},
+        {"id": "d", "text": "A result that needs no rule check", "correct": false, "feedback": "You still read the result for each rule. The comparison is only an observation."}
+      ]
+    },
+    {
+      "id": "sc-p4-hypothesis-3",
+      "step": "hypothesis-3",
+      "prompt": "Round 3 is optional. What does a hypothesis let you do afterwards?",
+      "options": [
+        {"id": "a", "text": "Compare what you expected with what happened", "correct": true, "feedback": "Right. The comparison between what you expected and what happened is how you learn about your prompt."},
+        {"id": "b", "text": "Skip scoring since the outcome is known", "correct": false, "feedback": "A hypothesis is a prediction, not a result. The answers still have to be scored."},
+        {"id": "c", "text": "Change the rules after seeing the answers", "correct": false, "feedback": "The rules stay the same in every round, or the scores cannot be compared."},
+        {"id": "d", "text": "Keep every change without deciding any more", "correct": false, "feedback": "Every round still ends with a decision to keep or undo."}
+      ]
+    },
+    {
+      "id": "sc-p4-edit-3",
+      "step": "edit-3",
+      "prompt": "Why does a small, single edit make results easier to read?",
+      "options": [
+        {"id": "a", "text": "You can tell what caused any movement", "correct": true, "feedback": "Right. A small, single edit leaves one likely cause for any movement in the scores."},
+        {"id": "b", "text": "The checker can then ignore the prompt", "correct": false, "feedback": "The checker scores the answers and never reads the prompt. A single edit helps you read the result."},
+        {"id": "c", "text": "The hypothesis is then no longer needed", "correct": false, "feedback": "The hypothesis is written first in every round, whatever the size of the edit."},
+        {"id": "d", "text": "The total can then never go down", "correct": false, "feedback": "A total can still go down. A small edit only makes the reason easier to see."}
+      ]
+    },
+    {
+      "id": "sc-p4-measure-3",
+      "step": "measure-3",
+      "prompt": "A rule shows NOT CHECKED in round 3. How should you read it?",
+      "options": [
+        {"id": "a", "text": "As lost coverage and never a gain", "correct": true, "feedback": "Right. A rule that moves to NOT CHECKED is no longer covered, so it is lost coverage and never a gain."},
+        {"id": "b", "text": "As a rule that passed every answer", "correct": false, "feedback": "NOT CHECKED means the rule was not decided. It does not mean it passed."},
+        {"id": "c", "text": "As a rule you can safely delete", "correct": false, "feedback": "Deleting it would hide the lost coverage. Keep it visible in the result."},
+        {"id": "d", "text": "As a sign the prompt improved overall", "correct": false, "feedback": "Lost coverage is never a gain. The total no longer reflects that rule."}
+      ]
+    },
+    {
+      "id": "sc-p4-decide-3",
+      "step": "decide-3",
+      "prompt": "Round 3 gives the same score with a simpler prompt. What is true?",
+      "options": [
+        {"id": "a", "text": "It is no measured gain on these rules", "correct": true, "feedback": "Right. An equal score is no measured gain on these rules. A simpler prompt at the same score can still be worth keeping."},
+        {"id": "b", "text": "It is a measured gain on these rules", "correct": false, "feedback": "A measured gain is a higher score on the same rules. The score here is the same."},
+        {"id": "c", "text": "It proves the simpler prompt is clearly worse", "correct": false, "feedback": "An equal score does not show that. One comparison can only suggest."},
+        {"id": "d", "text": "It proves the extra words were all wasted", "correct": false, "feedback": "One comparison cannot prove that, and the score says nothing about qualities no rule checks."}
+      ]
+    }
+  ],
+  "placement": [],
+  "lessons": [
+    {
+      "id": "p4-mission",
+      "title": "Your mission",
+      "win": "You can say in one sentence what you will do in Part 4 and why you change only one thing at a time.",
+      "minutes": 3,
+      "skippable": false,
+      "body": "**The goal.** Understand how to improve a prompt one change at a time, and how to tell from a rerun of the same rules whether a change was worth keeping.\n\n**Why it matters to you.** An edit that feels like an improvement is easy to believe. But AI answers vary from one try to the next, so one good-looking answer proves little, and a change that fixes one thing can quietly break another. Changing one thing at a time and rerunning the same rules shows which change did what. It also lets you undo a change that did not earn its place.\n\n**What you will do.** Start from the score of your prompt in Part 3, called Iteration 0. First, check that your checker can recognize a good answer. Then work in rounds: write down what you expect before anything is scored, change one thing in your prompt, collect five new answers, read the result for every rule, and decide to keep or undo the change. Two rounds are needed and a third is optional. If your own starting score is missing or unusable, the Practice task gives you a ready-made one. It is for practice only and never something to submit.\n\n**What you leave with.** An iteration log with two documented rounds, and the kept version of your prompt, in your project folder. You do not need any technical background.",
+      "activities": [],
+      "retrieval": [],
+      "sources": [
+        {"label": "The Practice task prompt (learning example)", "ref": "kit:northwind/northwind-prompt-v0.md"},
+        {"label": "A log with Iteration 0 already written (practice only)", "ref": "kit:part4/practice/iteration-log.md"}
+      ],
+      "primary_source": {
+        "label": "A log with Iteration 0 already written (practice only)",
+        "ref": "kit:part4/practice/iteration-log.md",
+        "why": "It shows the starting score every round is compared with, written for the Practice task."
+      },
+      "related": {
+        "lessons": ["p4-checker-first"],
+        "glossary": ["Iteration", "Baseline (Iteration 0)"]
+      }
+    },
+    {
+      "id": "p4-checker-first",
+      "title": "Check the checker first",
+      "win": "You can choose a known-good answer the right way and say what to do when the checker scores it under 95%.",
+      "minutes": 5,
+      "skippable": false,
+      "body": "**In the method.** Score the result. Before you trust a checker's numbers, check that it can recognize a good answer.\n\n**The idea.** A score is only as trustworthy as the checker behind it. So test the checker with an answer you already know is good. Choose that known-good answer by reading it against the written requirements, before you see its score. Never take the best of the five answers, because then the score would only echo the checker and test nothing.\n\nThe checker should score the known-good answer 95% or more. If it does not, something is wrong. Investigate the checker, or the written requirements. Never loosen a rule to make the answer pass. That hides the problem, and every later score becomes less trustworthy.\n\n**Two separate checks.** The known-good check asks whether the checker can recognize a good answer. The five-answer score asks how well your prompt does across several answers. They are two separate things, and you never merge them.\n\n**How this course does it.** In the next step you choose the answer from your own files, and the app shows its score only after you save your choice. Other approaches work too, such as writing the known-good answer yourself from the requirements.\n\nThe questions are for you, so answer them or move on.",
+      "activities": [
+        {
+          "id": "cf-when",
+          "type": "choice",
+          "prompt": "When do you choose the known-good answer?",
+          "options": [
+            {"id": "a", "text": "Before you see any score for it", "correct": true, "feedback": "Right. You judge it against the written requirements first, so its score cannot influence your choice."},
+            {"id": "b", "text": "After the checker has scored all five", "correct": false, "feedback": "By then the scores could shape your choice. Choose it from the requirements before you see its score."},
+            {"id": "c", "text": "After you find the highest total score", "correct": false, "feedback": "Choosing by score only echoes the checker. The known-good answer is chosen from the requirements."},
+            {"id": "d", "text": "Whenever the checker marks it as passing", "correct": false, "feedback": "Waiting for a pass means the checker decides for you. You decide first, from the requirements."}
+          ]
+        },
+        {
+          "id": "cf-sort",
+          "type": "sort",
+          "prompt": "Sort each action into what to do and what never to do with a known-good answer.",
+          "buckets": [
+            {"id": "do", "label": "Do this"},
+            {"id": "never", "label": "Never do this"}
+          ],
+          "items": [
+            {"id": "cf1", "text": "Choose it from the written requirements before seeing its score", "bucket": "do", "feedback": "Choosing first means the score cannot steer you. The requirements decide what good means."},
+            {"id": "cf2", "text": "Investigate the checker when it scores under 95%", "bucket": "do", "feedback": "A low score can point to a mistake in a check. Look at what each rule decided."},
+            {"id": "cf3", "text": "Loosen a rule so the answer passes", "bucket": "never", "feedback": "Loosening a rule hides the problem and makes every later score less trustworthy."},
+            {"id": "cf4", "text": "Take the highest scoring answer of the five", "bucket": "never", "feedback": "The best of the five is chosen by the checker, so it cannot test the checker."},
+            {"id": "cf5", "text": "Check the written requirements when it scores under 95%", "bucket": "do", "feedback": "The requirements may be unclear or incomplete. Fix the requirements and the rules together, not by loosening a rule."},
+            {"id": "cf6", "text": "Merge its score with the five-answer score", "bucket": "never", "feedback": "They answer different questions. One tests the checker and the other measures the prompt."}
+          ]
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-p4-cf-1",
+          "prompt": "A known-good answer scores under 95%. What do you do?",
+          "options": [
+            {"id": "a", "text": "Investigate the checker or the requirements", "correct": true, "feedback": "Right. Something is off, and the cause is in the checker or the written requirements."},
+            {"id": "b", "text": "Loosen the rule that it failed", "correct": false, "feedback": "Never loosen a rule to make an answer pass. That hides the problem."},
+            {"id": "c", "text": "Choose another answer that scores higher", "correct": false, "feedback": "Choosing by score turns the check into an echo. Investigate the cause instead."},
+            {"id": "d", "text": "Ignore it and carry on regardless", "correct": false, "feedback": "A low score means the checker may not be trustworthy yet. Investigate first."}
+          ]
+        },
+        {
+          "id": "r-p4-cf-2",
+          "prompt": "How do the known-good check and the five-answer score relate?",
+          "options": [
+            {"id": "a", "text": "Two separate checks that are never merged", "correct": true, "feedback": "Right. One asks whether the checker can recognize a good answer. The other asks how your prompt does across several answers."},
+            {"id": "b", "text": "One score that appears in two places", "correct": false, "feedback": "They are two different checks with two different questions."},
+            {"id": "c", "text": "The second one replaces the first one", "correct": false, "feedback": "Neither replaces the other. The known-good check comes first and stays separate."},
+            {"id": "d", "text": "The first is just the best answer", "correct": false, "feedback": "The known-good answer is chosen from the requirements, never as the best of the five."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "The Practice task's written rules (learning example)", "ref": "kit:northwind/northwind-test-cases-reference.md"},
+        {"label": "The ready-made Practice checker (practice only)", "ref": "kit:part4/practice/check.py"}
+      ],
+      "primary_source": {
+        "label": "The Practice task's written rules (learning example)",
+        "ref": "kit:northwind/northwind-test-cases-reference.md",
+        "why": "It lists the rules a good answer is judged against, which is how a known-good answer is chosen."
+      },
+      "related": {
+        "lessons": ["p4-mission", "p4-one-change"],
+        "glossary": ["Known-good answer", "Checker", "Known-good output"]
+      }
+    },
+    {
+      "id": "p4-one-change",
+      "title": "One change, one prediction",
+      "win": "You can change one thing at a time and write a hypothesis before anything is scored.",
+      "minutes": 6,
+      "skippable": false,
+      "body": "**In the method.** Improve. Change one thing, and say what you expect before you see a score.\n\n**The idea.** When you change several things at once and a score moves, you cannot tell which change did it. So change one thing in a round: one line, one instruction or one example. A change can be small.\n\nBefore anything is scored, write a hypothesis: which rule you expect to move, and why. Written first, it cannot bend to fit the result. Afterwards you compare what you expected with what happened, and that comparison is how you learn about your prompt.\n\n**Keep everything else the same.** Use the same input, the same model and the same rules in every round. If any of them changes along with the prompt, a different score might come from that instead.\n\n**How this course does it.** Each round has a hypothesis step before the edit step, and the app locks your hypothesis once it is saved. Other approaches work too, such as a notebook, as long as the hypothesis is written before anything is scored.\n\nThe questions are for you, so answer them or move on.",
+      "activities": [
+        {
+          "id": "oc-sort",
+          "type": "sort",
+          "prompt": "Each line describes an edit to a prompt. Sort each one into one change or more than one change.",
+          "buckets": [
+            {"id": "one", "label": "One change"},
+            {"id": "more", "label": "More than one change"}
+          ],
+          "items": [
+            {"id": "oc1", "text": "Reword the tone line to be more concrete", "bucket": "one", "feedback": "This touches one line for one purpose, so it is one change."},
+            {"id": "oc2", "text": "Reword the tone line and add a new example", "bucket": "more", "feedback": "A new example is a second change. If a score moves, you could not tell which one did it."},
+            {"id": "oc3", "text": "Remove the line that gives the AI a role", "bucket": "one", "feedback": "Removing a single line is one change."},
+            {"id": "oc4", "text": "Shorten the length limit and reorder the rules", "bucket": "more", "feedback": "A new limit and a new order are two changes made at once."},
+            {"id": "oc5", "text": "Add one example of a good update", "bucket": "one", "feedback": "One example is one change."},
+            {"id": "oc6", "text": "Rename the headings and tighten the tone line", "bucket": "more", "feedback": "Headings and tone are two separate things to change."}
+          ]
+        },
+        {
+          "id": "oc-hypothesis",
+          "type": "choice",
+          "prompt": "Which hypothesis is written the right way, before any score?",
+          "options": [
+            {"id": "a", "text": "Factual tone should rise because the new line names words to avoid.", "correct": true, "feedback": "Right. It names the rule that should move and gives a reason, and it was written before any score."},
+            {"id": "b", "text": "This edit should make the whole update much better overall, I think.", "correct": false, "feedback": "It names no rule and no reason, so nothing could show it was wrong."},
+            {"id": "c", "text": "The score went up, so I will say the edit worked well.", "correct": false, "feedback": "This is written after the score, so it is not a hypothesis."},
+            {"id": "d", "text": "I will write what I expected once I see the new results.", "correct": false, "feedback": "A hypothesis written after the results can bend to fit them. Write it first."}
+          ]
+        },
+        {
+          "id": "oc-order",
+          "type": "order",
+          "prompt": "Put the steps of one round in the order you would do them.",
+          "items": [
+            {"id": "o1", "text": "Write the hypothesis"},
+            {"id": "o2", "text": "Change one thing in the prompt"},
+            {"id": "o3", "text": "Collect new answers from the changed prompt"},
+            {"id": "o4", "text": "Score the answers with the same rules"},
+            {"id": "o5", "text": "Read each rule, then keep or undo the change"}
+          ],
+          "feedback_right": "Right. The hypothesis comes first, so nothing in the result can shape it.",
+          "feedback_wrong": "Not yet. The hypothesis comes before anything else, and the decision comes last, after you have read every rule."
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-p4-oc-1",
+          "prompt": "Why is the hypothesis written before anything is scored?",
+          "options": [
+            {"id": "a", "text": "So the result cannot bend what you expected", "correct": true, "feedback": "Right. Written first, it cannot be changed to fit the result."},
+            {"id": "b", "text": "So the checker is able to skip rules", "correct": false, "feedback": "The checker follows its rules and never reads the hypothesis."},
+            {"id": "c", "text": "So the prompt does not need any edit", "correct": false, "feedback": "The edit still happens. The hypothesis says what you expect it to do."},
+            {"id": "d", "text": "So the log can be filled in faster", "correct": false, "feedback": "Speed is not the reason. The reason is that the result cannot shape it."}
+          ]
+        },
+        {
+          "id": "r-p4-oc-2",
+          "prompt": "Why keep the input, the model and the rules the same each round?",
+          "options": [
+            {"id": "a", "text": "So a score change points to the prompt", "correct": true, "feedback": "Right. If only the prompt changed, a different score points at the prompt."},
+            {"id": "b", "text": "So the answers can never vary between runs", "correct": false, "feedback": "Answers still vary from one try to the next. That is why one comparison is only an observation."},
+            {"id": "c", "text": "So the rules can be loosened later on", "correct": false, "feedback": "Rules are not loosened to make results look better. They stay fixed so scores can be compared."},
+            {"id": "d", "text": "So each round needs a brand new hypothesis", "correct": false, "feedback": "Each round does have its own hypothesis, but that is not why the rest stays the same."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "The Practice task prompt (learning example)", "ref": "kit:northwind/northwind-prompt-v0.md"}
+      ],
+      "primary_source": {
+        "label": "The Practice task prompt (learning example)",
+        "ref": "kit:northwind/northwind-prompt-v0.md",
+        "why": "Every line is one instruction, so you can see what a single change to it would be."
+      },
+      "related": {
+        "lessons": ["p4-checker-first", "p4-worked-example"],
+        "glossary": ["Hypothesis", "Iteration"]
+      }
+    },
+    {
+      "id": "p4-worked-example",
+      "title": "A worked example",
+      "win": "You can predict how each rule will move after a change, and then compare your prediction with every rule's result.",
+      "minutes": 8,
+      "skippable": false,
+      "body": "**In the method.** Improve. Change the prompt, then compare every rule before and after.\n\n**The idea.** Predict before you look. Deciding what a change will do to each rule, before you see the result, shows how well you understand your prompt. A change aimed at one rule can still move the others.\n\n**A worked example, not a measurement.** This example uses the Practice task, for practice only. Its answers are saved examples written for this lesson, and they have no recorded model. Only your own rounds in the steps are measured, so your numbers may differ.\n\n**Where it starts.** This is Iteration 0, the Practice prompt scored on five saved answers: 25 of 30 overall.\n\n- C1 Length: 4 of 5\n- C2 Grouped by client: 4 of 5\n- C3 Blocker and ask: 4 of 5\n- C4 Teams, not email: 5 of 5\n- C5 Factual tone: 3 of 5\n- C6 Uses the rough notes: 5 of 5\n- NOT CHECKED: none\n\n**The line to change.** The prompt says `- Tone: factual, not self-promotional.` That is vague, so the tone rule can easily miss. The idea is to make this line more concrete.\n\n**Your prediction.** Before anything is scored, place each of the six rules: will it rise, stay or fall? A wrong placement shows why that rule moves as it does. Once your placements are right, the exact edit and the results appear, for two rounds.\n\n**How this course does it.** Each round uses five answers and the same checker. Other approaches work too, such as more answers.\n\nThe questions are for you, so answer them or move on.",
+      "activities": [
+        {
+          "id": "wx-predict",
+          "type": "sort",
+          "prompt": "The tone line is made more concrete and nothing else changes. For each rule, place it where you expect its result across five answers to go: rise, stay the same or fall.",
+          "buckets": [
+            {"id": "rises", "label": "Rises"},
+            {"id": "stays", "label": "Stays the same"},
+            {"id": "falls", "label": "Falls"}
+          ],
+          "items": [
+            {"id": "wx1", "text": "C1 Length", "bucket": "stays", "feedback": "A tone line gives no instruction about length, so there is no reason for the number of words to move."},
+            {"id": "wx2", "text": "C2 Grouped by client", "bucket": "stays", "feedback": "The grouping comes from its own line of the prompt, which this edit leaves alone. A tone change gives no reason for answers to group differently."},
+            {"id": "wx3", "text": "C3 Blocker and ask", "bucket": "stays", "feedback": "The Blocker and Need labels come from their own instruction. A tone line gives no reason for those labels to appear more or less."},
+            {"id": "wx4", "text": "C4 Teams, not email", "bucket": "stays", "feedback": "It already passes every answer, so it cannot rise. A fall would need the edit to push answers toward email openings, and a tone line does not do that."},
+            {"id": "wx5", "text": "C5 Factual tone", "bucket": "rises", "feedback": "This is the rule the edit is aimed at. It fails on praise words and exclamation marks, and a concrete line says what to avoid where a vague one leaves it to chance. It started at 3 of 5, so it has space to rise."},
+            {"id": "wx6", "text": "C6 Uses the rough notes", "bucket": "falls", "feedback": "It is easy to think a tone edit cannot touch this. But an answer is one piece of writing, and a stronger instruction about what to avoid can steer what the AI chooses to include. A side effect on a rule you did not aim at is possible, and only measuring shows whether it happens."}
+          ],
+          "reveal": "**These are saved answers, not a measurement.** The answers in this example are saved samples written for this lesson, and they have no recorded model. Only your own rounds are measured, so your numbers may differ.\n\n**Round 1.** Hypothesis, written first: Factual tone should rise, because a concrete line names what to avoid. The other rules should stay the same.\n\nThe edit is one change to the Practice prompt. Replace the tone line with:\n\n`- Tone: factual. Describe what happened and what is next. Do not use praise or enthusiasm words such as excited, thrilled, proud, amazing or successfully, and do not use exclamation marks.`\n\n| Rule | Iteration 0 | Round 1 |\n| --- | --- | --- |\n| C1 Length | 4 of 5 | 4 of 5 |\n| C2 Grouped by client | 4 of 5 | 4 of 5 |\n| C3 Blocker and ask | 4 of 5 | 4 of 5 |\n| C4 Teams, not email | 5 of 5 | 5 of 5 |\n| C5 Factual tone | 3 of 5 | 5 of 5 |\n| C6 Uses the rough notes | 5 of 5 | 4 of 5 |\n| Overall | 25 of 30 | 26 of 30 |\n| NOT CHECKED | none | none |\n\n**Read every rule.** The total rose from 25 of 30 to 26 of 30, and Factual tone rose by 2. But C6 Uses the rough notes fell from 5 of 5 to 4 of 5: one answer left out the lunch and learn item. Why? That is a guess and not a fact. The stronger tone line may have steered one answer away from the social item. Reading only the total would have hidden a worse rule.\n\n**Decision: keep.** The rule the edit was aimed at rose and the total rose, which is a measured gain on these rules. The log should also record the rule that fell, as something to watch.\n\n**Round 2, starting from round 1 kept.** Hypothesis, written first: No rule should change, because the shorter tone line says the same thing and the Role line adds nothing that a rule checks.\n\nThe edit is one change in purpose, making the prompt simpler, though it touches two lines. Shorten the tone line to:\n\n`- Tone: factual, no praise words, no exclamation marks.`\n\nThen delete the Role line:\n\n`Role: You are a delivery consultant writing a quick status message for your project lead.`\n\n| Rule | Round 1 (kept) | Round 2 |\n| --- | --- | --- |\n| C1 Length | 4 of 5 | 4 of 5 |\n| C2 Grouped by client | 4 of 5 | 4 of 5 |\n| C3 Blocker and ask | 4 of 5 | 4 of 5 |\n| C4 Teams, not email | 5 of 5 | 5 of 5 |\n| C5 Factual tone | 5 of 5 | 5 of 5 |\n| C6 Uses the rough notes | 4 of 5 | 4 of 5 |\n| Overall | 26 of 30 | 26 of 30 |\n| NOT CHECKED | none | none |\n\n**Read every rule.** Every rule is identical to round 1, and the total is 26 of 30 both times. That is no measured gain on these rules.\n\n**Decision: keep the simpler prompt.** A simpler prompt at the same score can be worth keeping. Remember that the score says nothing about qualities no rule checks, such as how the update reads to the person who gets it.\n\nYour own rounds will differ: your prompt, your answers and your numbers are your own."
+        },
+        {
+          "id": "wx-reflect",
+          "type": "reflection",
+          "prompt": "After you have predicted and read the results, write two or three sentences: which rule surprised you, and what would you have missed by looking only at the total?",
+          "min_words": 15
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-p4-wx-1",
+          "prompt": "Why is a worked example not a measurement of your prompt?",
+          "options": [
+            {"id": "a", "text": "Its answers are saved ones, not yours", "correct": true, "feedback": "Right. Only your own rounds, with your own answers, are measured. Yours may differ."},
+            {"id": "b", "text": "Its rules differ from every rule here", "correct": false, "feedback": "It uses the same kind of rules. What differs is that its answers are saved samples."},
+            {"id": "c", "text": "Its checker cannot be run twice, ever", "correct": false, "feedback": "A checker gives the same verdict every time. The example is a demonstration, not a measurement."},
+            {"id": "d", "text": "Its scores are guesses made in advance", "correct": false, "feedback": "The scores come from running the checker on saved answers. They just do not measure your prompt."}
+          ]
+        },
+        {
+          "id": "r-p4-wx-2",
+          "prompt": "A change raised the total. What should you still do before keeping it?",
+          "options": [
+            {"id": "a", "text": "Read the result for every single rule", "correct": true, "feedback": "Right. A total can rise while one rule gets worse, so read each rule."},
+            {"id": "b", "text": "Rerun the change until every rule rises", "correct": false, "feedback": "Rerunning until the result looks good would bend the evidence. Read what you have."},
+            {"id": "c", "text": "Remove the rule that did not rise", "correct": false, "feedback": "Removing a rule hides what it measured. Rules stay the same across rounds."},
+            {"id": "d", "text": "Trust the total because it is bigger", "correct": false, "feedback": "A bigger total can still hide a rule that got worse."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "The Practice task prompt (learning example)", "ref": "kit:northwind/northwind-prompt-v0.md"},
+        {"label": "A log with Iteration 0 already written (practice only)", "ref": "kit:part4/practice/iteration-log.md"}
+      ],
+      "primary_source": {
+        "label": "The Practice task prompt (learning example)",
+        "ref": "kit:northwind/northwind-prompt-v0.md",
+        "why": "It holds the tone line and the Role line this example changes, so you can see them in the whole prompt."
+      },
+      "related": {
+        "lessons": ["p4-one-change", "p4-read-results"],
+        "glossary": ["Hypothesis", "Iteration", "Baseline (Iteration 0)", "NOT CHECKED"]
+      }
+    },
+    {
+      "id": "p4-read-results",
+      "title": "Reading what changed",
+      "win": "You can read a round rule by rule, say what one comparison can and cannot show, and spot lost coverage.",
+      "minutes": 6,
+      "skippable": false,
+      "body": "**In the method.** Score the result and improve. After a change you read the evidence rule by rule, and only then decide.\n\n**The idea.** Read each rule, not only the total. A total can rise while one rule gets worse, because a gain in one place can hide a loss in another. A rule that becomes NOT CHECKED is lost coverage, never a gain. Nothing is checking it now, so the total no longer reflects it.\n\n**What one comparison can say.** One comparison on the same rules is an observation. It can suggest and never prove, because answers vary from one try to the next. A higher score on the same rules is a measured gain on these rules. An equal or lower score is no measured gain on these rules. Either way, the score says nothing about qualities no rule checks. A simpler prompt at the same score can be worth keeping.\n\n**How this course does it.** The five-answer overall score has a coaching target of 95%. It is a target and not a gate: a score below it is not a failure, and you are given a suggested next step. Finishing needs two documented rounds after Iteration 0, which is not one of them. That is this course's convention. Other approaches work too.\n\nThe questions are for you, so answer them or move on.",
+      "activities": [
+        {
+          "id": "rr-sort",
+          "type": "sort",
+          "prompt": "Each line compares a new result with the one before it, on the same rules. Sort each into a measured gain, no measured gain or lost coverage.",
+          "buckets": [
+            {"id": "gain", "label": "Measured gain on these rules"},
+            {"id": "nogain", "label": "No measured gain on these rules"},
+            {"id": "lost", "label": "Lost coverage, not a gain"}
+          ],
+          "items": [
+            {"id": "rr1", "text": "The total goes from 18 of 30 to 21 of 30", "bucket": "gain", "feedback": "A higher score on the same rules is a measured gain on these rules. Read each rule too."},
+            {"id": "rr2", "text": "The total stays at 20 of 30 with every rule unchanged", "bucket": "nogain", "feedback": "An equal score is no measured gain on these rules."},
+            {"id": "rr3", "text": "The total falls from 27 of 30 to 24 of 30", "bucket": "nogain", "feedback": "A lower score is no measured gain on these rules."},
+            {"id": "rr4", "text": "One rule is now NOT CHECKED, so the total looks higher", "bucket": "lost", "feedback": "The rule left the count, so the total is no longer comparable. That is lost coverage, never a gain."},
+            {"id": "rr5", "text": "Every rule stays equal and the prompt gets shorter", "bucket": "nogain", "feedback": "The score is equal, so it is no measured gain on these rules. A simpler prompt at the same score can still be worth keeping."}
+          ]
+        },
+        {
+          "id": "rr-observation",
+          "type": "choice",
+          "prompt": "You ran one comparison and the total rose. How should your log describe that one comparison?",
+          "options": [
+            {"id": "a", "text": "An observation that can suggest, not prove", "correct": true, "feedback": "Right. Answers vary from one try to the next, so one comparison can suggest and never prove."},
+            {"id": "b", "text": "Proof that the change always works well", "correct": false, "feedback": "One comparison cannot prove that. It is an observation."},
+            {"id": "c", "text": "A fact true of every future answer", "correct": false, "feedback": "Future answers will vary. One comparison says nothing certain about them."},
+            {"id": "d", "text": "A measurement that cannot be a coincidence", "correct": false, "feedback": "A coincidence is always possible with one comparison."}
+          ]
+        },
+        {
+          "id": "rr-hidden",
+          "type": "choice",
+          "prompt": "A round's total rose by one. Which finding should you check before keeping the change?",
+          "options": [
+            {"id": "a", "text": "Whether any single rule got worse than before", "correct": true, "feedback": "Right. A total can rise while a rule gets worse, so look at each rule."},
+            {"id": "b", "text": "Whether the new prompt looks longer to you", "correct": false, "feedback": "Length is only a problem if a rule checks it. Look at what each rule says."},
+            {"id": "c", "text": "Whether the checker can be run more quickly", "correct": false, "feedback": "Speed has nothing to do with whether a rule got worse."},
+            {"id": "d", "text": "Whether the total is now an even number", "correct": false, "feedback": "Whether a number is even or odd tells you nothing about the rules."}
+          ]
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-p4-rr-1",
+          "prompt": "What does it mean when a rule moves to NOT CHECKED?",
+          "options": [
+            {"id": "a", "text": "Coverage was lost, so it is no gain", "correct": true, "feedback": "Right. Nothing is checking that rule now, so it is lost coverage and never a gain."},
+            {"id": "b", "text": "The rule passed every one of the answers", "correct": false, "feedback": "NOT CHECKED means the rule was not decided, not that it passed."},
+            {"id": "c", "text": "The rule can be dropped from the log", "correct": false, "feedback": "A NOT CHECKED rule stays visible, so the lost coverage can be seen."},
+            {"id": "d", "text": "The checker has now improved that rule itself", "correct": false, "feedback": "The checker could not decide it. That is lost coverage."}
+          ]
+        },
+        {
+          "id": "r-p4-rr-2",
+          "prompt": "Two prompts score the same on the same rules. Which can be worth keeping?",
+          "options": [
+            {"id": "a", "text": "The simpler one, since the score matches", "correct": true, "feedback": "Right. A simpler prompt at the same score can be worth keeping, though the score says nothing about qualities no rule checks."},
+            {"id": "b", "text": "Neither one, since there is no change", "correct": false, "feedback": "An equal score is no measured gain on these rules, but a simpler prompt can still be worth keeping."},
+            {"id": "c", "text": "The longer one, since it holds more", "correct": false, "feedback": "More words do not earn their place unless a rule gains from them."},
+            {"id": "d", "text": "Whichever one was written most recently, always", "correct": false, "feedback": "Never assume the latest version is the one to keep. Decide on the evidence."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "A log with Iteration 0 already written (practice only)", "ref": "kit:part4/practice/iteration-log.md"},
+        {"label": "The ready-made Practice checker (practice only)", "ref": "kit:part4/practice/check.py"}
+      ],
+      "primary_source": {
+        "label": "A log with Iteration 0 already written (practice only)",
+        "ref": "kit:part4/practice/iteration-log.md",
+        "why": "It shows a result written rule by rule, with NOT CHECKED kept visible, which is how every round is read."
+      },
+      "related": {
+        "lessons": ["p4-worked-example", "p4-keep-and-log"],
+        "glossary": ["Measured gain on these rules", "Coverage change", "NOT CHECKED"]
+      }
+    },
+    {
+      "id": "p4-keep-and-log",
+      "title": "Keep it or undo it, and write it down",
+      "win": "You can decide to keep or undo a change on purpose, and say who writes which part of a log entry.",
+      "minutes": 6,
+      "skippable": false,
+      "body": "**In the method.** Keep a record. After every round you decide, and you write down what happened and why.\n\n**The idea.** A change is not kept just because it is the latest one. After each round make an explicit decision: keep it or undo it. Never assume the latest version is the kept one. An undone round stays in the log, marked as undone, because it still shows what you tried and what the rules said.\n\nThe log tells the story in order: what you expected, what you changed, what the numbers showed and why you decided as you did.\n\n**Red, green, refactor.** Software teams use a cycle you can borrow. Red is a check that fails, such as a rule that does not pass. Green is a change that makes it pass. Refactor is a cleanup that keeps the results the same, such as a simpler prompt at the same score. A good log shows all three.\n\n**How this course does it.** Each round is one entry in iteration-log.md, with Hypothesis, Change, Result, Reasoning and Decision. Your AI writes half: the numbers and the Hypothesis you saved. You write the rest: Change, Result, Reasoning and Decision. The app compares your entry with the scores and never edits the log. Other approaches work too, such as a notebook or a table, as long as every round is recorded the same way.\n\n**Where this leads.** Finishing Part 4 needs two documented rounds after Iteration 0, and a third is optional. You will then hold a log and the kept version of your prompt. Part 5 starts from that kept version and asks which of its instructions do real work. Results from the Practice task are for practice only and cannot be submitted.\n\nThe questions are for you, so answer them or move on.",
+      "activities": [
+        {
+          "id": "kl-sort",
+          "type": "sort",
+          "prompt": "Each line is a part of one log entry. Sort it by who writes it in this course.",
+          "buckets": [
+            {"id": "ai", "label": "Your AI writes it"},
+            {"id": "you", "label": "You write it"}
+          ],
+          "items": [
+            {"id": "kl1", "text": "The pass counts for each rule", "bucket": "ai", "feedback": "The numbers come from the checker, and your AI writes them into the entry."},
+            {"id": "kl2", "text": "The Hypothesis you saved before the edit", "bucket": "ai", "feedback": "It is copied word for word from what you saved, so it cannot change after the result."},
+            {"id": "kl3", "text": "What you changed in the prompt", "bucket": "you", "feedback": "You made the change, so you describe it in your own words."},
+            {"id": "kl4", "text": "What the numbers showed, in your words", "bucket": "you", "feedback": "Reading the result rule by rule is your job. The Result line is yours."},
+            {"id": "kl5", "text": "Why you decided as you did", "bucket": "you", "feedback": "The reasoning is yours. It is what lets someone else follow your thinking."},
+            {"id": "kl6", "text": "The decision to keep or undo", "bucket": "you", "feedback": "The decision is always yours, and it is explicit. Nothing is assumed."}
+          ]
+        },
+        {
+          "id": "kl-undone",
+          "type": "choice",
+          "prompt": "You decide to undo a round. What happens to its entry in the log?",
+          "options": [
+            {"id": "a", "text": "It stays there, marked as undone", "correct": true, "feedback": "Right. An undone round stays in the log, marked as undone, because it still shows what you tried."},
+            {"id": "b", "text": "It is deleted from the log", "correct": false, "feedback": "Deleting it would remove what you learned. Mark it as undone instead."},
+            {"id": "c", "text": "The next entry takes its place", "correct": false, "feedback": "Each round keeps its own entry. The log stays in order."},
+            {"id": "d", "text": "It stays but loses its numbers", "correct": false, "feedback": "The numbers stay. They are part of the evidence."}
+          ]
+        },
+        {
+          "id": "kl-cycle",
+          "type": "order",
+          "prompt": "Put the red, green, refactor cycle in order.",
+          "items": [
+            {"id": "c1", "text": "A rule fails on the answers"},
+            {"id": "c2", "text": "A change makes that rule pass"},
+            {"id": "c3", "text": "The prompt is simplified and the results stay the same"}
+          ],
+          "feedback_right": "Right. Red is the failing rule, green is the change that fixes it and refactor is the cleanup that keeps the results.",
+          "feedback_wrong": "Not yet. First something fails, then a change makes it pass, and only then do you simplify."
+        }
+      ],
+      "retrieval": [
+        {
+          "id": "r-p4-kl-1",
+          "prompt": "What is the refactor step in red, green, refactor?",
+          "options": [
+            {"id": "a", "text": "Simplifying while the results stay the same", "correct": true, "feedback": "Right. Refactor is a cleanup that keeps the results the same."},
+            {"id": "b", "text": "Finding a rule that fails on answers", "correct": false, "feedback": "That is the red step."},
+            {"id": "c", "text": "Making a failing rule pass again quickly", "correct": false, "feedback": "That is the green step."},
+            {"id": "d", "text": "Writing the hypothesis well before the edit", "correct": false, "feedback": "That belongs at the start of every round, and it is not one of the three steps."}
+          ]
+        },
+        {
+          "id": "r-p4-kl-2",
+          "prompt": "What does the app do with your iteration log?",
+          "options": [
+            {"id": "a", "text": "It compares the log and never edits it", "correct": true, "feedback": "Right. The app compares your entry with the scores and never edits the log."},
+            {"id": "b", "text": "It quietly rewrites each Reasoning line for you", "correct": false, "feedback": "The Reasoning is yours. The app never edits the log."},
+            {"id": "c", "text": "It decides keep or undo for you now", "correct": false, "feedback": "The decision is always yours and always explicit."},
+            {"id": "d", "text": "It deletes every undone round from the log", "correct": false, "feedback": "An undone round stays in the log, marked as undone."}
+          ]
+        }
+      ],
+      "sources": [
+        {"label": "The checker skill: Mode 3, run and log", "ref": "kit:skills/build-eval-script/SKILL.md"},
+        {"label": "A log with Iteration 0 already written (practice only)", "ref": "kit:part4/practice/iteration-log.md"}
+      ],
+      "primary_source": {
+        "label": "A log with Iteration 0 already written (practice only)",
+        "ref": "kit:part4/practice/iteration-log.md",
+        "why": "It shows the entry layout you will fill in: Hypothesis, Change, Result and Reasoning under the numbers."
+      },
+      "related": {
+        "lessons": ["p4-read-results", "p4-mission"],
+        "glossary": ["Kept version", "Red green refactor", "iteration-log.md"]
+      }
+    }
+  ]
+}

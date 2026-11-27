@@ -29,9 +29,13 @@ def part_three_state(engine):
     return {key: state[key] for key in ("course", "steps", "current_step", "current_item", "course_text")}
 
 
+# Part 4's decide-2 ends in a written reflection (kept by the step), so it has no choice question.
+NO_CHOICE_CHECK = {"part-4": ("decide-2",)}
+
+
 class Registry(unittest.TestCase):
     def test_parts_three_one_and_two_are_registered_and_keep_their_lists(self):
-        self.assertEqual(store.PARTS, (store.PART_3, store.PART_1, store.PART_2))
+        self.assertEqual(store.PARTS, (store.PART_3, store.PART_1, store.PART_2, store.PART_4))
         part = store.PART_3
         self.assertEqual((part.id, part.n, part.mission), ("part-3", 3, "mission"))
         self.assertEqual(part.course, store.COURSE)
@@ -40,10 +44,11 @@ class Registry(unittest.TestCase):
         self.assertEqual(part.course_for("promptfoo"), store.PROMPTFOO_COURSE)
         self.assertEqual(part.step_ids_for("promptfoo"), store.PROMPTFOO_STEP_IDS)
         self.assertEqual(store.all_lesson_ids(),
-                         store.LESSON_IDS + store.PART_1.lesson_ids + store.PART_2.lesson_ids)
+                         store.LESSON_IDS + store.PART_1.lesson_ids + store.PART_2.lesson_ids
+                         + store.PART_4.lesson_ids)
         self.assertEqual(store.all_step_ids(),
                          store.STEP_IDS + (store.EXTRA_STEP, store.OPTIONAL_STEP) + store.PART_1.step_ids
-                         + store.PART_2.step_ids)
+                         + store.PART_2.step_ids + store.PART_4.step_ids + store.PART_4.optional_steps)
         self.assertEqual(store.part_by_id("part-3"), part)
         self.assertIsNone(store.part_by_id("part-9"))
 
@@ -61,7 +66,7 @@ class Registry(unittest.TestCase):
             self.assertEqual(store.part_of("mission"), store.PART_3)
             self.assertEqual(store.all_lesson_ids(),
                              store.LESSON_IDS + store.PART_1.lesson_ids + store.PART_2.lesson_ids
-                             + (ph.INTRO, ph.CHOICE))
+                             + store.PART_4.lesson_ids + (ph.INTRO, ph.CHOICE))
         self.assertIsNone(store.part_of(ph.CHOICE))
 
     def test_parts_one_and_two_register_a_restart_plan_for_every_step_and_part_three_registers_none(self):
@@ -70,11 +75,18 @@ class Registry(unittest.TestCase):
             self.assertEqual(list(part.restart), list(part.step_ids), part.id)
             self.assertEqual(set(part.new_steps()), set(part.restart), part.id)
 
+    def test_no_lesson_or_step_id_is_shared_by_two_registered_parts_and_part_4_has_no_restart_plan(self):
+        self.assertEqual(store.duplicate_ids(), [])
+        self.assertIsNone(store.PART_4.restart)
+        self.assertEqual(set(store.PART_4.new_steps()), set(store.PART_4.saved_step_ids()))
+        self.assertEqual(store.PART_4.step_ids, tuple(i for k, i in store.PART_4.course if k == "step"))
+        self.assertTrue(set(store.PART_4.optional_steps).isdisjoint(store.PART_4.step_ids))
+
     def test_register_part_restores_the_registry_even_after_an_error(self):
         before = store.PARTS
         with self.assertRaises(RuntimeError):
             with store.register_part(ph.make_part()):
-                self.assertEqual(len(store.PARTS), 4)
+                self.assertEqual(len(store.PARTS), 5)
                 raise RuntimeError("boom")
         self.assertIs(store.PARTS, before)
 
@@ -185,10 +197,11 @@ class Loader(unittest.TestCase):
             self.assertEqual(course.mission_of("hook"), course.mission)
             self.assertEqual(course.mission_of(ph.CHOICE), "The test Part's mission.")
         self.assertEqual(list(course.by_id), list(store.LESSON_IDS) + list(store.PART_1.lesson_ids)
-                         + list(store.PART_2.lesson_ids) + [ph.INTRO, ph.CHOICE])
+                         + list(store.PART_2.lesson_ids) + list(store.PART_4.lesson_ids) + [ph.INTRO, ph.CHOICE])
         self.assertIn(ph.STEP, course.step_checks)
         self.assertEqual(list(L.load_bundled().by_id),
-                         list(store.LESSON_IDS) + list(store.PART_1.lesson_ids) + list(store.PART_2.lesson_ids))
+                         list(store.LESSON_IDS) + list(store.PART_1.lesson_ids) + list(store.PART_2.lesson_ids)
+                         + list(store.PART_4.lesson_ids))
 
     def test_a_lesson_id_that_two_parts_share_stops_the_load(self):
         with ph.synthetic_part(extra_parts=[ph.make_part("part-8", "part-8")]):
@@ -222,18 +235,19 @@ class Loader(unittest.TestCase):
         file = json.loads(resources.read_text("content/steps.json"))
         part_one = json.loads(resources.read_text("content/part-1-steps.json"))["steps"]
         part_two = json.loads(resources.read_text("content/part-2-steps.json"))["steps"]
+        part_four = json.loads(resources.read_text("content/part-4-steps.json"))["steps"]
         # A paste-mode step gets the shared paste words under its own ui on load; every other step is the file's text.
         expected = {k: dict(v, ui={**file["paste_ui"], **v.get("ui", {})}) if v.get("cli_mode") == "paste" else v
                     for k, v in file["steps"].items()}
         content, ui = L.load_step_content()
-        self.assertEqual({k: v for k, v in content["steps"].items() if k not in part_one and k not in part_two},
-                         expected)
+        self.assertEqual({k: v for k, v in content["steps"].items()
+                          if k not in part_one and k not in part_two and k not in part_four}, expected)
         self.assertEqual({k: v for k, v in content.items() if k != "steps"}, {k: v for k, v in file.items() if k != "steps"})
         self.assertEqual(ui, {})
         with ph.synthetic_part():
             content, ui = L.load_step_content()
         self.assertEqual({k: v for k, v in content["steps"].items()
-                          if k not in part_one and k not in part_two and k != ph.STEP}, expected)
+                          if k not in part_one and k not in part_two and k not in part_four and k != ph.STEP}, expected)
         self.assertEqual(content["steps"][ph.STEP]["kind"], ph.KIND)
         self.assertEqual(content["messages"], file["messages"])
         self.assertEqual(ui, {PART_9: {ph.ui_key(): "Words for the test Part"}})
@@ -263,9 +277,10 @@ class Loader(unittest.TestCase):
     def test_the_content_checks_read_every_registered_part(self):
         with ph.synthetic_part():
             parts = ch.parts_data()
-        self.assertEqual([p.id for p, _ in parts], ["part-3", "part-1", "part-2", PART_9])
+        self.assertEqual([p.id for p, _ in parts], ["part-3", "part-1", "part-2", "part-4", PART_9])
         for part, data in parts:
-            self.assertEqual(sorted(c["step"] for c in data["step_checks"]), sorted(part.step_ids))
+            self.assertEqual(sorted(c["step"] for c in data["step_checks"]),
+                             sorted(set(part.step_ids + part.optional_steps) - set(NO_CHOICE_CHECK.get(part.id, ()))))
             self.assertEqual([x["id"] for x in data["lessons"]], list(part.lesson_ids))
 
 

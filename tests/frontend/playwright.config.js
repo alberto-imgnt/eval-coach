@@ -21,6 +21,7 @@ module.exports = defineConfig({
     { name: 'part1', testMatch: /part1\.spec\.js$/, use: { ...shared, baseURL: `http://127.0.0.1:${REAL_PORT}` } },
     { name: 'part2', testMatch: /part2\.spec\.js$/, use: { ...shared, baseURL: `http://127.0.0.1:${REAL_PORT}` } },
     { name: 'part3inputs', testMatch: /part3-inputs\.spec\.js$/, use: { ...shared, baseURL: `http://127.0.0.1:${REAL_PORT}` } },
+    { name: 'part4', testMatch: /part4\.spec\.js$/, use: { ...shared, baseURL: `http://127.0.0.1:${REAL_PORT}` } },
     { name: 'locking', testMatch: /locking\.spec\.js$/, use: { ...shared, baseURL: `http://127.0.0.1:${REAL_PORT}` } },
   ],
   webServer: [

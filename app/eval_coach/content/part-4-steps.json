@@ -1,0 +1,1040 @@
+{
+  "paste_ui": {
+    "ai_note": "Each step opens a new chat, so nothing from an earlier step carries over. Your AI window starts by itself when this step needs it.",
+    "paste_heading": "Text to paste",
+    "paste_note": "Wait until your AI is ready for a message. Copy this line, click in the AI window, paste it with {paste_key} and press Enter. The app types nothing for you.",
+    "copy": "Copy",
+    "copied": "Copied. Paste it into your AI window and press Enter.",
+    "copy_failed": "Your browser did not allow copying. Select the text above and press {copy_key}.",
+    "new_chat": "Open a new AI chat",
+    "new_chat_confirm_title": "Open a new AI chat?",
+    "new_chat_confirm_body": "This closes your AI window and opens a new chat. Anything it has not saved is lost, and you will need to paste the text again.",
+    "new_chat_confirm_body_result": "This closes your AI window if it is open, clears this step's AI folder and opens a new chat. Anything your AI has not saved to your project is lost, and you will need to paste the text again.",
+    "new_chat_confirm": "Open a new chat",
+    "ready_hint": "Wait until your AI is ready for a message, then paste the text and press Enter."
+  },
+  "steps": {
+    "starting-point": {
+      "kind": "choose_start",
+      "title": "Choose your starting point",
+      "goal": "Choose the version you will improve: your own Part 3 baseline, or the Practice task baseline.",
+      "why": [
+        "Every round compares a changed prompt with a starting version, so you choose the starting version first.",
+        "Your Part 3 baseline is your own work: your prompt, your rules, your checker and your five answers. The Practice task baseline is a ready-made set for the Practice task. It is for practice only, it cannot be submitted, and it never touches your own files.",
+        "If your own baseline already scores 95% or more, there is little to improve in it. The Practice task baseline gives you something to improve either way.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Read both choices. Nothing is chosen for you.",
+        "Press Use my Part 3 baseline, or press Use the Practice task baseline.",
+        "Your choice is fixed once round 1 begins. To use the other one, reset your lesson progress in Settings. Your files are kept."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "The first choice is not available.",
+          "fix": "The reason is shown under it. The Practice task baseline is always available."
+        },
+        {
+          "problem": "You want the other starting point after round 1 began.",
+          "fix": "Reset your lesson progress in Settings. Your files are kept, and you choose again."
+        }
+      ],
+      "ui": {
+        "heading": "Choose where to start",
+        "own": "Your Part 3 baseline",
+        "own_blurb": "Your own prompt, rules, checker and five answers from Part 3.",
+        "practice": "Practice task baseline",
+        "practice_blurb": "A ready-made prompt, rules, checker and five answers for the Practice task. Its Iteration 0 scores 25 of 30.",
+        "practice_only": "This is for practice only and cannot be submitted.",
+        "little_gap": "Your baseline already scores 95% or more, so there is little to improve in it. The Practice task baseline is offered beside it.",
+        "use_own": "Use my Part 3 baseline",
+        "use_practice": "Use the Practice task baseline",
+        "chosen": "Chosen",
+        "unavailable": "Not available",
+        "saving": "Saving…"
+      },
+      "messages": {
+        "own_skipped": "You skipped Part 3, so there is no baseline of your own. Choose the Practice task baseline.",
+        "own_unfinished": "Your Part 3 baseline is not finished. Choose the Practice task baseline, or finish Part 3 first.",
+        "own_changed": "Your Part 3 files changed after the baseline was counted, so its score may no longer match them. Choose the Practice task baseline.",
+        "bad_choice": "Choose your Part 3 baseline or the Practice task baseline.",
+        "start_fixed": "Your starting point is fixed now that round 1 has begun. To use the other one, reset your lesson progress in Settings. Your files are kept."
+      },
+      "gate": {
+        "chosen": {
+          "label": "A starting point is chosen",
+          "ok": "",
+          "fail": "Choose your Part 3 baseline or the Practice task baseline."
+        }
+      }
+    },
+    "known-good": {
+      "kind": "known_good",
+      "title": "Check your checker",
+      "goal": "Write a known-good answer from your written requirements and confirm your checker scores it 95% or more.",
+      "why": [
+        "A checker you have not tested can be wrong in either direction. A known-good answer clearly meets every requirement, so a checker you can trust should pass it.",
+        "Choose it from the written requirements before you see its score. Never pick the strongest of your five answers: that would test the checker against the answers you already have and not against the requirements.",
+        "The checker should score it 95% or more. If it does not, investigate the checker or the written requirements. Do not loosen a rule just to make it pass.",
+        "This check is separate from the five-answer score. The two are never merged.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Read your written requirements below.",
+        "Write or paste one answer that clearly meets every requirement. Choose it now, before you see any score.",
+        "Press Save and check my answer. The app runs your checker on it, with no AI. The score appears only after the answer is saved.",
+        "If the score is under 95%, check the checker or the written requirements, fix the cause and save your answer again. Do not loosen a rule.",
+        "If a repair changed what your five original answers score, press Run my five original answers again before you start a round."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "Your known-good answer scores under 95%.",
+          "fix": "Open the rule that failed and decide whether the checker or the written requirement is wrong, then fix that. Never loosen a rule to make the answer pass."
+        },
+        {
+          "problem": "No score appears.",
+          "fix": "The score appears only after you save an answer. Write one and press Save and check my answer."
+        },
+        {
+          "problem": "The checker could not run.",
+          "fix": "Read the message shown. If your checker has an error, ask your AI to fix it without changing any threshold, then save your answer again."
+        }
+      ],
+      "ui": {
+        "heading": "Your known-good answer",
+        "rules_heading": "Your written requirements",
+        "answer_label": "Your known-good answer",
+        "answer_hint": "Choose it from the requirements above before you see a score.",
+        "save": "Save and check my answer",
+        "saving": "Checking…",
+        "result_heading": "What the checker said",
+        "stale": "The answer or the checker changed after this was scored. Save your answer again.",
+        "rerun_heading": "Your original five answers",
+        "rerun_button": "Run my five original answers again",
+        "rerunning": "Running…",
+        "practice_only": "The Practice task is for practice only and cannot be submitted."
+      },
+      "messages": {
+        "bad_text": "That text could not be saved."
+      },
+      "gate": {
+        "saved": {
+          "label": "Known-good answer saved",
+          "ok": "",
+          "fail": "Write or paste your known-good answer and press Save and check my answer."
+        },
+        "scored": {
+          "label": "Scored on the current checker",
+          "ok": "",
+          "fail": "Press Save and check my answer. The answer or the checker changed after it was scored."
+        },
+        "meets": {
+          "label": "Meets the 95% mark",
+          "ok": "",
+          "fail": "The known-good answer scores under 95%. Check the checker or the written requirements. Do not loosen a rule."
+        },
+        "rerun": {
+          "label": "Iteration 0 matches your checker",
+          "ok": "",
+          "fail": "Your checker changed what your five original answers score. Press Run my five original answers again."
+        }
+      }
+    },
+    "hypothesis-1": {
+      "kind": "hypothesis",
+      "title": "Round 1: Write your hypothesis",
+      "goal": "Say which rule you want to move and what you expect your change to do, before you change anything.",
+      "why": [
+        "A hypothesis is a prediction written before the result. One written after the result is only a story.",
+        "Look at every rule of your starting version, not only the total. A total can hide a rule that fails.",
+        "Name one rule and say what you expect. One change, one hypothesis.",
+        "Your text stays editable until the round has a saved answer. After that it cannot change, because a hypothesis written after the result is not a prediction.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Read the result of Iteration 0 for each rule. Any rule that does not pass every answer is marked in words.",
+        "Write one hypothesis: the rule you want to move and what you expect. For example: naming the exact labels I want will move the rule that checks labels from 3 of 5 to 5 of 5.",
+        "Press Save my hypothesis. The next step opens."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "The hypothesis cannot be changed.",
+          "fix": "The round already has a saved answer. A hypothesis written after the result is not a prediction, so write a new one in the next round."
+        },
+        {
+          "problem": "You are not sure which rule to pick.",
+          "fix": "Pick a rule that does not pass every answer. If every rule passes every answer, pick the rule you care about most and predict that it stays at 5 of 5."
+        }
+      ],
+      "ui": {
+        "rules_heading": "Your starting version, rule by rule",
+        "overall": "Overall: {passes} of {total}",
+        "start_iteration_0": "Starting from Iteration 0.",
+        "start_kept": "Starting from the version you kept (round {n}).",
+        "needs_work": "Needs work",
+        "passes_all": "Passes every answer",
+        "not_checked": "NOT CHECKED",
+        "rule_count": "{passes} of {checked} answers pass",
+        "label": "Your hypothesis",
+        "hint": "Name the rule and say what you expect your change to do.",
+        "save": "Save my hypothesis",
+        "saving": "Saving…",
+        "saved": "Your hypothesis is saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "practice_only": "The Practice task is for practice only and cannot be submitted."
+      },
+      "messages": {
+        "locked": "This round already has a saved answer, so its hypothesis cannot change now. A hypothesis written after the result is not a prediction.",
+        "bad_text": "That text could not be saved."
+      },
+      "gate": {
+        "saved": {
+          "label": "Hypothesis saved",
+          "ok": "",
+          "fail": "Write your hypothesis and press Save my hypothesis."
+        }
+      }
+    },
+    "edit-1": {
+      "kind": "edit",
+      "title": "Round 1: Edit your prompt",
+      "goal": "Change one thing in this round's own copy of your prompt.",
+      "why": [
+        "Change one thing at a time. If you change two things and the score moves, you cannot tell which one did it.",
+        "This is this round's own copy. Your earlier prompts, rules, checker and answers are not touched.",
+        "Keep the input, the model and the rules the same, so the only difference is your change.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Read your hypothesis above the editor.",
+        "Change one thing in the prompt, then press Save my edit.",
+        "The step is done when your saved prompt differs from the starting prompt.",
+        "Once the round has a saved answer, the prompt cannot change, because the answers have to come from this exact prompt."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "The step will not finish.",
+          "fix": "Your saved prompt is still the same as the starting prompt. Change one thing and press Save my edit."
+        },
+        {
+          "problem": "The prompt cannot be changed.",
+          "fix": "The round already has a saved answer. The answers have to come from this exact prompt, so make your next change in the next round."
+        }
+      ],
+      "ui": {
+        "hypothesis_heading": "Your hypothesis",
+        "start_heading": "Starting prompt (read only)",
+        "editor_heading": "This round's prompt",
+        "editor_label": "Your edited prompt",
+        "save": "Save my edit",
+        "saving": "Saving…",
+        "saved": "Your edit is saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "same_note": "Your prompt is still the same as the starting prompt. Change one thing, then save.",
+        "changed_note": "Your prompt differs from the starting prompt.",
+        "practice_only": "The Practice task is for practice only and cannot be submitted."
+      },
+      "messages": {
+        "blank": "The prompt cannot be empty.",
+        "locked": "This round already has a saved answer, so its prompt cannot change now. The answers have to come from this exact prompt.",
+        "save_failed": "Your prompt could not be saved: {error}",
+        "bad_text": "That text could not be saved."
+      },
+      "gate": {
+        "changed": {
+          "label": "The prompt differs from the starting prompt",
+          "ok": "",
+          "fail": "Change one thing in the prompt, then press Save my edit."
+        }
+      }
+    },
+    "measure-1": {
+      "kind": "measure",
+      "title": "Round 1: Collect and score five answers",
+      "cli_mode": "paste",
+      "line": "Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.",
+      "folder_label": "Folder with only this round's prompt",
+      "goal": "Collect five fresh answers from this round's prompt, then let the app score them with your checker.",
+      "why": [
+        "Five answers give a steadier rate than one, because the model varies from run to run. Each answer is a new chat, so no answer can remember an earlier one.",
+        "The app starts your AI on the model chosen with the Sonnet / Haiku switch and records it. Keep the model the same from round to round, so the only difference is your change.",
+        "The app scores the five answers by running your checker itself, with no AI call.",
+        "Read every rule, not only the total. A total can rise while a rule gets worse, and a rule that becomes NOT CHECKED is lost coverage and never a gain.",
+        "The 95% score is a target and not a gate. Below it you get a suggested next step, and you can still finish the round.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Your AI window opens by itself the first time you open this step, in a folder that holds only this round's prompt. If it did not open, press Open a new AI chat.",
+        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No.",
+        "Wait until your AI is ready for a message. Press Copy, click in the AI window, paste with {paste_key} and press Enter. Do not add anything.",
+        "The app waits for output.txt, saves it as the next answer and closes your AI window.",
+        "For each of answers 2 to 5, press Open a new AI chat, wait until it is ready, then copy and paste the line again. One prompt, one answer, one new chat each time.",
+        "When all five answers are saved, press Score these five answers.",
+        "Read the table. Every rule shows its count before and after. Keeping or undoing the round is your decision in the next step."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "Your AI reports a temporary error, such as a busy service or a network problem.",
+          "fix": "Wait a moment and ask it again in the AI window. If it keeps failing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."
+        },
+        {
+          "problem": "Nothing happens after you paste the line.",
+          "fix": "Look at the AI window. If your AI is set to ask for approval, it may be waiting for you. Answer it there."
+        },
+        {
+          "problem": "The answer never gets saved.",
+          "fix": "The app needs a file called output.txt with text in it. If your AI printed the answer but saved nothing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."
+        },
+        {
+          "problem": "Your AI window did not open by itself.",
+          "fix": "Press Open a new AI chat. If it still will not start, open Settings, go to the Setup group and check the command."
+        },
+        {
+          "problem": "The app says the checker could not run.",
+          "fix": "Read the message shown. If your checker has an error, ask your AI to fix it without changing any threshold, then press Score these five answers again."
+        }
+      ],
+      "ui": {
+        "runs_heading": "Your five answers",
+        "run_label": "Answer {n}",
+        "run_saved": "Saved ({words} words)",
+        "run_empty": "Not saved yet",
+        "model_label": "Model: {model}",
+        "score": "Score these five answers",
+        "scoring": "Scoring…",
+        "results_heading": "Every rule, before and after",
+        "rule_col": "Rule",
+        "before_col": "Before",
+        "after_col": "After",
+        "change_col": "Change",
+        "count": "{passes} of {checked}",
+        "up": "Up",
+        "down": "Down",
+        "same": "Same",
+        "not_checked": "NOT CHECKED",
+        "lost": "NOT CHECKED now: coverage lost",
+        "overall_before": "Before: {passes} of {total}",
+        "overall_after": "After: {passes} of {total}",
+        "stale": "A file changed after scoring ({what}). Score these five answers again.",
+        "rerun_button": "Run my five original answers again",
+        "rerunning": "Running…",
+        "practice_only": "The Practice task is for practice only and cannot be submitted."
+      },
+      "messages": {
+        "start_blocked": "Save your hypothesis first. The answers have to come after a prediction.",
+        "runs_complete": "All five answers are saved. Press Score these five answers.",
+        "model_differs": "This round used a different model from the one before it, so the comparison is less reliable. The score is still shown."
+      },
+      "gate": {
+        "hypothesis": {
+          "label": "Hypothesis saved",
+          "ok": "",
+          "fail": "Save your hypothesis first."
+        },
+        "answers": {
+          "label": "Five answers saved",
+          "ok": "All five answers are saved.",
+          "fail": "{count} of 5 answers are saved. Keep going until all five are saved."
+        },
+        "scored": {
+          "label": "Scored on the current files",
+          "ok": "",
+          "fail": "Press Score these five answers. If a file changed after scoring, score again."
+        }
+      }
+    },
+    "decide-1": {
+      "kind": "decide",
+      "title": "Round 1: Decide and log",
+      "cli_mode": "paste",
+      "folder_label": "Your project folder",
+      "line_template": "Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are {base}/attempts/{n}/runs/run-1.txt to {base}/attempts/{n}/runs/run-5.txt. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty.",
+      "tracks": {
+        "promptfoo": {
+          "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The config is {base}/attempts/{n}/promptfooconfig.yaml and the runs are the tests named run-1 to run-5. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty."
+        }
+      },
+      "goal": "Keep or undo this round, then record it in your iteration log.",
+      "why": [
+        "Keeping or undoing is your decision and not the app's. The latest round is not kept unless you keep it.",
+        "An undone round stays in the log, marked undone. What you tried and what happened is part of the record.",
+        "Your AI writes the numbers and your saved hypothesis. You write the Change, the Result, the Reasoning and the Decision line in your own words. The app only reads the log and never changes it.",
+        "One comparison is an observation: it can suggest and it never proves. The score says nothing about qualities no rule checks.",
+        "After you decide, the app says whether the round showed a measured gain on these rules. An equal or lower score is no measured gain on these rules, and a simpler prompt at the same score can still be worth keeping.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Read the results above, then press Keep this round or Undo this round.",
+        "After you decide, a line to paste appears and your AI window opens by itself. Wait until it is ready, press Copy, click in the AI window, paste with {paste_key} and press Enter. It adds the numbers and your saved hypothesis to the log file named above the line.",
+        "Open that log file in your editor. Under the entry for this round, write the Change, the Result, the Reasoning and a Decision line (kept or undone) in your own words.",
+        "Press Check my work."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "The line to paste is not shown.",
+          "fix": "It appears after you keep or undo the round."
+        },
+        {
+          "problem": "The app says the Decision differs.",
+          "fix": "Your log must say the same thing you chose in the app: kept or undone. Fix the Decision line in the log file. The app never edits your log."
+        },
+        {
+          "problem": "The app says the counts differ.",
+          "fix": "The app's count comes from running your checker itself, so trust it over the log. Ask your AI to correct the entry, or fix the number in the log file."
+        },
+        {
+          "problem": "The app says your Change, Result or Reasoning is missing.",
+          "fix": "Write them in your own words under this round's entry in the log file. The app checks only that they are there."
+        },
+        {
+          "problem": "The log has two entries for this round.",
+          "fix": "Keep one. Open the log file, delete the older entry and press Check my work again."
+        },
+        {
+          "problem": "Your AI reports a temporary error.",
+          "fix": "Wait a moment and ask it again in the AI window. If it keeps failing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."
+        }
+      ],
+      "ui": {
+        "results_heading": "Every rule, before and after",
+        "rule_col": "Rule",
+        "before_col": "Before",
+        "after_col": "After",
+        "change_col": "Change",
+        "count": "{passes} of {checked}",
+        "up": "Up",
+        "down": "Down",
+        "same": "Same",
+        "not_checked": "NOT CHECKED",
+        "lost": "NOT CHECKED now: coverage lost",
+        "overall_before": "Before: {passes} of {total}",
+        "overall_after": "After: {passes} of {total}",
+        "decision_heading": "Your decision",
+        "keep": "Keep this round",
+        "undo": "Undo this round",
+        "deciding": "Saving…",
+        "kept_note": "You kept this round.",
+        "undone_note": "You undid this round.",
+        "pending_note": "Keep or undo this round. The line to paste appears after you decide.",
+        "evidence_heading": "What the numbers say",
+        "log_heading": "Your iteration log",
+        "log_note": "Your log file is {log_file}. Write the Change, the Result, the Reasoning and the Decision there yourself.",
+        "rerun_button": "Run my five original answers again",
+        "rerunning": "Running…",
+        "practice_only": "The Practice task is for practice only and cannot be submitted."
+      },
+      "messages": {
+        "not_decided": "Keep or undo this round first. The line to paste appears after you decide.",
+        "bad_choice": "Choose keep or undo.",
+        "bad_text": "That text could not be saved."
+      },
+      "gate": {
+        "decided": {
+          "label": "You decided keep or undo",
+          "ok": "",
+          "fail": "Keep or undo this round first."
+        }
+      }
+    },
+    "hypothesis-2": {
+      "kind": "hypothesis",
+      "title": "Round 2: Write your hypothesis",
+      "goal": "Say which rule you want to move and what you expect your change to do, before you change anything.",
+      "why": [
+        "A hypothesis is a prediction written before the result. One written after the result is only a story.",
+        "Look at every rule of your starting version, not only the total. A total can hide a rule that fails.",
+        "Name one rule and say what you expect. One change, one hypothesis.",
+        "Your text stays editable until the round has a saved answer. After that it cannot change, because a hypothesis written after the result is not a prediction.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Read the result of the version you kept for each rule. Any rule that does not pass every answer is marked in words.",
+        "Write one hypothesis: the rule you want to move and what you expect. For example: naming the exact labels I want will move the rule that checks labels from 3 of 5 to 5 of 5.",
+        "Press Save my hypothesis. The next step opens."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "The hypothesis cannot be changed.",
+          "fix": "The round already has a saved answer. A hypothesis written after the result is not a prediction, so write a new one in the next round."
+        },
+        {
+          "problem": "You are not sure which rule to pick.",
+          "fix": "Pick a rule that does not pass every answer. If every rule passes every answer, pick the rule you care about most and predict that it stays at 5 of 5."
+        }
+      ],
+      "ui": {
+        "rules_heading": "Your starting version, rule by rule",
+        "overall": "Overall: {passes} of {total}",
+        "start_iteration_0": "Starting from Iteration 0.",
+        "start_kept": "Starting from the version you kept (round {n}).",
+        "needs_work": "Needs work",
+        "passes_all": "Passes every answer",
+        "not_checked": "NOT CHECKED",
+        "rule_count": "{passes} of {checked} answers pass",
+        "label": "Your hypothesis",
+        "hint": "Name the rule and say what you expect your change to do.",
+        "save": "Save my hypothesis",
+        "saving": "Saving…",
+        "saved": "Your hypothesis is saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "practice_only": "The Practice task is for practice only and cannot be submitted."
+      },
+      "messages": {
+        "locked": "This round already has a saved answer, so its hypothesis cannot change now. A hypothesis written after the result is not a prediction.",
+        "bad_text": "That text could not be saved."
+      },
+      "gate": {
+        "saved": {
+          "label": "Hypothesis saved",
+          "ok": "",
+          "fail": "Write your hypothesis and press Save my hypothesis."
+        }
+      }
+    },
+    "edit-2": {
+      "kind": "edit",
+      "title": "Round 2: Edit your prompt",
+      "goal": "Change one thing in this round's own copy of your prompt.",
+      "why": [
+        "Change one thing at a time. If you change two things and the score moves, you cannot tell which one did it.",
+        "This is this round's own copy. Your earlier prompts, rules, checker and answers are not touched.",
+        "Keep the input, the model and the rules the same, so the only difference is your change.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Read your hypothesis above the editor.",
+        "Change one thing in the prompt, then press Save my edit.",
+        "The step is done when your saved prompt differs from the starting prompt.",
+        "Once the round has a saved answer, the prompt cannot change, because the answers have to come from this exact prompt."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "The step will not finish.",
+          "fix": "Your saved prompt is still the same as the starting prompt. Change one thing and press Save my edit."
+        },
+        {
+          "problem": "The prompt cannot be changed.",
+          "fix": "The round already has a saved answer. The answers have to come from this exact prompt, so make your next change in the next round."
+        }
+      ],
+      "ui": {
+        "hypothesis_heading": "Your hypothesis",
+        "start_heading": "Starting prompt (read only)",
+        "editor_heading": "This round's prompt",
+        "editor_label": "Your edited prompt",
+        "save": "Save my edit",
+        "saving": "Saving…",
+        "saved": "Your edit is saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "same_note": "Your prompt is still the same as the starting prompt. Change one thing, then save.",
+        "changed_note": "Your prompt differs from the starting prompt.",
+        "practice_only": "The Practice task is for practice only and cannot be submitted."
+      },
+      "messages": {
+        "blank": "The prompt cannot be empty.",
+        "locked": "This round already has a saved answer, so its prompt cannot change now. The answers have to come from this exact prompt.",
+        "save_failed": "Your prompt could not be saved: {error}",
+        "bad_text": "That text could not be saved."
+      },
+      "gate": {
+        "changed": {
+          "label": "The prompt differs from the starting prompt",
+          "ok": "",
+          "fail": "Change one thing in the prompt, then press Save my edit."
+        }
+      }
+    },
+    "measure-2": {
+      "kind": "measure",
+      "title": "Round 2: Collect and score five answers",
+      "cli_mode": "paste",
+      "line": "Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.",
+      "folder_label": "Folder with only this round's prompt",
+      "goal": "Collect five fresh answers from this round's prompt, then let the app score them with your checker.",
+      "why": [
+        "Five answers give a steadier rate than one, because the model varies from run to run. Each answer is a new chat, so no answer can remember an earlier one.",
+        "The app starts your AI on the model chosen with the Sonnet / Haiku switch and records it. Keep the model the same from round to round, so the only difference is your change.",
+        "The app scores the five answers by running your checker itself, with no AI call.",
+        "Read every rule, not only the total. A total can rise while a rule gets worse, and a rule that becomes NOT CHECKED is lost coverage and never a gain.",
+        "The 95% score is a target and not a gate. Below it you get a suggested next step, and you can still finish the round.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Your AI window opens by itself the first time you open this step, in a folder that holds only this round's prompt. If it did not open, press Open a new AI chat.",
+        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No.",
+        "Wait until your AI is ready for a message. Press Copy, click in the AI window, paste with {paste_key} and press Enter. Do not add anything.",
+        "The app waits for output.txt, saves it as the next answer and closes your AI window.",
+        "For each of answers 2 to 5, press Open a new AI chat, wait until it is ready, then copy and paste the line again. One prompt, one answer, one new chat each time.",
+        "When all five answers are saved, press Score these five answers.",
+        "Read the table. Every rule shows its count before and after. Keeping or undoing the round is your decision in the next step."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "Your AI reports a temporary error, such as a busy service or a network problem.",
+          "fix": "Wait a moment and ask it again in the AI window. If it keeps failing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."
+        },
+        {
+          "problem": "Nothing happens after you paste the line.",
+          "fix": "Look at the AI window. If your AI is set to ask for approval, it may be waiting for you. Answer it there."
+        },
+        {
+          "problem": "The answer never gets saved.",
+          "fix": "The app needs a file called output.txt with text in it. If your AI printed the answer but saved nothing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."
+        },
+        {
+          "problem": "Your AI window did not open by itself.",
+          "fix": "Press Open a new AI chat. If it still will not start, open Settings, go to the Setup group and check the command."
+        },
+        {
+          "problem": "The app says the checker could not run.",
+          "fix": "Read the message shown. If your checker has an error, ask your AI to fix it without changing any threshold, then press Score these five answers again."
+        }
+      ],
+      "ui": {
+        "runs_heading": "Your five answers",
+        "run_label": "Answer {n}",
+        "run_saved": "Saved ({words} words)",
+        "run_empty": "Not saved yet",
+        "model_label": "Model: {model}",
+        "score": "Score these five answers",
+        "scoring": "Scoring…",
+        "results_heading": "Every rule, before and after",
+        "rule_col": "Rule",
+        "before_col": "Before",
+        "after_col": "After",
+        "change_col": "Change",
+        "count": "{passes} of {checked}",
+        "up": "Up",
+        "down": "Down",
+        "same": "Same",
+        "not_checked": "NOT CHECKED",
+        "lost": "NOT CHECKED now: coverage lost",
+        "overall_before": "Before: {passes} of {total}",
+        "overall_after": "After: {passes} of {total}",
+        "stale": "A file changed after scoring ({what}). Score these five answers again.",
+        "rerun_button": "Run my five original answers again",
+        "rerunning": "Running…",
+        "practice_only": "The Practice task is for practice only and cannot be submitted."
+      },
+      "messages": {
+        "start_blocked": "Save your hypothesis first. The answers have to come after a prediction.",
+        "runs_complete": "All five answers are saved. Press Score these five answers.",
+        "model_differs": "This round used a different model from the one before it, so the comparison is less reliable. The score is still shown."
+      },
+      "gate": {
+        "hypothesis": {
+          "label": "Hypothesis saved",
+          "ok": "",
+          "fail": "Save your hypothesis first."
+        },
+        "answers": {
+          "label": "Five answers saved",
+          "ok": "All five answers are saved.",
+          "fail": "{count} of 5 answers are saved. Keep going until all five are saved."
+        },
+        "scored": {
+          "label": "Scored on the current files",
+          "ok": "",
+          "fail": "Press Score these five answers. If a file changed after scoring, score again."
+        }
+      }
+    },
+    "decide-2": {
+      "kind": "decide",
+      "title": "Round 2: Decide and log",
+      "cli_mode": "paste",
+      "folder_label": "Your project folder",
+      "line_template": "Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are {base}/attempts/{n}/runs/run-1.txt to {base}/attempts/{n}/runs/run-5.txt. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty.",
+      "tracks": {
+        "promptfoo": {
+          "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The config is {base}/attempts/{n}/promptfooconfig.yaml and the runs are the tests named run-1 to run-5. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty."
+        }
+      },
+      "goal": "Keep or undo this round, then record it in your iteration log.",
+      "why": [
+        "Keeping or undoing is your decision and not the app's. The latest round is not kept unless you keep it.",
+        "An undone round stays in the log, marked undone. What you tried and what happened is part of the record.",
+        "Your AI writes the numbers and your saved hypothesis. You write the Change, the Result, the Reasoning and the Decision line in your own words. The app only reads the log and never changes it.",
+        "One comparison is an observation: it can suggest and it never proves. The score says nothing about qualities no rule checks.",
+        "After you decide, the app says whether the round showed a measured gain on these rules. An equal or lower score is no measured gain on these rules, and a simpler prompt at the same score can still be worth keeping.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Read the results above, then press Keep this round or Undo this round.",
+        "After you decide, a line to paste appears and your AI window opens by itself. Wait until it is ready, press Copy, click in the AI window, paste with {paste_key} and press Enter. It adds the numbers and your saved hypothesis to the log file named above the line.",
+        "Open that log file in your editor. Under the entry for this round, write the Change, the Result, the Reasoning and a Decision line (kept or undone) in your own words.",
+        "Press Check my work."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "The line to paste is not shown.",
+          "fix": "It appears after you keep or undo the round."
+        },
+        {
+          "problem": "The app says the Decision differs.",
+          "fix": "Your log must say the same thing you chose in the app: kept or undone. Fix the Decision line in the log file. The app never edits your log."
+        },
+        {
+          "problem": "The app says the counts differ.",
+          "fix": "The app's count comes from running your checker itself, so trust it over the log. Ask your AI to correct the entry, or fix the number in the log file."
+        },
+        {
+          "problem": "The app says your Change, Result or Reasoning is missing.",
+          "fix": "Write them in your own words under this round's entry in the log file. The app checks only that they are there."
+        },
+        {
+          "problem": "The log has two entries for this round.",
+          "fix": "Keep one. Open the log file, delete the older entry and press Check my work again."
+        },
+        {
+          "problem": "Your AI reports a temporary error.",
+          "fix": "Wait a moment and ask it again in the AI window. If it keeps failing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."
+        }
+      ],
+      "ui": {
+        "results_heading": "Every rule, before and after",
+        "rule_col": "Rule",
+        "before_col": "Before",
+        "after_col": "After",
+        "change_col": "Change",
+        "count": "{passes} of {checked}",
+        "up": "Up",
+        "down": "Down",
+        "same": "Same",
+        "not_checked": "NOT CHECKED",
+        "lost": "NOT CHECKED now: coverage lost",
+        "overall_before": "Before: {passes} of {total}",
+        "overall_after": "After: {passes} of {total}",
+        "decision_heading": "Your decision",
+        "keep": "Keep this round",
+        "undo": "Undo this round",
+        "deciding": "Saving…",
+        "kept_note": "You kept this round.",
+        "undone_note": "You undid this round.",
+        "pending_note": "Keep or undo this round. The line to paste appears after you decide.",
+        "evidence_heading": "What the numbers say",
+        "log_heading": "Your iteration log",
+        "log_note": "Your log file is {log_file}. Write the Change, the Result, the Reasoning and the Decision there yourself.",
+        "rerun_button": "Run my five original answers again",
+        "rerunning": "Running…",
+        "practice_only": "The Practice task is for practice only and cannot be submitted.",
+        "reflection": {
+          "heading": "Quick check",
+          "prompt": "In your own words: why did you keep or undo your last round, and what can the score not tell you?",
+          "hint": "Your answer is saved. It never blocks anything, so you can continue without it.",
+          "label": "Your answer",
+          "save": "Save my answer",
+          "saved": "Your answer is saved."
+        }
+      },
+      "messages": {
+        "not_decided": "Keep or undo this round first. The line to paste appears after you decide.",
+        "bad_choice": "Choose keep or undo.",
+        "bad_text": "That text could not be saved."
+      },
+      "gate": {
+        "decided": {
+          "label": "You decided keep or undo",
+          "ok": "",
+          "fail": "Keep or undo this round first."
+        }
+      }
+    },
+    "hypothesis-3": {
+      "kind": "hypothesis",
+      "title": "Round 3 (optional): Write your hypothesis",
+      "goal": "Say which rule you want to move and what you expect your change to do, before you change anything.",
+      "why": [
+        "A hypothesis is a prediction written before the result. One written after the result is only a story.",
+        "Look at every rule of your starting version, not only the total. A total can hide a rule that fails.",
+        "Name one rule and say what you expect. One change, one hypothesis.",
+        "Your text stays editable until the round has a saved answer. After that it cannot change, because a hypothesis written after the result is not a prediction.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Read the result of the version you kept for each rule. Any rule that does not pass every answer is marked in words.",
+        "Write one hypothesis: the rule you want to move and what you expect. For example: naming the exact labels I want will move the rule that checks labels from 3 of 5 to 5 of 5.",
+        "Press Save my hypothesis. The next step opens."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "The hypothesis cannot be changed.",
+          "fix": "The round already has a saved answer. A hypothesis written after the result is not a prediction, so write a new one in the next round."
+        },
+        {
+          "problem": "You are not sure which rule to pick.",
+          "fix": "Pick a rule that does not pass every answer. If every rule passes every answer, pick the rule you care about most and predict that it stays at 5 of 5."
+        }
+      ],
+      "ui": {
+        "rules_heading": "Your starting version, rule by rule",
+        "overall": "Overall: {passes} of {total}",
+        "start_iteration_0": "Starting from Iteration 0.",
+        "start_kept": "Starting from the version you kept (round {n}).",
+        "needs_work": "Needs work",
+        "passes_all": "Passes every answer",
+        "not_checked": "NOT CHECKED",
+        "rule_count": "{passes} of {checked} answers pass",
+        "label": "Your hypothesis",
+        "hint": "Name the rule and say what you expect your change to do.",
+        "save": "Save my hypothesis",
+        "saving": "Saving…",
+        "saved": "Your hypothesis is saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "practice_only": "The Practice task is for practice only and cannot be submitted."
+      },
+      "messages": {
+        "locked": "This round already has a saved answer, so its hypothesis cannot change now. A hypothesis written after the result is not a prediction.",
+        "bad_text": "That text could not be saved."
+      },
+      "gate": {
+        "saved": {
+          "label": "Hypothesis saved",
+          "ok": "",
+          "fail": "Write your hypothesis and press Save my hypothesis."
+        }
+      }
+    },
+    "edit-3": {
+      "kind": "edit",
+      "title": "Round 3 (optional): Edit your prompt",
+      "goal": "Change one thing in this round's own copy of your prompt.",
+      "why": [
+        "Change one thing at a time. If you change two things and the score moves, you cannot tell which one did it.",
+        "This is this round's own copy. Your earlier prompts, rules, checker and answers are not touched.",
+        "Keep the input, the model and the rules the same, so the only difference is your change.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Read your hypothesis above the editor.",
+        "Change one thing in the prompt, then press Save my edit.",
+        "The step is done when your saved prompt differs from the starting prompt.",
+        "Once the round has a saved answer, the prompt cannot change, because the answers have to come from this exact prompt."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "The step will not finish.",
+          "fix": "Your saved prompt is still the same as the starting prompt. Change one thing and press Save my edit."
+        },
+        {
+          "problem": "The prompt cannot be changed.",
+          "fix": "The round already has a saved answer. The answers have to come from this exact prompt, so make your next change in the next round."
+        }
+      ],
+      "ui": {
+        "hypothesis_heading": "Your hypothesis",
+        "start_heading": "Starting prompt (read only)",
+        "editor_heading": "This round's prompt",
+        "editor_label": "Your edited prompt",
+        "save": "Save my edit",
+        "saving": "Saving…",
+        "saved": "Your edit is saved.",
+        "unsaved": "You have changes that are not saved yet.",
+        "same_note": "Your prompt is still the same as the starting prompt. Change one thing, then save.",
+        "changed_note": "Your prompt differs from the starting prompt.",
+        "practice_only": "The Practice task is for practice only and cannot be submitted."
+      },
+      "messages": {
+        "blank": "The prompt cannot be empty.",
+        "locked": "This round already has a saved answer, so its prompt cannot change now. The answers have to come from this exact prompt.",
+        "save_failed": "Your prompt could not be saved: {error}",
+        "bad_text": "That text could not be saved."
+      },
+      "gate": {
+        "changed": {
+          "label": "The prompt differs from the starting prompt",
+          "ok": "",
+          "fail": "Change one thing in the prompt, then press Save my edit."
+        }
+      }
+    },
+    "measure-3": {
+      "kind": "measure",
+      "title": "Round 3 (optional): Collect and score five answers",
+      "cli_mode": "paste",
+      "line": "Read prompt.md, follow it, and save only your answer to output.txt. Do nothing else.",
+      "folder_label": "Folder with only this round's prompt",
+      "goal": "Collect five fresh answers from this round's prompt, then let the app score them with your checker.",
+      "why": [
+        "Five answers give a steadier rate than one, because the model varies from run to run. Each answer is a new chat, so no answer can remember an earlier one.",
+        "The app starts your AI on the model chosen with the Sonnet / Haiku switch and records it. Keep the model the same from round to round, so the only difference is your change.",
+        "The app scores the five answers by running your checker itself, with no AI call.",
+        "Read every rule, not only the total. A total can rise while a rule gets worse, and a rule that becomes NOT CHECKED is lost coverage and never a gain.",
+        "The 95% score is a target and not a gate. Below it you get a suggested next step, and you can still finish the round.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Your AI window opens by itself the first time you open this step, in a folder that holds only this round's prompt. If it did not open, press Open a new AI chat.",
+        "If your AI asks whether to trust the folder, choose the yes option. The highlighted default may be No.",
+        "Wait until your AI is ready for a message. Press Copy, click in the AI window, paste with {paste_key} and press Enter. Do not add anything.",
+        "The app waits for output.txt, saves it as the next answer and closes your AI window.",
+        "For each of answers 2 to 5, press Open a new AI chat, wait until it is ready, then copy and paste the line again. One prompt, one answer, one new chat each time.",
+        "When all five answers are saved, press Score these five answers.",
+        "Read the table. Every rule shows its count before and after. Keeping or undoing the round is your decision in the next step."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "Your AI reports a temporary error, such as a busy service or a network problem.",
+          "fix": "Wait a moment and ask it again in the AI window. If it keeps failing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."
+        },
+        {
+          "problem": "Nothing happens after you paste the line.",
+          "fix": "Look at the AI window. If your AI is set to ask for approval, it may be waiting for you. Answer it there."
+        },
+        {
+          "problem": "The answer never gets saved.",
+          "fix": "The app needs a file called output.txt with text in it. If your AI printed the answer but saved nothing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."
+        },
+        {
+          "problem": "Your AI window did not open by itself.",
+          "fix": "Press Open a new AI chat. If it still will not start, open Settings, go to the Setup group and check the command."
+        },
+        {
+          "problem": "The app says the checker could not run.",
+          "fix": "Read the message shown. If your checker has an error, ask your AI to fix it without changing any threshold, then press Score these five answers again."
+        }
+      ],
+      "ui": {
+        "runs_heading": "Your five answers",
+        "run_label": "Answer {n}",
+        "run_saved": "Saved ({words} words)",
+        "run_empty": "Not saved yet",
+        "model_label": "Model: {model}",
+        "score": "Score these five answers",
+        "scoring": "Scoring…",
+        "results_heading": "Every rule, before and after",
+        "rule_col": "Rule",
+        "before_col": "Before",
+        "after_col": "After",
+        "change_col": "Change",
+        "count": "{passes} of {checked}",
+        "up": "Up",
+        "down": "Down",
+        "same": "Same",
+        "not_checked": "NOT CHECKED",
+        "lost": "NOT CHECKED now: coverage lost",
+        "overall_before": "Before: {passes} of {total}",
+        "overall_after": "After: {passes} of {total}",
+        "stale": "A file changed after scoring ({what}). Score these five answers again.",
+        "rerun_button": "Run my five original answers again",
+        "rerunning": "Running…",
+        "practice_only": "The Practice task is for practice only and cannot be submitted."
+      },
+      "messages": {
+        "start_blocked": "Save your hypothesis first. The answers have to come after a prediction.",
+        "runs_complete": "All five answers are saved. Press Score these five answers.",
+        "model_differs": "This round used a different model from the one before it, so the comparison is less reliable. The score is still shown."
+      },
+      "gate": {
+        "hypothesis": {
+          "label": "Hypothesis saved",
+          "ok": "",
+          "fail": "Save your hypothesis first."
+        },
+        "answers": {
+          "label": "Five answers saved",
+          "ok": "All five answers are saved.",
+          "fail": "{count} of 5 answers are saved. Keep going until all five are saved."
+        },
+        "scored": {
+          "label": "Scored on the current files",
+          "ok": "",
+          "fail": "Press Score these five answers. If a file changed after scoring, score again."
+        }
+      }
+    },
+    "decide-3": {
+      "kind": "decide",
+      "title": "Round 3 (optional): Decide and log",
+      "cli_mode": "paste",
+      "folder_label": "Your project folder",
+      "line_template": "Read skills/build-eval-script/SKILL.md and follow it in run + log mode. The runs are {base}/attempts/{n}/runs/run-1.txt to {base}/attempts/{n}/runs/run-5.txt. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty.",
+      "tracks": {
+        "promptfoo": {
+          "line_template": "Read skills/build-promptfoo-config/SKILL.md and follow it in run + log mode. The config is {base}/attempts/{n}/promptfooconfig.yaml and the runs are the tests named run-1 to run-5. The prompt file is {base}/attempts/{n}/prompt.md. The model was {model}. Append the entry to {log} as Iteration {n}. Copy the Hypothesis word for word from {base}/attempts/{n}/hypothesis.md and leave Change, Result and Reasoning empty."
+        }
+      },
+      "goal": "Keep or undo this round, then record it in your iteration log.",
+      "why": [
+        "Keeping or undoing is your decision and not the app's. The latest round is not kept unless you keep it.",
+        "An undone round stays in the log, marked undone. What you tried and what happened is part of the record.",
+        "Your AI writes the numbers and your saved hypothesis. You write the Change, the Result, the Reasoning and the Decision line in your own words. The app only reads the log and never changes it.",
+        "One comparison is an observation: it can suggest and it never proves. The score says nothing about qualities no rule checks.",
+        "After you decide, the app says whether the round showed a measured gain on these rules. An equal or lower score is no measured gain on these rules, and a simpler prompt at the same score can still be worth keeping.",
+        "This is this course's way of working. Other approaches to improving a prompt work too."
+      ],
+      "instructions": [
+        "Read the results above, then press Keep this round or Undo this round.",
+        "After you decide, a line to paste appears and your AI window opens by itself. Wait until it is ready, press Copy, click in the AI window, paste with {paste_key} and press Enter. It adds the numbers and your saved hypothesis to the log file named above the line.",
+        "Open that log file in your editor. Under the entry for this round, write the Change, the Result, the Reasoning and a Decision line (kept or undone) in your own words.",
+        "Press Check my work."
+      ],
+      "troubleshooting": [
+        {
+          "problem": "The line to paste is not shown.",
+          "fix": "It appears after you keep or undo the round."
+        },
+        {
+          "problem": "The app says the Decision differs.",
+          "fix": "Your log must say the same thing you chose in the app: kept or undone. Fix the Decision line in the log file. The app never edits your log."
+        },
+        {
+          "problem": "The app says the counts differ.",
+          "fix": "The app's count comes from running your checker itself, so trust it over the log. Ask your AI to correct the entry, or fix the number in the log file."
+        },
+        {
+          "problem": "The app says your Change, Result or Reasoning is missing.",
+          "fix": "Write them in your own words under this round's entry in the log file. The app checks only that they are there."
+        },
+        {
+          "problem": "The log has two entries for this round.",
+          "fix": "Keep one. Open the log file, delete the older entry and press Check my work again."
+        },
+        {
+          "problem": "Your AI reports a temporary error.",
+          "fix": "Wait a moment and ask it again in the AI window. If it keeps failing, press Open a new AI chat, wait until it is ready, then copy and paste the line again."
+        }
+      ],
+      "ui": {
+        "results_heading": "Every rule, before and after",
+        "rule_col": "Rule",
+        "before_col": "Before",
+        "after_col": "After",
+        "change_col": "Change",
+        "count": "{passes} of {checked}",
+        "up": "Up",
+        "down": "Down",
+        "same": "Same",
+        "not_checked": "NOT CHECKED",
+        "lost": "NOT CHECKED now: coverage lost",
+        "overall_before": "Before: {passes} of {total}",
+        "overall_after": "After: {passes} of {total}",
+        "decision_heading": "Your decision",
+        "keep": "Keep this round",
+        "undo": "Undo this round",
+        "deciding": "Saving…",
+        "kept_note": "You kept this round.",
+        "undone_note": "You undid this round.",
+        "pending_note": "Keep or undo this round. The line to paste appears after you decide.",
+        "evidence_heading": "What the numbers say",
+        "log_heading": "Your iteration log",
+        "log_note": "Your log file is {log_file}. Write the Change, the Result, the Reasoning and the Decision there yourself.",
+        "rerun_button": "Run my five original answers again",
+        "rerunning": "Running…",
+        "practice_only": "The Practice task is for practice only and cannot be submitted."
+      },
+      "messages": {
+        "not_decided": "Keep or undo this round first. The line to paste appears after you decide.",
+        "bad_choice": "Choose keep or undo.",
+        "bad_text": "That text could not be saved."
+      },
+      "gate": {
+        "decided": {
+          "label": "You decided keep or undo",
+          "ok": "",
+          "fail": "Keep or undo this round first."
+        }
+      }
+    }
+  }
+}

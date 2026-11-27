@@ -74,6 +74,9 @@ class Part:
     new_steps: Optional[Callable[[], dict]] = None  # default saved record of each step (Parts other than Part 3)
     restart: Optional[Dict[str, StepOwns]] = None  # what each step owns; None means "Start this step again" is not offered
     new_extra: Optional[Callable[[], dict]] = None  # more keys of the saved block besides `done` and `steps`
+    # Steps that follow the required order and unlock in their own order once every required item is done. They are
+    # saved in `done` after the required steps, and never count toward the Part being done.
+    optional_steps: tuple = ()
 
     def course_for(self, track="script"):
         return self.track_courses.get(track, self.course)
@@ -89,8 +92,13 @@ class Part:
     def step_ids(self):
         return self.step_ids_for()
 
+    def saved_step_ids(self, track="script"):
+        """The order `done` may hold: the required steps, then the optional ones."""
+        return self.step_ids_for(track) + self.optional_steps
+
     def owns(self, item_id):
-        return item_id in self.lesson_ids or item_id in self.step_ids or item_id in self.extra_steps
+        return (item_id in self.lesson_ids or item_id in self.step_ids or item_id in self.extra_steps
+                or item_id in self.optional_steps)
 
 
 PART_3 = Part("part-3", 3, "mission", COURSE, "content/lessons.json", "content/steps.json",
@@ -160,32 +168,58 @@ PART_2 = Part("part-2", 2, "p2-mission", COURSE_2, "content/part-2-lessons.json"
                   "reference": StepOwns(),
               })
 # Part 4: improving a prompt one change at a time. Its step ids are plain words that no other Part uses, and its
-# lesson id carries a `p4-` prefix. Its saved block also holds the attempt manifest (see attempts.py): hashes, counts
-# and ids only, never a text.
+# lesson ids carry a `p4-` prefix. A round is four steps (hypothesis, edit, measure, decide) and round n is attempt n.
+# Its saved block also holds the attempt manifest (see attempts.py): hashes, counts and ids only, never a text.
+ROUNDS_4 = (1, 2, 3)
+REQUIRED_ROUNDS_4 = (1, 2)
+ROUND_PHASES = ("hypothesis", "edit", "measure", "decide")
+
+
+def round_steps_4(n):
+    return tuple(f"{phase}-{n}" for phase in ROUND_PHASES)
+
+
 COURSE_4 = (
     ("lesson", "p4-mission"),
-    ("step", "hypothesis"), ("step", "revise"), ("step", "measure"), ("step", "known-good"), ("step", "decide"),
+    ("step", "starting-point"),
+    ("lesson", "p4-checker-first"),
+    ("step", "known-good"),
+    ("lesson", "p4-one-change"), ("lesson", "p4-worked-example"),
+    *(("step", s) for s in round_steps_4(1)),
+    ("lesson", "p4-read-results"),
+    *(("step", s) for s in round_steps_4(2)),
+    ("lesson", "p4-keep-and-log"),
 )
+# Round 3 follows the required order and never keeps the Part from being done.
+OPTIONAL_STEPS_4 = round_steps_4(3)
 
 
 def new_part_4_steps():
     """The saved record of each Part 4 step. Each attempt's own record is in the manifest, not here."""
-    return {step: {"last_check": None} for step in ("hypothesis", "revise", "measure", "known-good", "decide")}
+    steps = {"starting-point": {"last_check": None}, "known-good": {"last_check": None}}
+    for n in ROUNDS_4:
+        steps[f"hypothesis-{n}"] = {"last_check": None}
+        steps[f"edit-{n}"] = {"last_check": None}
+        steps[f"measure-{n}"] = {"model": "", "models": [], "auto_started": False, "last_check": None}
+        steps[f"decide-{n}"] = {"auto_started": False, "reflection": "", "last_check": None}
+    return steps
 
 
 def new_part_4_extra():
-    """The attempt manifest and the two notes that gate comparing attempts with Iteration 0."""
-    return {"attempts": [], "rerun": None, "iteration_0": None}
+    """The attempt manifest, the starting point (None until chosen; "own" or "practice") and the two notes that gate
+    comparing attempts with Iteration 0."""
+    return {"attempts": [], "rerun": None, "iteration_0": None, "start": None}
 
 
 PART_4 = Part("part-4", 4, "p4-mission", COURSE_4, "content/part-4-lessons.json", "content/part-4-steps.json",
-              progress_key="part-4", new_steps=new_part_4_steps, new_extra=new_part_4_extra)
+              progress_key="part-4", new_steps=new_part_4_steps, new_extra=new_part_4_extra,
+              optional_steps=OPTIONAL_STEPS_4)
 
 # Part 3 stays first: its steps file also holds the messages every Part shares.
-PARTS = (PART_3, PART_1, PART_2)
+PARTS = (PART_3, PART_1, PART_2, PART_4)
 # Parts whose engine is built and whose saved progress is read, but whose course content has not shipped. They are
 # not in PARTS, so no lessons or step text is loaded for them and the Series map is unchanged.
-DARK_PARTS = (PART_4,)
+DARK_PARTS = ()
 
 
 # Step kinds: a step whose content names a `kind` is handled by the object registered for it. A step with no
@@ -212,14 +246,14 @@ def all_lesson_ids():
 
 
 def all_step_ids():
-    return tuple(item for p in PARTS for item in p.step_ids + p.extra_steps)
+    return tuple(item for p in PARTS for item in p.step_ids + p.extra_steps + p.optional_steps)
 
 
 def duplicate_ids(parts=None):
     """Lesson and step ids that more than one Part names, as plain messages."""
     seen, problems = {}, []
     for part in PARTS if parts is None else parts:
-        for kind, item in [("lesson", i) for i in part.lesson_ids] + [("step", i) for i in part.step_ids + part.extra_steps]:
+        for kind, item in [("lesson", i) for i in part.lesson_ids] + [("step", i) for i in part.step_ids + part.extra_steps + part.optional_steps]:
             if item in seen and seen[item] != part.id:
                 problems.append(f"{kind} id {item!r} is in both {seen[item]} and {part.id}")
             seen.setdefault(item, part.id)
@@ -489,10 +523,10 @@ def _validate_parts(data):
         if part is None or part.progress_key is None:
             continue
         saved = _merge_defaults(saved, new_part_progress(part), f"progress.parts.{part_id}")
-        bad = [s for s in saved["done"] if s not in part.step_ids]
+        bad = [s for s in saved["done"] if s not in part.saved_step_ids()]
         if bad:
             raise CorruptStateError(f"progress lists unknown steps for {part_id}: {bad}")
-        if list(saved["done"]) != list(part.step_ids[: len(saved["done"])]):
+        if list(saved["done"]) != list(part.saved_step_ids()[: len(saved["done"])]):
             raise CorruptStateError(f"progress lists finished steps out of order for {part_id}.")
         data["parts"][part_id] = saved
 

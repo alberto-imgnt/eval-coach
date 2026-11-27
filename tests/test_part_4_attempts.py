@@ -286,7 +286,7 @@ class Manifest(Base):
         data["parts"]["part-4"] = {}
         block = store.validate_progress(data)["parts"]["part-4"]
         self.assertEqual(block["attempts"], [])
-        self.assertEqual(set(block["steps"]), set(store.PART_4.step_ids))
+        self.assertEqual(set(block["steps"]), set(store.PART_4.saved_step_ids()))
         for bad in ({"attempts": "x"}, {"done": "x"}, {"done": ["generate"]}):
             data = store.new_progress("p", "cli", "northwind")
             data["parts"]["part-4"] = bad
@@ -301,18 +301,17 @@ class Manifest(Base):
 
 
 class Registration(unittest.TestCase):
-    def test_part_4_uses_ids_no_other_part_uses_and_is_not_on_the_series_map(self):
-        self.assertEqual(store.duplicate_ids(list(store.PARTS) + [store.PART_4]), [])
-        self.assertIsNone(store.part_by_id("part-4"))
+    def test_part_4_uses_ids_no_other_part_uses(self):
+        self.assertEqual(store.duplicate_ids(), [])
+        self.assertIs(store.part_by_id("part-4"), store.PART_4)
         self.assertIs(store.known_part("part-4"), store.PART_4)
         self.assertEqual(store.PART_4.progress_key, "part-4")
-        self.assertEqual(set(store.PART_4.new_steps()), set(store.PART_4.step_ids))
-        series = json.loads(resources.read_text("content/series.json"))["parts"]
-        self.assertEqual(next(p["kind"] for p in series if p["id"] == "part-4"), "soon")
+        self.assertEqual(set(store.PART_4.new_steps()), set(store.PART_4.saved_step_ids()))
 
     def test_the_default_block_has_an_empty_manifest(self):
         block = store.new_part_progress(store.PART_4)
-        self.assertEqual((block["done"], block["attempts"], block["rerun"], block["iteration_0"]), ([], [], None, None))
+        self.assertEqual((block["done"], block["attempts"], block["rerun"], block["iteration_0"], block["start"]),
+                         ([], [], None, None, None))
         self.assertNotIn("attempts", store.new_part_progress(store.PART_1))
 
 
@@ -570,6 +569,26 @@ class ScoreOnThePromptfooTrack(Base):
         self.assertEqual((view["known_good"]["passes"], view["known_good"]["checked"]), (6, 6))
         self.assertEqual(self.fake.calls[-1]["argv"][-1], "eval-output.json")
 
+    def test_the_five_answers_are_scored_on_a_config_with_fixture_tests_the_attempt_folder_has_no_files_for(self):
+        (self.proj / "promptfooconfig.yaml").write_text(pf.pf_config(pf.RUN_TESTS + pf.FIXTURE_TESTS), encoding="utf-8")
+        self.fake.strict_files = True  # real promptfoo stops on a test whose file is missing
+        n, view = self.run_attempt()
+        self.assertTrue(view["scored"])
+        argv = self.fake.calls[-1]["argv"]
+        self.assertEqual(argv[argv.index("--filter-pattern") + 1], "^run-[1-5]$")
+        self.assertFalse((self.paths.attempt(n).project / "fixtures").exists())
+
+    def test_known_good_is_scored_before_any_answer_exists_by_running_only_that_test(self):
+        self.fake.strict_files = True  # real promptfoo stops when a test it runs reads a file that is not there
+        n = self.attempts.start()["n"]
+        self.attempts.save_known_good(n, SAMPLE[1])
+        view = self.attempts.score_known_good(n)
+        self.assertEqual((view["known_good"]["passes"], view["known_good"]["checked"]), (6, 6))
+        argv = self.fake.calls[-1]["argv"]
+        self.assertEqual(argv[argv.index("--filter-pattern") + 1], "^known-good$")
+        self.assertEqual(argv[-2:], ["-o", "eval-output.json"])
+        self.assertFalse(self.paths.attempt(n).run_file(1).exists())
+
     def test_a_config_without_a_run_1_test_is_refused_plainly(self):
         (self.proj / "promptfooconfig.yaml").write_text(pf.pf_config(["run-2", "run-3"]), encoding="utf-8")
         n = self.attempts.start()["n"]
@@ -783,7 +802,7 @@ class LogGate(Base):
         self.write_log(self.log_for((1, "kept")))
         result, items = self.gate()
         self.assertTrue(result["ok"], result)
-        self.assertEqual(len(result["items"]), 6)
+        self.assertEqual(len(result["items"]), 7)
         self.assertTrue(all(i["ok"] for i in items.values()))
 
     def test_the_log_is_never_changed(self):
@@ -913,7 +932,47 @@ class LogGate(Base):
         self.write_log(self.log_for((1, "kept"), (2, "undone")))
         result, _ = self.gate()
         self.assertTrue(result["ok"])
-        self.assertEqual([i["label"][:9] for i in result["items"]], ["Attempt 1"] * 6 + ["Attempt 2"] * 6)
+        self.assertEqual([i["label"][:9] for i in result["items"]], ["Attempt 1"] * 7 + ["Attempt 2"] * 7)
+
+    def test_an_empty_reasoning_fails_the_presence_item_and_the_log_is_not_changed(self):
+        self.run_attempt(decide="keep")
+        self.write_log(self.log_for((1, "kept")).replace("- Reasoning: because", "- Reasoning:"))
+        before = (self.proj / "iteration-log.md").read_bytes()
+        result, items = self.gate()
+        self.assertFalse(result["ok"])
+        item = items["Attempt 1 has your Change, Result and Reasoning"]
+        self.assertFalse(item["ok"])
+        self.assertEqual(item["detail"], "The log entry for attempt 1 has no text for: Reasoning. Write them in your "
+                                         "own words.")
+        self.assertEqual((self.proj / "iteration-log.md").read_bytes(), before)
+
+    def test_each_missing_field_is_named(self):
+        self.run_attempt(decide="keep")
+        text = self.log_for((1, "kept")).replace("- Change: one change", "- Change:").replace("- Result: counted",
+                                                                                              "- Result:")
+        self.write_log(text)
+        self.assertIn("Change, Result", self.failures(self.gate()[0]))
+
+    def test_any_text_passes_the_presence_item(self):
+        self.run_attempt(decide="keep")
+        text = (self.log_for((1, "kept")).replace("- Change: one change", "- Change: x")
+                .replace("- Result: counted", "- Result: it rose").replace("- Reasoning: because", "- Reasoning: ?"))
+        self.write_log(text)
+        result, items = self.gate()
+        self.assertTrue(items["Attempt 1 has your Change, Result and Reasoning"]["ok"])
+        self.assertTrue(result["ok"], result)
+
+    def test_a_round_needs_the_presence_item_to_count_toward_completion(self):
+        self.run_attempt(decide="keep")
+        self.write_log(self.log_for((1, "kept")).replace("- Reasoning: because", "- Reasoning:"))
+        self.assertEqual(self.attempts.completion()["rounds"], 0)
+
+    def test_the_check_can_stop_at_a_round(self):
+        self.run_attempt(decide="keep")
+        self.run_attempt(sources=(2, 2, 2, 2, 2), decide="undo")
+        self.write_log(self.log_for((1, "kept")))
+        self.assertTrue(self.attempts.check_log(through=1)["ok"])
+        self.assertFalse(self.attempts.check_log()["ok"])
 
 
 class Completion(Base):
@@ -1047,11 +1106,8 @@ class WithTheEngine(ch.CourseBase):
         self.assertEqual(ctx.exception.code, "no_baseline")
         self.assertEqual(self.engine.progress["parts"], {})
 
-    def test_the_series_map_still_shows_part_4_as_coming_soon(self):
-        self.setup_project()
-        state = self.engine.get_state()
-        self.assertEqual(next(p["kind"] for p in state["series"]["parts"] if p["id"] == "part-4"), "soon")
-        self.assertEqual([p.id for p in store.PARTS], ["part-3", "part-1", "part-2"])
+    def test_part_4_is_registered_after_the_other_parts(self):
+        self.assertEqual([p.id for p in store.PARTS], ["part-3", "part-1", "part-2", "part-4"])
 
 
 class Wording(unittest.TestCase):
@@ -1062,7 +1118,7 @@ class Wording(unittest.TestCase):
             self.assertNotIn(banned, text)
         self.assertEqual(words["evidence"]["gain"], "measured gain on these rules")
         self.assertEqual(words["evidence"]["no_gain"], "no measured gain on these rules")
-        for key in ("entry", "decision", "hypothesis", "scored", "counts", "not_checked"):
+        for key in ("entry", "decision", "hypothesis", "scored", "counts", "not_checked", "written"):
             self.assertEqual(set(words["gate"][key]), {"label", "ok", "fail"})
 
     def test_the_two_gate_helpers_it_reuses_are_part_3s(self):

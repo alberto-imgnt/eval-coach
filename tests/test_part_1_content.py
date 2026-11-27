@@ -390,7 +390,7 @@ class Glossary(unittest.TestCase):
         terms = json.loads(resources.read_text("content/glossary.json"))["terms"]
         for term in terms:
             with self.subTest(term=term["term"]):
-                if term["term"] in self.TERMS or term["lesson"].startswith("p2-"):
+                if term["term"] in self.TERMS or term["lesson"].startswith(("p2-", "p4-")):
                     self.assertIs(term.get("card"), False)
                 else:
                     self.assertNotIn("card", term)

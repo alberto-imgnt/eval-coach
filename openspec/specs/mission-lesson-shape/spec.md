@@ -7,7 +7,7 @@ Gives every Part's mission lesson the same short shape (goal, why it matters to 
 ## Requirements
 
 ### Requirement: Every mission lesson has the same four passages
-Each Part's mission lesson (`mission`, `p1-mission`, `p2-mission`) SHALL be one page with no activities and no review questions, with four labelled passages in this order: "The goal", "Why it matters to you", "What you will do" and "What you leave with". Each passage SHALL be specific to its Part. Source: series review item 13.
+Each Part's mission lesson (`mission`, `p1-mission`, `p2-mission`, `p4-mission`) SHALL be one page with no activities and no review questions, with four labelled passages in this order: "The goal", "Why it matters to you", "What you will do" and "What you leave with". Each passage SHALL be specific to its Part. Source: series review item 13.
 
 #### Scenario: Same order in every Part
 - **WHEN** the content tests read each mission lesson body

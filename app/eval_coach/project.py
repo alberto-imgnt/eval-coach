@@ -37,6 +37,14 @@ REPLACED_INPUTS = "part-3/replaced"
 # Part 4 keeps each attempt under part-4/attempts/<n>/ in the project. Part 3's own files are never written there.
 PART4_DIR = "part-4"
 ATTEMPTS_DIR = "attempts"
+# The Practice baseline: a bundled Iteration 0 kept apart from the participant's own Part 3 files, under part-4/practice/.
+PRACTICE_DIR = "practice"
+PRACTICE_KIT = "kit/part4/practice/"
+PRACTICE_PROMPT = NORTHWIND_PROMPT
+PRACTICE_TEST_CASES = NORTHWIND_TEST_CASES
+PRACTICE_RUNS = tuple(f"kit/northwind/sample-run-{n}.txt" for n in range(1, 6))
+PRACTICE_CHECKERS = {"script": PRACTICE_KIT + "check.py", "promptfoo": PRACTICE_KIT + "promptfooconfig.yaml"}
+PRACTICE_LOG = PRACTICE_KIT + "iteration-log.md"
 
 _CATCH_UP = re.compile(rb"(?im)^[ \t]*<!--\s*catch-up copy.*?-->[ \t]*\r?\n(?:[ \t]*\r?\n)?")
 
@@ -95,9 +103,15 @@ class Paths:
         self.part1_root = self.home / "part1"
         self.part2 = self.project / PART2_DIR
         self.part4 = self.project / PART4_DIR
+        self.part4_practice = PracticePaths(self.project)
+        self.part4_root = self.home / "part4"
+        self.part4_blind = self.part4_root / "blind"
+        self.part4_blind_prompt = self.part4_blind / "prompt.md"
+        self.part4_blind_output = self.part4_blind / "output.txt"
 
-    def attempt(self, n):
-        return AttemptPaths(self.project, n)
+    def attempt(self, n, practice=False):
+        """Where attempt n keeps its files: under part-4/attempts/, or under part-4/practice/attempts/ for Practice."""
+        return AttemptPaths(self.project, n, self.part4_practice.project if practice else None)
 
     def part2_file(self, which):
         return self.part2 / PART2_FILES[which]
@@ -138,9 +152,9 @@ class AttemptPaths:
     checker runners and `baseline.runs_hash` read (`project` is the folder they run in), so the attempt is scored
     exactly like Part 3's five runs without touching Part 3's files."""
 
-    def __init__(self, project, n):
+    def __init__(self, project, n, base=None):
         self.n = n
-        self.project = Path(project) / PART4_DIR / ATTEMPTS_DIR / str(n)
+        self.project = (Path(base) if base is not None else Path(project) / PART4_DIR) / ATTEMPTS_DIR / str(n)
         self.prompt = self.project / "prompt.md"
         self.test_cases = self.project / "test-cases.md"
         self.check_py = self.project / "check.py"
@@ -148,6 +162,27 @@ class AttemptPaths:
         self.runs = self.project / "runs"
         self.hypothesis = self.project / "hypothesis.md"
         self.known_good = self.project / "known-good.txt"
+        self.results = self.project / "results.json"
+
+    def run_file(self, n):
+        return self.runs / f"run-{n}.txt"
+
+    def checker(self, track="script"):
+        return self.config_yaml if track == "promptfoo" else self.check_py
+
+
+class PracticePaths:
+    """Where the Practice baseline keeps Iteration 0, with the accessors `Paths` has for Part 3's own files, so an
+    attempt reads either one the same way. Nothing here ever points at the participant's own Part 3 files."""
+
+    def __init__(self, project):
+        self.project = Path(project) / PART4_DIR / PRACTICE_DIR
+        self.prompt = self.project / "prompt-v0.md"
+        self.test_cases = self.project / "test-cases.md"
+        self.check_py = self.project / "check.py"
+        self.config_yaml = self.project / "promptfooconfig.yaml"
+        self.runs = self.project / "runs"
+        self.iteration_log = self.project / "iteration-log.md"
         self.results = self.project / "results.json"
 
     def run_file(self, n):
@@ -296,6 +331,26 @@ def clear_dir(path):
             if attempt == 19:
                 raise
             time.sleep(0.1)
+
+
+def write_practice_baseline(paths, track="script"):
+    """Copy the bundled Practice baseline into `part-4/practice/`, create-only: an existing file is never replaced.
+
+    The participant's own Part 3 files are neither read nor written. Only the checker for `track` is copied.
+    """
+    practice = paths.part4_practice
+    _write_new(practice.prompt, strip_catch_up_comment(resources.read_bytes(PRACTICE_PROMPT)))
+    _write_new(practice.test_cases, strip_catch_up_comment(resources.read_bytes(PRACTICE_TEST_CASES)))
+    for n, source in enumerate(PRACTICE_RUNS, start=1):
+        _write_new(practice.run_file(n), resources.read_bytes(source))
+    _write_new(practice.checker(track), resources.read_bytes(PRACTICE_CHECKERS[track]))
+    _write_new(practice.iteration_log, resources.read_bytes(PRACTICE_LOG))
+
+
+def prepare_part4_blind(paths, prompt):
+    """Clear the Part 4 blind folder and leave only the attempt's prompt.md in it."""
+    clear_dir(paths.part4_blind)
+    store.write_bytes_atomic(paths.part4_blind_prompt, prompt)
 
 
 def prepare_blind(paths):

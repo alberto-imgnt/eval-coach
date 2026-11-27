@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "change": "part-4-course",
+  "tree": "afef9669f49db42b82aa08c23ba2621913c32d63",
+  "excludes": [
+    "openspec"
+  ],
+  "head": "37d238f1d0b7f9c3f4373ae5dddc8c9989a3b775",
+  "checks": [
+    {
+      "name": "backend",
+      "command": "python -m unittest discover -s tests",
+      "exit_code": 0,
+      "tests": 2189,
+      "finished": "2026-11-26T16:12:42Z"
+    },
+    {
+      "name": "backend-embedded",
+      "command": "spikes\\phase0-preflight\\runtime\\python-embed-3.13.17-nopth\\python.exe -m unittest discover -s tests",
+      "exit_code": 0,
+      "tests": 2189,
+      "finished": "2026-11-26T16:22:44Z"
+    },
+    {
+      "name": "interface",
+      "command": "node tests/frontend/.tmp/node_modules/@playwright/test/cli.js test --config tests/frontend/playwright.config.js",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-26T16:33:50Z"
+    },
+    {
+      "name": "build",
+      "command": "python tools\\build_pyz.py --smoke",
+      "exit_code": 0,
+      "tests": null,
+      "finished": "2026-11-26T16:34:00Z"
+    }
+  ]
+}

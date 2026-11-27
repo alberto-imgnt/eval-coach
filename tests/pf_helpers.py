@@ -98,11 +98,16 @@ def build_results(project, config_text):
 
 
 class FakePromptfoo:
-    """Stands in for the preflight runner: finds a fake npx and "runs" promptfoo."""
+    """Stands in for the preflight runner: finds a fake npx and "runs" promptfoo.
+
+    `--filter-pattern` keeps only the tests whose name matches, as promptfoo does. With `strict_files` set it also stops
+    the way promptfoo does when a test it runs reads a file that is not there, which is how the real one behaves.
+    """
 
     def __init__(self):
         self.calls = []
         self.mode = "normal"  # normal | no_results | timeout | cache_miss | bad_json | not_started
+        self.strict_files = False
 
     def which(self, name, path):
         return r"C:\fake\npx.exe" if name == "npx" else None
@@ -112,6 +117,7 @@ class FakePromptfoo:
 
     def run(self, argv, timeout, env=None, cwd=None, on_tick=None, cancel=None):
         out = argv[argv.index("-o") + 1] if "-o" in argv else "results.json"
+        pattern = argv[argv.index("--filter-pattern") + 1] if "--filter-pattern" in argv else None
         self.calls.append({"argv": list(argv), "timeout": timeout, "env": dict(env or {}), "cwd": cwd,
                            "results_existed": (Path(cwd) / out).exists()})
         if self.mode == "not_started":
@@ -127,6 +133,12 @@ class FakePromptfoo:
             (Path(cwd) / out).write_text("{not json", encoding="utf-8")
             return Result(code=100, stdout="Writing output to results.json\n")
         data = build_results(cwd, config)
+        if pattern is not None:
+            data["results"]["results"] = [r for r in data["results"]["results"] if re.search(pattern, r["testCase"]["description"])]
+        if self.strict_files:
+            gone = [r["testCase"]["description"] for r in data["results"]["results"] if not (Path(cwd) / file_for(r["testCase"]["description"])).is_file()]
+            if gone:
+                return Result(code=1, stderr=f"Error: No files found for variable output at path {file_for(gone[0])} in directory {cwd}\n")
         (Path(cwd) / out).write_text(json.dumps(data), encoding="utf-8")
         failed = any(not r["success"] for r in data["results"]["results"])
         return Result(code=100 if failed else 0, stdout="Results:\n  0 errors (0%)\nWriting output to results.json\n")

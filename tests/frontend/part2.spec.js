@@ -148,7 +148,7 @@ const gateText = (page, label) => gateItems(page).filter({ hasText: label });
 
 // ---- the Series map ------------------------------------------------------------------
 
-test('the Series map shows Part 2 with a state and an open control, Parts 4 and 5 still say Coming soon, and each Part counts its own items', async ({ page, request }) => {
+test('the Series map shows Part 2 with a state and an open control, Part 5 still says Coming soon, and each Part counts its own items', async ({ page, request }) => {
   await control(request, '/control/reset', { scenario: 'ready', part1_reach: 'rewrite' });
   await page.goto(`/?t=${TOKEN}`);
   await expect(page.locator('#step-heading')).toHaveText('Evaluated systems');
@@ -162,8 +162,8 @@ test('the Series map shows Part 2 with a state and an open control, Parts 4 and 
   await expect(row.locator('#series-open-part-2')).toBeVisible();
   await expect(row.locator('#series-toggle-part-2')).toBeVisible();
   const soon = page.locator('.series-row.k-soon');
-  await expect(soon).toHaveCount(2);
-  expect(await soon.locator('.series-title').allTextContents()).toEqual(['Part 4: Iterating with evaluation-driven development', 'Part 5: Load-bearing audit and packaging']);
+  await expect(soon).toHaveCount(1);
+  expect(await soon.locator('.series-title').allTextContents()).toEqual(['Part 5: Load-bearing audit and packaging']);
   for (const one of await soon.all()) {
     await expect(one.locator('.series-tag')).toHaveText('Coming soon');
     await expect(one.locator('button, a, [tabindex], .series-chevron')).toHaveCount(0);

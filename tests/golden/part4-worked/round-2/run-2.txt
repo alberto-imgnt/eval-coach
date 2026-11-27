@@ -1,0 +1,10 @@
+**Northwind**
+- Two client meetings on the new reporting feature; built the feature Mon–Tue
+- Ran the demo Wed; fixed the feedback issues Fri
+- Blocker: lost half a day Thu waiting on client test data access. Need: access granted before Monday.
+
+**Contoso**
+- Reviewed an estimate Fri
+
+**Internal**
+- Helped onboard a new teammate Wed; wrote documentation while blocked Thu

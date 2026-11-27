@@ -13,7 +13,7 @@ import helpers
 from eval_coach import project, state
 from eval_coach.engine import EngineError
 
-PART_1, PART_2, PART_3 = state.PART_1, state.PART_2, state.PART_3
+PART_1, PART_2, PART_3, PART_4 = state.PART_1, state.PART_2, state.PART_3, state.PART_4
 
 
 class LockBase(ch.CourseBase):
@@ -218,7 +218,8 @@ class SkipAPart(LockBase):
             self.assert_code("confirm_required", self.engine.part_skip, "part-1", confirm)
         self.assert_code("skip_unavailable", self.engine.part_skip, "part-2", True)  # locked
         self.assert_code("skip_unavailable", self.engine.part_skip, "part-3", True)
-        self.assert_code("unknown_part", self.engine.part_skip, "part-4", True)  # coming soon, no content
+        self.assert_code("skip_unavailable", self.engine.part_skip, "part-4", True)  # locked
+        self.assert_code("unknown_part", self.engine.part_skip, "part-5", True)  # coming soon, no content
         self.assert_code("unknown_part", self.engine.part_skip, None, True)
         self.finish_part(PART_1)
         self.assert_code("skip_unavailable", self.engine.part_skip, "part-1", True)  # finished
@@ -232,7 +233,9 @@ class SkipAPart(LockBase):
         self.engine.part_skip("part-2", True)
         self.engine.part_skip("part-3", True)
         self.assertEqual([p["state"] for p in self.engine.get_state()["series"]["parts"] if "state" in p],
-                         ["skipped", "skipped", "skipped"])
+                         ["skipped", "skipped", "skipped", "not_started"])
+        self.assertEqual(self.engine.get_state()["series"]["active_part"], "part-4")
+        self.engine.part_skip("part-4", True)
         self.assertIsNone(self.engine.get_state()["series"]["active_part"])
 
     def test_the_skip_is_remembered_and_saved_work_stays(self):
@@ -294,10 +297,10 @@ class SkipAPart(LockBase):
         self.assertEqual(self.series_row("part-2")["state"], "locked")
 
     def test_the_series_view_carries_the_skip_words_for_each_part(self):
-        for part_id in ("part-1", "part-2", "part-3"):
+        for part_id in ("part-1", "part-2", "part-3", "part-4"):
             skip = self.series_row(part_id)["skip"]
             self.assertTrue(skip["teaches"] and skip["matters"], part_id)
-        self.assertNotIn("skip", self.series_row("part-4"))
+        self.assertNotIn("skip", self.series_row("part-5"))
 
 
 class SeriesStates(LockBase):
@@ -311,6 +314,8 @@ class SeriesStates(LockBase):
         self.assertEqual(self.engine.get_state()["series"]["active_part"], "part-2")
         self.finish_part(PART_2)
         self.finish_part(PART_3)
+        self.assertEqual(self.engine.get_state()["series"]["active_part"], "part-4")
+        self.finish_part(PART_4)
         self.assertIsNone(self.engine.get_state()["series"]["active_part"])
 
     def test_counts_belong_to_open_parts_only(self):

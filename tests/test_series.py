@@ -39,7 +39,7 @@ class SeriesContent(unittest.TestCase):
     def test_six_parts_in_order_with_their_kinds(self):
         parts = series()["parts"]
         self.assertEqual([p["n"] for p in parts], [1, 2, 3, 4, 5, 6])
-        self.assertEqual([p["kind"] for p in parts], ["course", "course", "course", "soon", "soon", "live"])
+        self.assertEqual([p["kind"] for p in parts], ["course", "course", "course", "course", "soon", "live"])
         self.assertEqual(len({p["id"] for p in parts}), 6)
 
     def test_the_page_is_titled_evaluated_systems(self):
@@ -81,6 +81,8 @@ class SeriesContent(unittest.TestCase):
                 self.assertEqual(part["ui"]["brand_sub"], "Part 1 \u00b7 Structured prompting")
             elif part["id"] == "part-2":
                 self.assertEqual(part["ui"]["brand_sub"], "Part 2 \u00b7 Defining evaluation criteria")
+            elif part["id"] == "part-4":
+                self.assertEqual(part["ui"]["brand_sub"], "Part 4 \u00b7 Iterating with evaluation-driven development")
             else:
                 self.assertNotIn("ui", part)
 

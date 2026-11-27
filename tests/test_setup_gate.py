@@ -105,7 +105,7 @@ class GateBeforeSetup(NoSetupBase):
     def test_only_the_open_lesson_can_be_read_before_setup(self):
         before = self.progress_bytes()
         for lesson in self.course.data["lessons"]:
-            if lesson["id"] in ("mission", "p1-mission", "p2-mission"):
+            if lesson["id"] in ("mission", "p1-mission", "p2-mission", "p4-mission"):
                 continue
             self.assertEqual(self.code_of(self.engine.lesson_view, lesson["id"]), "lesson_locked", lesson["id"])
         self.assertEqual(self.progress_bytes(), before)

@@ -71,6 +71,20 @@ class RealPromptfoo(unittest.TestCase):
                          [("C1", 4, 5, False), ("C2", 4, 5, False), ("C3", 4, 5, False), ("C4", 0, 0, True)])
         self.assertEqual(summary["overall"], {"passes": 12, "total": 15})
 
+    def test_one_named_test_runs_alone_even_when_another_test_reads_a_file_that_is_not_there(self):
+        config = (self.project / "promptfooconfig.yaml").read_text(encoding="utf-8")
+        (self.project / "promptfooconfig.yaml").write_text(
+            config.rstrip("\n") + "\n  - description: known-good\n    vars:\n      output: file://known-good.txt\n"
+            "  - description: run-6\n    vars:\n      output: file://runs/not-there.txt\n", encoding="utf-8")
+        shutil.copy(str(GOLDEN / "northwind" / "sample-run-1.txt"), str(self.project / "known-good.txt"))
+        whole = promptfoo.run_selection(self.project, "known-good", ["known-good.txt"], self.env, self.npx)
+        self.assertFalse(whole["ok"])
+        self.assertIn("No files found", whole["error"])
+        alone = promptfoo.run_selection(self.project, "known-good", ["known-good.txt"], self.env, self.npx, only=promptfoo.KNOWN_GOOD_PATTERN)
+        self.assertTrue(alone["ok"], alone["error"])
+        self.assertEqual([f["file"] for f in alone["files"]], ["known-good.txt"])
+        self.assertEqual([r["verdict"] for r in alone["files"][0]["rows"]], ["P", "P", "P", "NC"])
+
     def test_a_broken_config_is_a_plain_error_with_no_stale_results(self):
         (self.project / "results.json").write_text("{\"stale\": true}", encoding="utf-8")
         (self.project / "promptfooconfig.yaml").write_text("tests: [this is: not valid: yaml\n", encoding="utf-8")

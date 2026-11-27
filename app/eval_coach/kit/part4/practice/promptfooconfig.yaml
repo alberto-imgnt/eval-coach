@@ -1,0 +1,64 @@
+# Practice checks for the Practice task: the end-of-week update (rules C1 to C6), for practice only.
+# Plain rules, no AI. Each answer is loaded from runs/run-N.txt and checked by the same rules as check.py.
+description: Practice task end-of-week update checks
+prompts:
+  - "{{output}}"
+providers:
+  - echo
+defaultTest:
+  assert:
+    # C1: Word count under 150 passes
+    - type: javascript
+      metric: C1_length
+      value: 'output.split(/\s+/).filter(Boolean).length < 150'
+    # C2: Northwind, Contoso, Internal all appear as labels; no day name used as a label
+    - type: regex
+      metric: C2_grouped_by_client
+      value: '(?:^|\n)[ \t>*#_-]*Northwind[ \t*_]*(?::|\r?\n|$)'
+    - type: regex
+      metric: C2_grouped_by_client
+      value: '(?:^|\n)[ \t>*#_-]*Contoso[ \t*_]*(?::|\r?\n|$)'
+    - type: regex
+      metric: C2_grouped_by_client
+      value: '(?:^|\n)[ \t>*#_-]*Internal[ \t*_]*(?::|\r?\n|$)'
+    - type: javascript
+      metric: C2_grouped_by_client
+      value: '!/(?:^|\n)[ \t>*#_-]*(?:[Mm]on|[Tt]ue|[Ww]ed|[Tt]hu|[Ff]ri)[a-z]*(?:\s*[–-]\s*(?:[Mm]on|[Tt]ue|[Ww]ed|[Tt]hu|[Ff]ri)[a-z]*)?[ \t*_]*(?::|\r?\n|$)/.test(output)'
+    # C3: A "Blocker:" label and a "Need:" label both appear
+    - type: contains-all
+      metric: C3_blocker_and_ask
+      value:
+        - "Blocker:"
+        - "Need:"
+    # C4: None of "Subject:", "Dear", "Regards", "Sincerely" appear
+    - type: javascript
+      metric: C4_teams_not_email
+      value: '!["subject:", "dear", "regards", "sincerely"].some((m) => output.toLowerCase().includes(m))'
+    # C5: Zero banned words and no exclamation marks
+    - type: javascript
+      metric: C5_factual_tone
+      value: '!["excited", "thrilled", "proud", "amazing", "incredible", "awesome", "delighted", "successfully", "crushed", "happy to report"].some((w) => output.toLowerCase().includes(w)) && !output.includes("!")'
+    # C6: Every note keyword is found
+    - type: javascript
+      metric: C6_uses_the_rough_notes
+      value: '["estimate", "onboard", "demo", "lunch", "documentation", "reporting feature"].every((k) => output.toLowerCase().includes(k))'
+    # Empty outputs must not pass "must not contain" checks
+    - type: javascript
+      metric: non_empty
+      value: output.trim().length > 0
+tests:
+  - description: run-1
+    vars:
+      output: file://runs/run-1.txt
+  - description: run-2
+    vars:
+      output: file://runs/run-2.txt
+  - description: run-3
+    vars:
+      output: file://runs/run-3.txt
+  - description: run-4
+    vars:
+      output: file://runs/run-4.txt
+  - description: run-5
+    vars:
+      output: file://runs/run-5.txt

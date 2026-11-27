@@ -17,6 +17,7 @@ const CONTENT = JSON.parse(fs.readFileSync(path.join(APP, 'content', 'lessons.js
 const P1_CONTENT = JSON.parse(fs.readFileSync(path.join(APP, 'content', 'part-1-lessons.json'), 'utf8'));
 const P1_STEPS = JSON.parse(fs.readFileSync(path.join(APP, 'content', 'part-1-steps.json'), 'utf8')).steps;
 const P2_CONTENT = JSON.parse(fs.readFileSync(path.join(APP, 'content', 'part-2-lessons.json'), 'utf8'));
+const P4_CONTENT = JSON.parse(fs.readFileSync(path.join(APP, 'content', 'part-4-lessons.json'), 'utf8'));
 const EVENTS = path.join(L.WORK, 'fake-cli-events.jsonl');
 const MODE_FILE = path.join(L.WORK, 'fake-cli-mode.txt');
 const PROGRESS = path.join(PROJECT, '.learning', 'progress.json');
@@ -27,7 +28,7 @@ const HOOK_LINE = 'Read update.txt and requirements.md. Score the update from 1 
 const DAY = 86400;
 const FORBIDDEN_KEYS = ['correct', 'expected', 'bucket', 'feedback_right', 'feedback_wrong'];
 
-const lessonDef = (id) => CONTENT.lessons.find((l) => l.id === id) || P1_CONTENT.lessons.find((l) => l.id === id) || P2_CONTENT.lessons.find((l) => l.id === id);
+const lessonDef = (id) => CONTENT.lessons.find((l) => l.id === id) || P1_CONTENT.lessons.find((l) => l.id === id) || P2_CONTENT.lessons.find((l) => l.id === id) || P4_CONTENT.lessons.find((l) => l.id === id);
 const sleep = L.sleep;
 const exists = (p) => fs.existsSync(p);
 const readText = (p) => fs.readFileSync(p, 'utf8');
@@ -1245,8 +1246,8 @@ async function stageLive() {
 }
 
 // ---- old progress ------------------------------------------------------------------------
-async function spawnApp(home) {
-  const log = path.join(L.WORK, 'server-migrate.out');
+async function spawnApp(home, opts = {}) {
+  const log = path.join(L.WORK, opts.log || 'server-migrate.out');
   fs.writeFileSync(log, '');
   const out = fs.openSync(log, 'a');
   const child = spawn(L.PYTHON, [L.PYZ, '--no-browser', '--custom-ai', ...L.demoArgs(), '--home', home], { detached: true, stdio: ['ignore', out, out], env: L.filteredEnv(), windowsHide: true, cwd: L.WORK });
@@ -1259,7 +1260,7 @@ async function spawnApp(home) {
       const refused = await fetch(`http://127.0.0.1:${m[1]}/api/lesson?id=mission`, { headers: { 'X-Eval-Token': m[2] } });
       const body = await refused.json();
       const lockedBefore = refused.status === 400 && body.error && body.error.code === 'lesson_locked';
-      await L.unlockDemo(m[1], m[2]);
+      if (!opts.keepLocked) await L.unlockDemo(m[1], m[2]);
       return { pid: child.pid, port: m[1], token: m[2], lockedBefore };
     }
     await sleep(100);
@@ -1767,7 +1768,17 @@ async function stageModel() {
   endStage('model');
 }
 
+// Part 4 has its own file: it needs this file's helpers, handed over here once, and it changes `target` and `activePart` through setters.
+const part4 = require('./part4-stages')({
+  state, PROJECT, HOME, APP, KIT, PROGRESS, LOG_FILE, RUN_FILES, MODE_FILE, PASTE_AUDIT, LOCK_MESSAGE, check, must, endStage, requireStandIn,
+  get, post, getState, viewLesson, lessonOf, actView, courseMap, answer, correctAnswer, wrongAnswer, solveAll, solveActivity, completeLesson,
+  enterStage, expectStepActive, expectStepLocked, lessonDef, openPart3Ai, expectPart3SendRefused, pastePart3Line, driveApprovals, auditProcess,
+  cliStopped, countsOf, spawnApp, sha256, readText, readJson, exists, hasText, sleep,
+  setActivePart: (id) => { activePart = id; },
+  setTarget: (t) => { target = t; },
+});
+
 module.exports = {
   mission: stageMission, hook: stageHook, 'several-runs': stageSeveralRuns, rules: stageRules, trust: stageTrust, surprise: stageSurprise,
-  'baseline-why': stageBaselineWhy, baseline: stageBaseline, 'fixtures-config': stageFixturesConfig, live: stageLive, part1: stagePart1, part2: stagePart2, migrate: stageMigrate, model: stageModel,
+  'baseline-why': stageBaselineWhy, baseline: stageBaseline, 'fixtures-config': stageFixturesConfig, live: stageLive, part1: stagePart1, part2: stagePart2, ...part4, migrate: stageMigrate, model: stageModel,
 };

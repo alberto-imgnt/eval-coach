@@ -45,8 +45,28 @@
        "teaches": "How your AI builds a checker from your test cases, how to check that the checker can be trusted, and how to run it on five answers and record a starting score.",
        "matters": "Without a checker you can trust and a starting score, you cannot tell whether a change to your prompt made things better or worse."
      }},
-    {"n": 4, "id": "part-4", "title": "Iterating with evaluation-driven development", "kind": "soon",
-     "outcome": "I change my prompt, check again with the same rules and see whether the score moved."},
+    {"n": 4, "id": "part-4", "title": "Iterating with evaluation-driven development", "kind": "course",
+     "outcome": "I change my prompt, check again with the same rules and see whether the score moved.",
+     "skip": {
+       "teaches": "How to change a prompt one thing at a time, write down what you expect first, check again with the same rules, read every rule and decide whether to keep or undo the change.",
+       "matters": "A score that rises can hide a rule that got worse. Without a record of each change and its evidence, you cannot tell which change was worth keeping."
+     },
+     "ui": {
+       "brand_sub": "Part 4 · Iterating with evaluation-driven development",
+       "map_title": "Part {n}: ",
+       "map_aria": "Course map. You are at Part {n} of {total}.",
+       "course_groups": [
+         {"id": "start", "label": "Start from a score", "items": ["p4-mission", "starting-point"]},
+         {"id": "trust", "label": "Trust your checker", "items": ["p4-checker-first", "known-good"]},
+         {"id": "round-1", "label": "Round 1", "items": ["p4-one-change", "p4-worked-example", "hypothesis-1", "edit-1", "measure-1", "decide-1"]},
+         {"id": "round-2", "label": "Round 2", "items": ["p4-read-results", "hypothesis-2", "edit-2", "measure-2", "decide-2"]},
+         {"id": "keep", "label": "Keep it and log it", "items": ["p4-keep-and-log"]},
+         {"id": "round-3", "label": "Another round (optional)", "items": ["hypothesis-3", "edit-3", "measure-3", "decide-3"]}
+       ],
+       "finished_title": "You have finished Part 4",
+       "finished_body": "Your work is saved in your project folder: your iteration log with two documented rounds, and the version of your prompt that you kept. You can now change a prompt one thing at a time, check it again with the same rules, read every rule and not only the total, and say in your own words why you kept or undid a change. Part 5 starts from the version you kept. Reviews will still appear here when they are due.",
+       "finished_body_practice": "Your work is saved in your project folder, in part-4{sep}practice: a practice log with two documented rounds, and the version of the Practice prompt that you kept. These results are for practice only and cannot be submitted. You can now change a prompt one thing at a time, check it again with the same rules, read every rule and not only the total, and say in your own words why you kept or undid a change. Part 5 starts from the version you kept. Reviews will still appear here when they are due."
+     }},
     {"n": 5, "id": "part-5", "title": "Load-bearing audit and packaging", "kind": "soon",
      "outcome": "I keep only the instructions that earn their place and package my work so someone else can use it."},
     {"n": 6, "id": "part-6", "title": "Your own task", "kind": "live",
