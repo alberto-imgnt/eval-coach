@@ -700,7 +700,7 @@ class DecideOnThePromptfooTrack(Decide):
         line = self.view("decide-1")["cli"]["line"]
         self.assertIn("skills/build-promptfoo-config/SKILL.md", line)
         self.assertIn("part-4/practice/attempts/1/promptfooconfig.yaml", line)
-
+        self.assertIn("part-4/practice/attempts/1/eval-output.json and never to results.json", line)
 
 class RoundsAndFinishing(P4):
     def test_two_documented_rounds_finish_part_4_whatever_the_decisions_and_scores(self):
