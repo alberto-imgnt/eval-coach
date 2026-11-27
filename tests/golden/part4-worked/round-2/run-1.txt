@@ -1,0 +1,7 @@
+Weekly update
+
+Mon: Standup. Two Northwind client meetings about the new reporting feature, then started building it.
+Tue: Continued the Northwind reporting feature.
+Wed: Helped onboard a new teammate. Prepared and ran the Northwind demo.
+Thu: Blocker: half a day lost waiting on client test data access, so I worked on documentation. Need: access granted before Monday. Also attended the internal AI lunch & learn.
+Fri: Fixed the demo feedback issues. Reviewed a Contoso estimate.

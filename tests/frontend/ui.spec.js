@@ -3683,13 +3683,14 @@ test('Series map: the page is titled Evaluated systems, opens with the outcome i
   await expect(page.locator('#back-to-series')).toContainText('Back to series map');
 });
 
-test('Series map: Parts 4 and 5 say Coming soon and do nothing, Part 6 says Live meeting and explains itself', async ({ page, request }) => {
+test('Series map: Part 5 says Coming soon and does nothing, Part 6 says Live meeting and explains itself', async ({ page, request }) => {
   await openMap(page, request, 'course-main', ['mission']);
   const soon = page.locator('.series-row.k-soon');
-  await expect(soon).toHaveCount(2);
+  await expect(soon).toHaveCount(1);
   await expect(page.locator('#series-part-1')).toHaveClass(/k-course/);
   await expect(page.locator('#series-part-2')).toHaveClass(/k-course/);
-  expect(await soon.locator('.series-title').allTextContents()).toEqual([PART_TITLES[3], PART_TITLES[4]]);
+  await expect(page.locator('#series-part-4')).toHaveClass(/k-course/);
+  expect(await soon.locator('.series-title').allTextContents()).toEqual([PART_TITLES[4]]);
   for (const row of await soon.all()) {
     await expect(row.locator('.series-tag')).toHaveText('Coming soon');
     await expect(row.locator('.series-outcome')).not.toHaveText('');

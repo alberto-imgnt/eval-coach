@@ -168,6 +168,8 @@ class _Checker:
             self.nonempty_text(item, "feedback", at)
             if not isinstance(item, dict) or item.get("bucket") not in bucket_ids:
                 self.bad(at, "bucket must name one of the buckets")
+        if "reveal" in activity:
+            self.nonempty_text(activity, "reveal", where)  # shown only after the activity is passed
 
     def rule_lab(self, activity, where):
         self.nonempty_text(activity, "prompt", where)
@@ -317,6 +319,8 @@ class _Checker:
         if not isinstance(activity, dict) or activity.get("type") not in ACTIVITY_TYPES:
             self.bad(where, f"type must be one of {ACTIVITY_TYPES}")
             return
+        if "reveal" in activity and activity["type"] != "sort":
+            self.bad(where, "only a sort activity can have a reveal")
         getattr(self, activity["type"])(activity, where)
 
     def ref(self, ref, where):
@@ -463,8 +467,9 @@ class _Checker:
         for i, item in enumerate(checks):
             where = f"step_checks[{i}]"
             self.choice(item, where)
-            if isinstance(item, dict) and item.get("step") not in self.part.step_ids:
-                self.bad(where, f"step must be one of {list(self.part.step_ids)}, got {item.get('step')!r}")
+            if isinstance(item, dict) and item.get("step") not in self.part.step_ids + self.part.optional_steps:
+                self.bad(where, f"step must be one of {list(self.part.step_ids + self.part.optional_steps)}, "
+                                f"got {item.get('step')!r}")
 
 
 def kit_ref_allowed(ref):
@@ -601,7 +606,7 @@ def load_step_content():
     missing or invalid file, a step with no text, a step id two Parts share, or a step `kind` nobody handles.
     """
     problems = []
-    from . import criteria_steps, input_step, part_steps  # noqa: F401  registers the step kinds
+    from . import attempt_steps, criteria_steps, input_step, part_steps  # noqa: F401  registers the step kinds
     content, ui = None, {}
     for part in state.PARTS:
         try:
@@ -613,7 +618,7 @@ def load_step_content():
         steps = data.get("steps") if isinstance(data, dict) else None
         if not isinstance(steps, dict):
             raise LessonError(f"{part.steps_file}: steps must be an object")
-        for step in part.step_ids + part.extra_steps:
+        for step in part.step_ids + part.extra_steps + part.optional_steps:
             if step not in steps:
                 problems.append(f"{part.steps_file}: no text for step {step!r}")
         for step, text in steps.items():
@@ -759,6 +764,10 @@ def _sort_result(activity, entry):
               "right": right, "total": len(activity["items"])}
     if result["passed"]:
         result["feedback"] = [{"item": item["id"], "feedback": item["feedback"]} for item in activity["items"]]
+    elif activity.get("reveal"):
+        # A prediction with a reveal gives feedback for the items placed wrongly and for no other.
+        result["feedback"] = [{"item": item["id"], "feedback": item["feedback"]} for item in activity["items"]
+                              if placements.get(item["id"]) != item["bucket"]]
     return result
 
 
@@ -806,6 +815,8 @@ def public_activity(lesson_id, activity, entry, seed, reasons):
                     buckets=[{"id": b["id"], "label": b["label"]} for b in activity["buckets"]],
                     items=[{"id": i["id"], "text": i["text"]} for i in _shuffled(seed, context, activity["items"])],
                     result=_sort_result(activity, entry))
+        if activity.get("reveal") and view["passed"]:
+            view["reveal"] = activity["reveal"]  # what a prediction was about, only once it is made
     elif kind == "rule_lab":
         cases = [{"key": case_key(c), "sample": c["sample"], "rule": c["rule"]} for c in activity["cases"]]
         view.update(prompt=activity["prompt"],

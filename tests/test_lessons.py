@@ -11,7 +11,7 @@ import helpers  # noqa: F401
 
 from eval_coach import lessons as L
 from eval_coach import resources
-from eval_coach.state import COURSE, LESSON_IDS, PART_1, PART_2, all_lesson_ids
+from eval_coach.state import COURSE, LESSON_IDS, PART_1, PART_2, PART_4, all_lesson_ids
 
 CONTENT = helpers.ROOT / "app" / "eval_coach" / "content"
 
@@ -112,7 +112,8 @@ class BundledCourse(unittest.TestCase):
     def test_loads_and_validates_from_disk(self):
         course = L.load_bundled()
         self.assertEqual(course.mission, MISSION)
-        self.assertEqual(list(course.by_id), list(LESSON_IDS) + list(PART_1.lesson_ids) + list(PART_2.lesson_ids))
+        self.assertEqual(list(course.by_id), list(LESSON_IDS) + list(PART_1.lesson_ids) + list(PART_2.lesson_ids)
+                         + list(PART_4.lesson_ids))
 
     def test_course_order_is_the_documented_one(self):
         self.assertEqual(
@@ -227,7 +228,9 @@ class BundledCourse(unittest.TestCase):
     def test_every_step_has_a_question_after_it(self):
         for part, data in ch.parts_data():
             with self.subTest(part=part.id):
-                self.assertEqual(sorted(c["step"] for c in data["step_checks"]), sorted(part.step_ids))
+                # Part 4's decide-2 has a written reflection kept by the step instead of a choice question.
+                expected = set(part.step_ids + part.optional_steps) - ({"decide-2"} if part.id == "part-4" else set())
+                self.assertEqual(sorted(c["step"] for c in data["step_checks"]), sorted(expected))
 
     def test_no_activity_carries_a_blocking_flag(self):
         for lesson in self.data["lessons"]:
@@ -1235,7 +1238,8 @@ class FromTheZipapp(unittest.TestCase):
         self.assertEqual(out.returncode, 0, out.stderr.decode())
         data = json.loads(out.stdout)
         self.assertTrue(data["archive"])
-        self.assertEqual(data["lessons"], list(LESSON_IDS) + list(PART_1.lesson_ids) + list(PART_2.lesson_ids))
+        self.assertEqual(data["lessons"], list(LESSON_IDS) + list(PART_1.lesson_ids) + list(PART_2.lesson_ids)
+                         + list(PART_4.lesson_ids))
         self.assertGreater(data["kit"], 100)
         self.assertEqual(len(data["refused"]), 3)
         self.assertTrue(data["ui"])

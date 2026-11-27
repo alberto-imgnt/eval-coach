@@ -25,8 +25,8 @@ const CLI_COMMAND = STANDIN ? `${PYTHON} ${path.join(WORK, 'harness', 'fake_cli.
 // The model the app records at each AI start: the stand-in has no model data, so no option is passed; a real command names its own.
 const MODEL = STANDIN ? "the AI's own default model" : 'sonnet';
 const CLI_TIMEOUT_MS = 240000;
-// stand-in: 13 before the lessons + 4 hook runs (one silent) + 2 practice runs (build-try, fix-try) + 2 baseline sessions (+1 for the promptfoo track's extra step, +1 for its optional live step) + 4 for Part 1 (the cold run and one rewrite run for each of the three label sets). real: 13 used + fixtures, readback, fix + 1 retry (user-approved option A); Part 1 needs two more real sessions only after the user approves them
-const MAX_SESSIONS = STANDIN ? 30 : 17;
+// stand-in: 27 before Part 4 on the Script pass (the promptfoo pass adds 2, for its extra step and its optional live step) + 18 for Part 4 (the `part4` stage's two rounds and the `part4-practice` stage's one round, each five answers and one log window) = 45 on the Script pass and 47 on the promptfoo pass. real: 13 used + fixtures, readback, fix + 1 retry (user-approved option A); Part 1 needs two more real sessions only after the user approves them
+const MAX_SESSIONS = STANDIN ? 47 : 17;
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9.-]+/g;
 // Demo access for the stand-in runs: Part 3 is reached directly, so the app starts with a throwaway hash (made here,
 // for a throwaway password) and the harness turns demo access on. The real password and hash are never used here.

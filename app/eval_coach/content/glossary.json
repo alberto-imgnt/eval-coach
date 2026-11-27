@@ -1,50 +1,342 @@
 {
   "terms": [
-    {"term": "Checker", "kind": "idea", "meaning": "A program that applies written rules to an answer and says pass or fail for each rule. Because it only follows rules, it gives the same verdict every time.", "lesson": "rules"},
-    {"term": "Deterministic", "kind": "idea", "meaning": "Same input, same verdict, every time. The AI that writes an answer can vary from run to run. A checker that follows rules does not.", "lesson": "rules"},
-    {"term": "Criterion", "kind": "idea", "meaning": "One thing a good answer must do.", "lesson": "rules"},
-    {"term": "Threshold", "kind": "idea", "meaning": "The pass or fail rule for a criterion, written as a sentence, such as under 150 words.", "lesson": "rules"},
-    {"term": "NOT CHECKED", "kind": "idea", "meaning": "The threshold needs human judgment, so a checker cannot decide it. That criterion is not covered until you rewrite the threshold as a number, a list of terms or a label. It stays visible as not covered and is left out of the score. This course never hands such a criterion to an AI grader.", "lesson": "rules"},
-    {"term": "Interpretation choice", "kind": "idea", "meaning": "A decision made when words were turned into a rule, such as whole word or part of a word. If it is not what you meant, change the sentence.", "lesson": "rules"},
-    {"term": "Fixture", "kind": "idea", "meaning": "A made-up output used to test the checker itself, where you already know the right verdict. A useful pair is one clearly bad output and one that is polished but wrong.", "lesson": "trust"},
-    {"term": "Polished but wrong", "kind": "idea", "meaning": "An output that reads well but breaks a requirement. If your checker passes it, one of your checks is only for show, like window dressing.", "lesson": "trust"},
-    {"term": "Answer key", "kind": "course", "meaning": "In this course, a record of what each fixture was built to fail, judged against your requirements. It is written only after you lock your predictions, and you read it after the checker has run. The idea is that nothing can influence a prediction made before the result.", "lesson": "trust"},
-    {"term": "Run", "kind": "course", "meaning": "In this course, one answer from your prompt, produced in a new chat. A new chat starts a new AI window. The idea is that one run is one draw, so you collect several.", "lesson": "several-runs"},
-    {"term": "Baseline (Iteration 0)", "kind": "idea", "meaning": "Your starting score: for each criterion, the pass rate across several answers, recorded once your thresholds are settled. Compare later results rule by rule, including anything marked NOT CHECKED.", "lesson": "baseline-why"},
-    {"term": "Exit code", "kind": "idea", "meaning": "A number a program returns when it finishes. 0 usually means everything went well, and a checker may use another number, such as 1, to say that something failed.", "lesson": "surprise"},
-    {"term": "promptfoo", "kind": "course", "meaning": "In this course, an open-source tool used on the promptfoo track. It does the same job as the checker script, using a config file. The idea is the same rules written in a different form.", "lesson": "rules"},
-    {"term": "Agent skill", "kind": "course", "meaning": "In this course, a SKILL.md instruction file that your agent follows to do one job. The idea is a rulebook you can read and hold the agent to.", "lesson": "rules"},
-    {"term": "prompt-v0.md", "kind": "course", "meaning": "In this course, your Part 1 prompt, with your rough notes included. It is the exact text the AI receives on every run. The idea is that the prompt is the thing being measured.", "lesson": "several-runs"},
-    {"term": "test-cases.md", "kind": "course", "meaning": "In this course, your criteria and thresholds from Part 2. It is the spec for your checker. The idea is that the written rules come first and the checker follows them.", "lesson": "rules"},
-    {"term": "runs/run-1.txt to run-5.txt", "kind": "course", "meaning": "In this course, the five answers from your prompt, each saved as its own file. The idea is that a saved answer can be scored again and again.", "lesson": "several-runs"},
-    {"term": "check.py or promptfooconfig.yaml", "kind": "course", "meaning": "In this course, your checker. check.py is the file on the Script track, and promptfooconfig.yaml is the file on the promptfoo track. The idea is that the same rules can be written as a script or as a config.", "lesson": "rules"},
-    {"term": "fixtures/", "kind": "course", "meaning": "In this course, the folder in your project that holds your bad and polished-but-wrong outputs. The answer key is kept separately by the app and shown after the checker has run. The idea is a place for outputs whose right verdict you know.", "lesson": "trust"},
-    {"term": "iteration-log.md", "kind": "course", "meaning": "In this course, the file that records your baseline as Iteration 0, ready for Part 4 to build on. The idea is a written record of each change and its score.", "lesson": "baseline-why"},
-    {"term": "The loop", "kind": "course", "meaning": "In this course, the chain of prompt, answer, file, checker and verdict. Every arrow is something you start, and nothing moves on by itself. The idea is that you can look at each link on its own.", "lesson": "several-runs"},
-    {"term": "Verdict", "kind": "course", "meaning": "In this course, what the checker says about one criterion on one saved answer: PASS, FAIL or NOT CHECKED. The idea is a result you can compare, not an opinion.", "lesson": "rules"},
-    {"term": "Generator", "kind": "course", "meaning": "In this course, a new chat that sees only your prompt and notes, and writes the answers. The idea is to keep the writer of the answers apart from the rules that score them.", "lesson": "several-runs"},
-    {"term": "Builder", "kind": "course", "meaning": "In this course, your AI tool working from your test cases. It writes the checker, the fixtures and the log. The idea is that the rules come from you and the code from a tool.", "lesson": "rules"},
-    {"term": "Blind folder", "kind": "course", "meaning": "In this course, a folder that holds only your prompt, so the AI cannot see your test cases while it writes an answer. The idea is that answers must not bend to the rules that score them.", "lesson": "several-runs"},
-    {"term": "Mid-tier model", "kind": "course", "meaning": "In this course, a model that is not the most powerful one your tool offers. The app records its name because it goes in your log. The idea is that a score belongs to one prompt on one model.", "lesson": "several-runs"},
-    {"term": "Spec", "kind": "idea", "meaning": "The written description of what something must do. When a result is wrong, you change the spec first and let the checker follow.", "lesson": "surprise"},
-    {"term": "First look", "kind": "course", "meaning": "In this course, one pass of the checker over a single saved answer, so you can see it work. It is not your baseline. The idea is that seeing a checker run is not yet a score you can trust.", "lesson": "rules"},
-    {"term": "Known-good output", "kind": "course", "meaning": "In this course, an answer you judge against the written requirements before seeing its score. Your checker should recognize it as good and score it 95% or more. If it scores lower, investigate the checker or the written rules.", "lesson": "baseline-why"},
-    {"term": "AI window", "kind": "course", "meaning": "In this course, the terminal inside this app where your own AI tool runs. Each new chat starts a new AI window. The idea is that you stay in control of what your AI tool does. Depending on its settings, it may ask before it acts or act on its own. If it asks for approval, you answer there; the app never answers for you.", "lesson": "hook"},
-    {"term": "Markdown", "kind": "idea", "meaning": "Plain text with a few simple symbols, such as # for a heading. Your prompt and your test cases are saved as .md files that any text editor can open.", "lesson": "rules"},
-    {"term": "Proxy", "kind": "idea", "meaning": "A simple check that stands in for something a rule cannot judge directly, such as looking for a keyword instead of judging whether an answer is good. Tightening a proxy narrows the gap but never closes it.", "lesson": "surprise"},
-    {"term": "Agent", "kind": "idea", "meaning": "An AI tool that does more than chat: it reads files, writes files and runs commands for you.", "lesson": "rules"},
-    {"term": "Prompt", "kind": "idea", "meaning": "The words you give an AI tool to tell it what you need. The AI can only work from what the prompt says, so anything you leave out is a guess.", "lesson": "p1-mission", "card": false},
-    {"term": "Prompting framework", "kind": "idea", "meaning": "A checklist of labels, such as Role or Task, that names what a prompt needs, so you do not forget a part. Many exist, and you can build your own from the categories of information your task needs.", "lesson": "p1-frameworks", "card": false},
-    {"term": "Gap", "kind": "idea", "meaning": "Something you wanted in an answer that the prompt never said, so the AI had no way to know it.", "lesson": "p1-gaps", "card": false},
-    {"term": "RTCC", "kind": "idea", "meaning": "A sample prompting framework with four labels: Role, Task, Context and Constraints. The letters use common expansions that other sources define differently.", "lesson": "p1-frameworks", "card": false},
-    {"term": "RISE", "kind": "idea", "meaning": "A sample prompting framework with four labels: Role, Input, Steps and Expectation. The letters use common expansions that other sources define differently.", "lesson": "p1-frameworks", "card": false},
-    {"term": "Cold prompt", "kind": "course", "meaning": "In this course, the prompt you write in your own words before you learn any structure, run once, so it shows your starting point. The idea is that you can only see what a structure adds by comparing it with where you began.", "lesson": "p1-gaps", "card": false},
-    {"term": "Scenario card", "kind": "course", "meaning": "In this course, the short description of the Friday update, with the five things you know but that are not in the rough notes. The idea is that you score an answer against what was in your head.", "lesson": "p1-mission", "card": false},
-    {"term": "Test case", "kind": "idea", "meaning": "A written description of one check an answer must pass: what to look for and the pass or fail rule for it. A file of test cases, saved with the input they apply to, is what a program can later use to score answers.", "lesson": "p2-testfile", "card": false},
-    {"term": "Format check", "kind": "idea", "meaning": "A criterion about how an answer looks, such as its length or its headings. It is right to check format when the task asks for a particular look.", "lesson": "p2-criteria", "card": false},
-    {"term": "Content check", "kind": "idea", "meaning": "A criterion about what an answer says, such as a fact it must contain. A set of criteria with only format checks can pass an answer that looks right and misses the point.", "lesson": "p2-criteria", "card": false},
-    {"term": "Supporting list", "kind": "idea", "meaning": "A list that a threshold points to, such as words to avoid or terms that must appear. You write it for your own task and keep it in the same file as the test cases, so the check can run from the file alone.", "lesson": "p2-testfile", "card": false},
-    {"term": "Script test", "kind": "idea", "meaning": "A question to ask of every threshold: could a script decide it with no human judgment? If not, tighten it into a number, a term or a label.", "lesson": "p2-thresholds", "card": false},
-    {"term": "Worksheet", "kind": "course", "meaning": "In this course, the table where you list your criteria, each with the requirement it traces to and its type, and later its threshold. The idea is that you draft all the rules in one place before you write them into a file.", "lesson": "p2-criteria", "card": false}
+    {
+      "term": "Checker",
+      "kind": "idea",
+      "meaning": "A program that applies written rules to an answer and says pass or fail for each rule. Because it only follows rules, it gives the same verdict every time.",
+      "lesson": "rules"
+    },
+    {
+      "term": "Deterministic",
+      "kind": "idea",
+      "meaning": "Same input, same verdict, every time. The AI that writes an answer can vary from run to run. A checker that follows rules does not.",
+      "lesson": "rules"
+    },
+    {
+      "term": "Criterion",
+      "kind": "idea",
+      "meaning": "One thing a good answer must do.",
+      "lesson": "rules"
+    },
+    {
+      "term": "Threshold",
+      "kind": "idea",
+      "meaning": "The pass or fail rule for a criterion, written as a sentence, such as under 150 words.",
+      "lesson": "rules"
+    },
+    {
+      "term": "NOT CHECKED",
+      "kind": "idea",
+      "meaning": "The threshold needs human judgment, so a checker cannot decide it. That criterion is not covered until you rewrite the threshold as a number, a list of terms or a label. It stays visible as not covered and is left out of the score. This course never hands such a criterion to an AI grader.",
+      "lesson": "rules"
+    },
+    {
+      "term": "Interpretation choice",
+      "kind": "idea",
+      "meaning": "A decision made when words were turned into a rule, such as whole word or part of a word. If it is not what you meant, change the sentence.",
+      "lesson": "rules"
+    },
+    {
+      "term": "Fixture",
+      "kind": "idea",
+      "meaning": "A made-up output used to test the checker itself, where you already know the right verdict. A useful pair is one clearly bad output and one that is polished but wrong.",
+      "lesson": "trust"
+    },
+    {
+      "term": "Polished but wrong",
+      "kind": "idea",
+      "meaning": "An output that reads well but breaks a requirement. If your checker passes it, one of your checks is only for show, like window dressing.",
+      "lesson": "trust"
+    },
+    {
+      "term": "Answer key",
+      "kind": "course",
+      "meaning": "In this course, a record of what each fixture was built to fail, judged against your requirements. It is written only after you lock your predictions, and you read it after the checker has run. The idea is that nothing can influence a prediction made before the result.",
+      "lesson": "trust"
+    },
+    {
+      "term": "Run",
+      "kind": "course",
+      "meaning": "In this course, one answer from your prompt, produced in a new chat. A new chat starts a new AI window. The idea is that one run is one draw, so you collect several.",
+      "lesson": "several-runs"
+    },
+    {
+      "term": "Baseline (Iteration 0)",
+      "kind": "idea",
+      "meaning": "Your starting score: for each criterion, the pass rate across several answers, recorded once your thresholds are settled. Compare later results rule by rule, including anything marked NOT CHECKED.",
+      "lesson": "baseline-why"
+    },
+    {
+      "term": "Exit code",
+      "kind": "idea",
+      "meaning": "A number a program returns when it finishes. 0 usually means everything went well, and a checker may use another number, such as 1, to say that something failed.",
+      "lesson": "surprise"
+    },
+    {
+      "term": "promptfoo",
+      "kind": "course",
+      "meaning": "In this course, an open-source tool used on the promptfoo track. It does the same job as the checker script, using a config file. The idea is the same rules written in a different form.",
+      "lesson": "rules"
+    },
+    {
+      "term": "Agent skill",
+      "kind": "course",
+      "meaning": "In this course, a SKILL.md instruction file that your agent follows to do one job. The idea is a rulebook you can read and hold the agent to.",
+      "lesson": "rules"
+    },
+    {
+      "term": "prompt-v0.md",
+      "kind": "course",
+      "meaning": "In this course, your Part 1 prompt, with your rough notes included. It is the exact text the AI receives on every run. The idea is that the prompt is the thing being measured.",
+      "lesson": "several-runs"
+    },
+    {
+      "term": "test-cases.md",
+      "kind": "course",
+      "meaning": "In this course, your criteria and thresholds from Part 2. It is the spec for your checker. The idea is that the written rules come first and the checker follows them.",
+      "lesson": "rules"
+    },
+    {
+      "term": "runs/run-1.txt to run-5.txt",
+      "kind": "course",
+      "meaning": "In this course, the five answers from your prompt, each saved as its own file. The idea is that a saved answer can be scored again and again.",
+      "lesson": "several-runs"
+    },
+    {
+      "term": "check.py or promptfooconfig.yaml",
+      "kind": "course",
+      "meaning": "In this course, your checker. check.py is the file on the Script track, and promptfooconfig.yaml is the file on the promptfoo track. The idea is that the same rules can be written as a script or as a config.",
+      "lesson": "rules"
+    },
+    {
+      "term": "fixtures/",
+      "kind": "course",
+      "meaning": "In this course, the folder in your project that holds your bad and polished-but-wrong outputs. The answer key is kept separately by the app and shown after the checker has run. The idea is a place for outputs whose right verdict you know.",
+      "lesson": "trust"
+    },
+    {
+      "term": "iteration-log.md",
+      "kind": "course",
+      "meaning": "In this course, the file that records your baseline as Iteration 0, ready for Part 4 to build on. The idea is a written record of each change and its score.",
+      "lesson": "baseline-why"
+    },
+    {
+      "term": "The loop",
+      "kind": "course",
+      "meaning": "In this course, the chain of prompt, answer, file, checker and verdict. Every arrow is something you start, and nothing moves on by itself. The idea is that you can look at each link on its own.",
+      "lesson": "several-runs"
+    },
+    {
+      "term": "Verdict",
+      "kind": "course",
+      "meaning": "In this course, what the checker says about one criterion on one saved answer: PASS, FAIL or NOT CHECKED. The idea is a result you can compare, not an opinion.",
+      "lesson": "rules"
+    },
+    {
+      "term": "Generator",
+      "kind": "course",
+      "meaning": "In this course, a new chat that sees only your prompt and notes, and writes the answers. The idea is to keep the writer of the answers apart from the rules that score them.",
+      "lesson": "several-runs"
+    },
+    {
+      "term": "Builder",
+      "kind": "course",
+      "meaning": "In this course, your AI tool working from your test cases. It writes the checker, the fixtures and the log. The idea is that the rules come from you and the code from a tool.",
+      "lesson": "rules"
+    },
+    {
+      "term": "Blind folder",
+      "kind": "course",
+      "meaning": "In this course, a folder that holds only your prompt, so the AI cannot see your test cases while it writes an answer. The idea is that answers must not bend to the rules that score them.",
+      "lesson": "several-runs"
+    },
+    {
+      "term": "Mid-tier model",
+      "kind": "course",
+      "meaning": "In this course, a model that is not the most powerful one your tool offers. The app records its name because it goes in your log. The idea is that a score belongs to one prompt on one model.",
+      "lesson": "several-runs"
+    },
+    {
+      "term": "Spec",
+      "kind": "idea",
+      "meaning": "The written description of what something must do. When a result is wrong, you change the spec first and let the checker follow.",
+      "lesson": "surprise"
+    },
+    {
+      "term": "First look",
+      "kind": "course",
+      "meaning": "In this course, one pass of the checker over a single saved answer, so you can see it work. It is not your baseline. The idea is that seeing a checker run is not yet a score you can trust.",
+      "lesson": "rules"
+    },
+    {
+      "term": "Known-good output",
+      "kind": "course",
+      "meaning": "In this course, an answer you judge against the written requirements before seeing its score. Your checker should recognize it as good and score it 95% or more. If it scores lower, investigate the checker or the written rules.",
+      "lesson": "baseline-why"
+    },
+    {
+      "term": "AI window",
+      "kind": "course",
+      "meaning": "In this course, the terminal inside this app where your own AI tool runs. Each new chat starts a new AI window. The idea is that you stay in control of what your AI tool does. Depending on its settings, it may ask before it acts or act on its own. If it asks for approval, you answer there; the app never answers for you.",
+      "lesson": "hook"
+    },
+    {
+      "term": "Markdown",
+      "kind": "idea",
+      "meaning": "Plain text with a few simple symbols, such as # for a heading. Your prompt and your test cases are saved as .md files that any text editor can open.",
+      "lesson": "rules"
+    },
+    {
+      "term": "Proxy",
+      "kind": "idea",
+      "meaning": "A simple check that stands in for something a rule cannot judge directly, such as looking for a keyword instead of judging whether an answer is good. Tightening a proxy narrows the gap but never closes it.",
+      "lesson": "surprise"
+    },
+    {
+      "term": "Agent",
+      "kind": "idea",
+      "meaning": "An AI tool that does more than chat: it reads files, writes files and runs commands for you.",
+      "lesson": "rules"
+    },
+    {
+      "term": "Prompt",
+      "kind": "idea",
+      "meaning": "The words you give an AI tool to tell it what you need. The AI can only work from what the prompt says, so anything you leave out is a guess.",
+      "lesson": "p1-mission",
+      "card": false
+    },
+    {
+      "term": "Prompting framework",
+      "kind": "idea",
+      "meaning": "A checklist of labels, such as Role or Task, that names what a prompt needs, so you do not forget a part. Many exist, and you can build your own from the categories of information your task needs.",
+      "lesson": "p1-frameworks",
+      "card": false
+    },
+    {
+      "term": "Gap",
+      "kind": "idea",
+      "meaning": "Something you wanted in an answer that the prompt never said, so the AI had no way to know it.",
+      "lesson": "p1-gaps",
+      "card": false
+    },
+    {
+      "term": "RTCC",
+      "kind": "idea",
+      "meaning": "A sample prompting framework with four labels: Role, Task, Context and Constraints. The letters use common expansions that other sources define differently.",
+      "lesson": "p1-frameworks",
+      "card": false
+    },
+    {
+      "term": "RISE",
+      "kind": "idea",
+      "meaning": "A sample prompting framework with four labels: Role, Input, Steps and Expectation. The letters use common expansions that other sources define differently.",
+      "lesson": "p1-frameworks",
+      "card": false
+    },
+    {
+      "term": "Cold prompt",
+      "kind": "course",
+      "meaning": "In this course, the prompt you write in your own words before you learn any structure, run once, so it shows your starting point. The idea is that you can only see what a structure adds by comparing it with where you began.",
+      "lesson": "p1-gaps",
+      "card": false
+    },
+    {
+      "term": "Scenario card",
+      "kind": "course",
+      "meaning": "In this course, the short description of the Friday update, with the five things you know but that are not in the rough notes. The idea is that you score an answer against what was in your head.",
+      "lesson": "p1-mission",
+      "card": false
+    },
+    {
+      "term": "Test case",
+      "kind": "idea",
+      "meaning": "A written description of one check an answer must pass: what to look for and the pass or fail rule for it. A file of test cases, saved with the input they apply to, is what a program can later use to score answers.",
+      "lesson": "p2-testfile",
+      "card": false
+    },
+    {
+      "term": "Format check",
+      "kind": "idea",
+      "meaning": "A criterion about how an answer looks, such as its length or its headings. It is right to check format when the task asks for a particular look.",
+      "lesson": "p2-criteria",
+      "card": false
+    },
+    {
+      "term": "Content check",
+      "kind": "idea",
+      "meaning": "A criterion about what an answer says, such as a fact it must contain. A set of criteria with only format checks can pass an answer that looks right and misses the point.",
+      "lesson": "p2-criteria",
+      "card": false
+    },
+    {
+      "term": "Supporting list",
+      "kind": "idea",
+      "meaning": "A list that a threshold points to, such as words to avoid or terms that must appear. You write it for your own task and keep it in the same file as the test cases, so the check can run from the file alone.",
+      "lesson": "p2-testfile",
+      "card": false
+    },
+    {
+      "term": "Script test",
+      "kind": "idea",
+      "meaning": "A question to ask of every threshold: could a script decide it with no human judgment? If not, tighten it into a number, a term or a label.",
+      "lesson": "p2-thresholds",
+      "card": false
+    },
+    {
+      "term": "Worksheet",
+      "kind": "course",
+      "meaning": "In this course, the table where you list your criteria, each with the requirement it traces to and its type, and later its threshold. The idea is that you draft all the rules in one place before you write them into a file.",
+      "lesson": "p2-criteria",
+      "card": false
+    },
+    {
+      "term": "Hypothesis",
+      "kind": "idea",
+      "meaning": "A prediction you write before a change is scored: which rule you expect to move, and why. Written first, it cannot bend to fit the result, so you can compare what you expected with what happened.",
+      "lesson": "p4-one-change",
+      "card": false
+    },
+    {
+      "term": "Iteration",
+      "kind": "idea",
+      "meaning": "One round of improvement: a hypothesis, one change, a new set of scores and a decision to keep or undo. Iteration 0 is the starting score, and later rounds are numbered from 1.",
+      "lesson": "p4-one-change",
+      "card": false
+    },
+    {
+      "term": "Red green refactor",
+      "kind": "idea",
+      "meaning": "A cycle from software testing. Red is a check that fails, green is a change that makes it pass, and refactor is a cleanup that keeps the results the same. For a prompt, the cleanup is often a simpler prompt at the same score.",
+      "lesson": "p4-keep-and-log",
+      "card": false
+    },
+    {
+      "term": "Known-good answer",
+      "kind": "course",
+      "meaning": "In this course, an answer you choose from the written requirements before you see its score, to test the checker. The checker should score it 95% or more. If it does not, investigate the checker or the written requirements, and never loosen a rule to make it pass. It is a separate check from the five-answer score.",
+      "lesson": "p4-checker-first",
+      "card": false
+    },
+    {
+      "term": "Kept version",
+      "kind": "course",
+      "meaning": "In this course, the version of your prompt that you decided to keep after a round. Each round ends with an explicit keep or undo, and the latest version is never assumed to be the kept one. The next round starts from it.",
+      "lesson": "p4-keep-and-log",
+      "card": false
+    },
+    {
+      "term": "Measured gain on these rules",
+      "kind": "idea",
+      "meaning": "A higher score on the same rules. An equal or lower score is no measured gain on these rules. Either way, the score says nothing about qualities no rule checks, and one comparison is an observation that can suggest and never prove.",
+      "lesson": "p4-read-results",
+      "card": false
+    },
+    {
+      "term": "Coverage change",
+      "kind": "idea",
+      "meaning": "A rule that moves to or from NOT CHECKED between two rounds. A rule that becomes NOT CHECKED is lost coverage and never a gain, because the total no longer reflects it.",
+      "lesson": "p4-read-results",
+      "card": false
+    }
   ]
 }

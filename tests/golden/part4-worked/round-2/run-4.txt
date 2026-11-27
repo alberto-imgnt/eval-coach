@@ -1,0 +1,12 @@
+**Northwind**
+- Attended standup and joined two client meetings about the new reporting feature, where we walked through the requirements in detail and agreed on the next steps for the days ahead
+- Spent Monday and Tuesday building the Northwind reporting feature, focusing on the core data views, the filters and the export options so the demo would be ready on time
+- Prepared and ran the Northwind demo on Wednesday, which the client responded to well, and we collected a good deal of feedback from the people who attended
+- Fixed all of the issues that came out of the demo feedback on Friday
+- Blocker: lost half a day on Thursday waiting on client test data access. Need: access granted before Monday so testing can continue.
+
+**Contoso**
+- Reviewed the estimate on Friday and shared my notes with the team
+
+**Internal**
+- Helped onboard a new teammate, attended the internal AI lunch & learn, and worked on documentation while I was blocked on the client data

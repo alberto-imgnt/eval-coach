@@ -10,6 +10,7 @@ this module takes the saved files as they are.
 """
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import re
@@ -27,6 +28,7 @@ TARGET_PERCENT = 95
 ROUNDS_NEEDED = 2
 HASH_KEYS = ("prompt", "test_cases", "checker", "runs")
 DECISIONS = {"keep": "kept", "undo": "undone"}
+START_CHOICES = ("own", "practice")
 GENERATED_START = "# eval-coach: known-good test (generated)"
 GENERATED_END = "# eval-coach: end of known-good test"
 _GENERATED = re.compile(r"^[ \t]*" + re.escape(GENERATED_START) + r"[^\n]*\n.*?^[ \t]*" + re.escape(GENERATED_END)
@@ -34,6 +36,24 @@ _GENERATED = re.compile(r"^[ \t]*" + re.escape(GENERATED_START) + r"[^\n]*\n.*?^
 _FILE_REF = re.compile(r"file://([^\s\"'(){}\[\],]+)")
 _SHARED_FOLDERS = ("runs/", "fixtures/", "examples/")
 _RUN_ONE = re.compile(r"\bdescription\s*:\s*[\"']?run-1\b")
+
+
+@functools.lru_cache(maxsize=None)
+def _load_words_json():
+    return resources.read_text("content/part-4-attempts.json")
+
+
+@functools.lru_cache(maxsize=None)
+def _baseline_problems_json():
+    return json.dumps(json.loads(resources.read_text("content/steps.json"))["steps"]["baseline"]["gate"]["problems"])
+
+
+def _load_words():
+    return json.loads(_load_words_json())
+
+
+def _baseline_problems():
+    return json.loads(_baseline_problems_json())
 
 
 def _error(code, message):
@@ -179,13 +199,16 @@ class Attempts:
         self._model = model or (lambda: "")
         self._lock = lock or threading.RLock()
         self._running = False
-        self.words = words or json.loads(resources.read_text("content/part-4-attempts.json"))
-        self._baseline_problems = json.loads(resources.read_text("content/steps.json"))[
-            "steps"]["baseline"]["gate"]["problems"]
+        self.words = words or _load_words()
+        self._baseline_problems = _baseline_problems()
 
     @classmethod
-    def for_engine(cls, engine):
-        """The attempts of the engine's current project, reading Part 3's saved baseline as Iteration 0."""
+    def for_engine(cls, engine, model=None):
+        """The attempts of the engine's current project, reading Part 3's saved baseline as Iteration 0.
+
+        `model` gives the model name a scored attempt records; by default it is Part 3's. The Practice baseline has no
+        recorded model, so it is never read for it.
+        """
         def runtime():
             env = engine._cli_env()
             options = {"npx_argv": engine.preflight.npx_argv(env), "runner": engine.preflight.runner,
@@ -197,7 +220,85 @@ class Attempts:
             return saved.get("summary") if saved else None
 
         return cls(engine.paths, lambda: engine.progress, engine._save, engine._track, runtime, zero,
-                   engine._model_name, engine._lock)
+                   model or engine._model_name, engine._lock)
+
+    # --- the starting point ----------------------------------------------------
+
+    def source(self):
+        """"own" (the participant's Part 3 files) or "practice" (the bundled baseline). Unset means "own"."""
+        return self._block().get("start") or "own"
+
+    def chosen(self):
+        """The starting point the participant chose, or None before they chose one."""
+        return self._block().get("start")
+
+    def _practice(self):
+        return self.source() == "practice"
+
+    def _base(self):
+        """Where Iteration 0's prompt, rules, checker, five answers and log are kept."""
+        return self.paths.part4_practice if self._practice() else self.paths
+
+    def _ap(self, n):
+        return self.paths.attempt(n, practice=self._practice())
+
+    def _log_name(self):
+        return "part-4/practice/iteration-log.md" if self._practice() else "iteration-log.md"
+
+    def _zero_summary(self):
+        """Iteration 0's saved summary: Part 3's baseline result, or the Practice baseline's own."""
+        if not self._practice():
+            return self._iteration_zero()
+        try:
+            data = store.read_json(self._base().results)
+            return {key: data[key] for key in ("criteria", "overall", "not_checked", "runs")}
+        except (OSError, KeyError, TypeError, store.CorruptStateError):
+            return None
+
+    def choose_start(self, source):
+        """Save the starting point, once. The Practice baseline is copied into part-4/practice/ create-only and scored.
+
+        Nothing of the participant's own Part 3 files is read for Practice, and none is written either way. The choice
+        cannot change once attempt 1 exists.
+        """
+        with self._lock:
+            if source not in START_CHOICES:
+                raise self._fail("bad_start")
+            if self.manifest():
+                if self._block().get("start") == source or (source == "own" and not self._block().get("start")):
+                    return
+                raise self._fail("start_fixed")
+            if source == "own":
+                if not self._baseline_done():
+                    raise self._fail("no_baseline")
+                self._block(create=True)["start"] = "own"
+                self._save_progress()
+                return
+            try:
+                project.write_practice_baseline(self.paths, self.track)
+            except OSError as exc:
+                raise self._fail("practice_busy", error=exc) from exc
+            practice = self.paths.part4_practice
+            env, options = self._options()
+            self._begin_run()
+        try:
+            result = baseline.run_checks(practice.project, self.track, env=env, **options)
+        finally:
+            self._end_run()
+        if not result["ok"]:
+            raise self._fail("checker_failed", error=result["error"])
+        summary = baseline.summarize(result)
+        if summary is None:
+            raise self._fail("checker_failed", error=baseline._consistency_problem(result) or "")
+        with self._lock:
+            if self.manifest():
+                raise self._fail("start_fixed")
+            try:
+                store.write_json_atomic(practice.results, dict(summary, track=self.track))
+            except OSError as exc:
+                raise self._fail("practice_busy", error=exc) from exc
+            self._block(create=True)["start"] = "practice"
+            self._save_progress()
 
     # --- the manifest ----------------------------------------------------------
 
@@ -238,7 +339,8 @@ class Attempts:
         return next((rec["n"] for rec in reversed(self.manifest()) if rec["decision"] == "kept"), 0)
 
     def _baseline_done(self):
-        return "baseline" in self.progress["done"]
+        """Iteration 0 exists: the participant finished Part 3's baseline, or chose the Practice baseline."""
+        return self._practice() or "baseline" in self.progress["done"]
 
     # --- files -----------------------------------------------------------------
 
@@ -250,7 +352,7 @@ class Attempts:
         """Which of prompt, rules, checker and answers differ from what was scored: [] when nothing changed."""
         if rec["hashes"] is None:
             return []
-        now = self._hashes(self.paths.attempt(rec["n"]))
+        now = self._hashes(self._ap(rec["n"]))
         return [key for key in HASH_KEYS if rec["hashes"].get(key) != now[key]]
 
     def _stale_words(self, keys):
@@ -262,7 +364,7 @@ class Attempts:
 
     def _sources(self, parent):
         """The files a new attempt starts from: the kept version's, or Iteration 0's own files."""
-        src = self.paths if parent == 0 else self.paths.attempt(parent)
+        src = self._base() if parent == 0 else self._ap(parent)
         track = self.track
         names = {"prompt": (src.prompt, "prompt.md" if parent else "prompt-v0.md"),
                  "test_cases": (src.test_cases, "test-cases.md"),
@@ -298,7 +400,7 @@ class Attempts:
             missing = [label for key, (path, label) in names.items() if not path.is_file()]
             if missing:
                 raise self._fail("no_start_files", n=n, files=", ".join(missing))
-            ap = self.paths.attempt(n)
+            ap = self._ap(n)
             try:
                 self._copy_new(src.prompt, ap.prompt)
                 self._copy_new(src.test_cases, ap.test_cases)
@@ -322,7 +424,7 @@ class Attempts:
         """Save the hypothesis for attempt n. It can change until the attempt is run, and never after."""
         with self._lock:
             rec = self._require(n)
-            ap = self.paths.attempt(n)
+            ap = self._ap(n)
             if not isinstance(text, str) or len(text) > MAX_TEXT or "\0" in text:
                 raise self._fail("bad_text")
             if not text.strip():
@@ -337,8 +439,22 @@ class Attempts:
             rec["hypothesis_hash"] = _sha(data)
             self._save_progress()
 
+    def require_hypothesis(self, n):
+        """Refuse unless attempt n has a saved hypothesis that is still the one on disk."""
+        with self._lock:
+            self._require_hypothesis(n, self._require(n))
+
+    def run_texts(self, n):
+        """Whether each of the five answers of attempt n is saved: [(k, has text, word count)]."""
+        ap = self._ap(n)
+        out = []
+        for k in range(1, baseline.RUNS + 1):
+            text = gates.read_text(ap.run_file(k))
+            out.append((k, bool(text.strip()), len(text.split())))
+        return out
+
     def _require_hypothesis(self, n, rec):
-        ap = self.paths.attempt(n)
+        ap = self._ap(n)
         if not rec["hypothesis_hash"] or not gates.has_text(ap.hypothesis):
             raise self._fail("hypothesis_needed", n=n)
         if gates.file_sha256(ap.hypothesis) != rec["hypothesis_hash"]:
@@ -348,7 +464,7 @@ class Attempts:
 
     def _prepare(self, n, rec):
         """The checks every checker run starts with. Returns the attempt's paths."""
-        ap = self.paths.attempt(n)
+        ap = self._ap(n)
         for path in (ap.prompt, ap.test_cases, ap.checker(self.track)):
             if not path.is_file():
                 raise self._fail("file_missing", n=n, name=path.name)
@@ -358,8 +474,10 @@ class Attempts:
         return ap
 
     def _options(self):
+        """The runtime and the options every checker run of an attempt takes: promptfoo writes its own output to another
+        file, and runs only the five answers' tests, because an attempt folder has no fixtures for the others to read."""
         env, options = self._runtime()
-        return env, dict(options, output=promptfoo.ATTEMPT_OUTPUT)
+        return env, dict(options, output=promptfoo.ATTEMPT_OUTPUT, only=promptfoo.RUN_TESTS_PATTERN)
 
     def _begin_run(self):
         if self._running:
@@ -423,7 +541,7 @@ class Attempts:
         """Save the known-good answer. Its score is not returned until this exists, and a new answer drops the old score."""
         with self._lock:
             rec = self._require(n)
-            ap = self.paths.attempt(n)
+            ap = self._ap(n)
             if not isinstance(text, str) or len(text) > MAX_TEXT or "\0" in text:
                 raise self._fail("bad_text")
             if not text.strip():
@@ -441,7 +559,7 @@ class Attempts:
         """Run the attempt's checker on the known-good answer. The score is kept apart from the five answers'."""
         with self._lock:
             rec = self._require(n)
-            ap = self.paths.attempt(n)
+            ap = self._ap(n)
             if not gates.has_text(ap.known_good):
                 raise self._fail("known_good_needed")
             ap = self._prepare(n, rec)
@@ -459,7 +577,8 @@ class Attempts:
             if self.track == "promptfoo":
                 result = promptfoo.run_selection(
                     ap.project, promptfoo.KNOWN_GOOD_TEST, [promptfoo.KNOWN_GOOD_FILE], env, options.get("npx_argv"),
-                    options.get("runner"), options.get("python"), output=promptfoo.ATTEMPT_OUTPUT)
+                    options.get("runner"), options.get("python"), output=promptfoo.ATTEMPT_OUTPUT,
+                    only=promptfoo.KNOWN_GOOD_PATTERN)  # no answer exists yet, and promptfoo stops on a missing file
             else:
                 result = runner.run_checker(ap.project, [promptfoo.KNOWN_GOOD_FILE], env=env)
         finally:
@@ -487,13 +606,13 @@ class Attempts:
         corrected = self._block().get("iteration_0")
         if corrected:
             return corrected["results"], corrected["checker_hash"]
-        summary = self._iteration_zero()
+        summary = self._zero_summary()
         results = compact(summary) if summary else None
-        return results, checker_hash(self.paths.checker(self.track), self.track)
+        return results, checker_hash(self._base().checker(self.track), self.track)
 
     def _zero_with(self, ap):
         """Iteration 0's five original answers scored by the attempt's checker, in a scratch folder. None if absent."""
-        root = self.paths
+        root = self._base()
         if not all(gates.has_text(root.run_file(i)) for i in range(1, baseline.RUNS + 1)):
             return None
         track = self.track
@@ -523,7 +642,7 @@ class Attempts:
         The scratch run happens outside the lock, so a slow checker never holds up the page.
         """
         with self._lock:
-            ap = self.paths.attempt(n)
+            ap = self._ap(n)
             zero, zero_hash = self._zero()
             mine = checker_hash(ap.checker(self.track), self.track)
             if zero is None or mine is None or mine == zero_hash:
@@ -547,7 +666,7 @@ class Attempts:
             note = self.rerun_needed()
             if not note:
                 return None
-            ap = self.paths.attempt(note["attempt"])
+            ap = self._ap(note["attempt"])
         results = self._zero_with(ap)  # outside the lock, like every checker run
         if results is None:
             raise self._fail("answers_missing", n=0, files="runs/run-1.txt to runs/run-5.txt")
@@ -592,7 +711,7 @@ class Attempts:
 
         It is always compared with the original Iteration 0, so a corrected Iteration 0 never hides a changed rule set.
         """
-        summary = self._iteration_zero()
+        summary = self._zero_summary()
         zero, now = (compact(summary) if summary else None), rec["results"]
         if zero is None or now is None:
             return {"changed": False, "added": [], "removed": [], "lost": [], "text": None}
@@ -634,7 +753,7 @@ class Attempts:
 
     def _known_good(self, n, rec):
         """The known-good result, only when its answer is saved. Never merged with the five-answer score."""
-        ap = self.paths.attempt(n)
+        ap = self._ap(n)
         saved = rec["known_good"]
         if saved is None or not gates.has_text(ap.known_good):
             return None
@@ -650,11 +769,67 @@ class Attempts:
         return {"passes": passes, "checked": checked, "meets": meets, "stale": stale, "failing": saved["failing"],
                 "text": text, "next_step": None if meets else words["next_step"]}
 
+    def _names(self, n):
+        """{rule id: name}, from Iteration 0's saved summary and the attempt's own results.json."""
+        names = {}
+        summaries = [self._zero_summary()]
+        if n:
+            try:
+                summaries.append(store.read_json(self._ap(n).results))
+            except (OSError, store.CorruptStateError):
+                pass
+        for summary in summaries:
+            for criterion in (summary or {}).get("criteria", []) if isinstance(summary, dict) else []:
+                names[criterion["id"]] = criterion["name"]
+        return names
+
+    @staticmethod
+    def _cell(results, cid):
+        if results is None or cid not in results:
+            return None
+        return {"passes": results[cid]["passes"], "checked": results[cid]["checked_runs"],
+                "not_checked": cid in results["not_checked"]}
+
+    def rules_of(self, n):
+        """Every rule of version n (0 is Iteration 0) with its pass count; `failing` marks a rule under 5 of 5."""
+        results = self._results_of(n)
+        if results is None:
+            return []
+        names = self._names(n)
+        out = []
+        for cid in _ids(results):
+            cell = self._cell(results, cid)
+            out.append(dict(cell, id=cid, name=names.get(cid, cid),
+                            failing=not cell["not_checked"] and cell["passes"] < cell["checked"]))
+        return out
+
+    def compare(self, rec):
+        """Every rule's count before (the starting version) and after (this attempt), plus the two overall scores.
+
+        A rule that is NOT CHECKED now but was checked before is `lost`. None until the attempt is scored.
+        """
+        results, start = rec["results"], self._results_of(rec["parent"])
+        if results is None or start is None:
+            return None
+        names, rows = self._names(rec["n"]), []
+        for cid in _ids({**{k: 0 for k in _ids(start)}, **{k: 0 for k in _ids(results)}}):
+            before, after = self._cell(start, cid), self._cell(results, cid)
+            lost = bool(before and after and after["not_checked"] and not before["not_checked"])
+            change = None
+            if before and after and not before["not_checked"] and not after["not_checked"]:
+                change = "up" if after["passes"] > before["passes"] else "down" if after["passes"] < before["passes"] \
+                    else "same"
+            rows.append({"id": cid, "name": names.get(cid, cid), "before": before, "after": after, "change": change,
+                         "lost": lost})
+        first, second = overall(start), overall(results)
+        return {"rules": rows, "before": {"passes": first[0], "total": first[1]},
+                "after": {"passes": second[0], "total": second[1]}}
+
     def view(self, n):
         """Everything the page needs about attempt n. The two scores are separate fields and are never combined."""
         with self._lock:
             rec = self._require(n)
-            ap = self.paths.attempt(n)
+            ap = self._ap(n)
             stale = self._stale(rec)
             return {
                 "n": n, "parent": rec["parent"], "log_entry": rec["log_entry"], "decision": rec["decision"],
@@ -665,6 +840,8 @@ class Attempts:
                 "five_answers": self._five_answers(rec), "known_good": self._known_good(n, rec),
                 "known_good_saved": gates.has_text(ap.known_good),
                 "coverage": self.coverage(rec), "evidence": self.evidence(rec),
+                "start_rules": self.rules_of(rec["parent"]), "compare": self.compare(rec),
+                "source": self.source(),
             }
 
     def overview(self):
@@ -679,13 +856,13 @@ class Attempts:
 
     def _log_entries(self):
         """(entries, problem): the log's entries in order, or why there are none."""
-        problems = self.words["gate"]["problems"]
-        if not self.paths.iteration_log.is_file():
-            return None, problems["no_log"]
+        problems, log, name = self.words["gate"]["problems"], self._base().iteration_log, self._log_name()
+        if not log.is_file():
+            return None, problems["no_log"].format(log=name)
         try:
-            return parsers.parse_iteration_log(gates.read_text(self.paths.iteration_log)), None
+            return parsers.parse_iteration_log(gates.read_text(log)), None
         except parsers.IterationLogError as exc:
-            return None, problems["unusable"].format(error=str(exc))
+            return None, problems["unusable"].format(error=str(exc), log=name)
 
     def _attempt_items(self, rec, entries, log_problem):
         """[(item key, ok, problem text)] for one attempt: the log entry against the manifest and the saved results."""
@@ -723,11 +900,21 @@ class Attempts:
             items.append(("counts", not counts, " ".join(counts)))
             nc = gates.baseline_not_checked_problems(entry, summary, self._baseline_problems)
             items.append(("not_checked", not nc, " ".join(nc)))
+        items.append(("written", *self._written_problem(rec, entry)))
         return items
+
+    def _written_problem(self, rec, entry):
+        """Change, Result and Reasoning each have text. Only their presence is checked, never what they say."""
+        problems, n = self.words["gate"]["problems"], rec["n"]
+        names = self.words["written_names"]
+        empty = [names[key] for key in ("change", "result", "reasoning") if not entry[key].strip()]
+        if empty:
+            return False, problems["written_missing"].format(n=n, fields=", ".join(empty))
+        return True, ""
 
     def _hypothesis_problem(self, rec, entry):
         problems, n = self.words["gate"]["problems"], rec["n"]
-        saved = gates.read_text(self.paths.attempt(n).hypothesis)
+        saved = gates.read_text(self._ap(n).hypothesis)
         if not rec["hypothesis_hash"] or not saved.strip():
             return False, problems["hypothesis_unsaved"].format(n=n)
         shown = _squash(saved)
@@ -741,7 +928,7 @@ class Attempts:
         """(summary, problem): the attempt's results.json, when it still says what the manifest says."""
         problems, n = self.words["gate"]["problems"], rec["n"]
         try:
-            data = store.read_json(self.paths.attempt(n).results)
+            data = store.read_json(self._ap(n).results)
             summary = {key: data[key] for key in ("criteria", "overall", "not_checked", "runs")}
             if compact(summary) != rec["results"]:
                 return None, problems["results_changed"].format(n=n)
@@ -749,12 +936,17 @@ class Attempts:
         except (OSError, KeyError, TypeError, store.CorruptStateError):
             return None, problems["results_missing"].format(n=n)
 
-    def check_log(self):
-        """Compare each attempt's log entry with the manifest and its saved results. Reads only: the log is never edited."""
+    def check_log(self, through=None):
+        """Compare each attempt's log entry with the manifest and its saved results. Reads only: the log is never edited.
+
+        `through` limits the check to attempts up to that number, so a round's step is not held up by a later round.
+        """
         with self._lock:
             report = gates.Report(self.words["gate"])
             entries, log_problem = self._log_entries()
             for rec in self.manifest():
+                if through is not None and rec["n"] > through:
+                    continue
                 for key, ok, problem in self._attempt_items(rec, entries, log_problem):
                     report.add(key, ok, n=rec["n"], problem=problem)
                 if self.coverage(rec)["changed"]:

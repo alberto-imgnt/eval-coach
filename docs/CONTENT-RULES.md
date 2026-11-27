@@ -1,6 +1,6 @@
 # Content rules: teaching, activities and wording for every Part
 
-Read `docs/SPEC.md` first; its non-negotiable rules apply. These rules apply to **every Part's course** (Part 1 `part-1-course`, Part 2 `part-2-course`, Part 3 [RUNNING-EVALS-COURSE.md](RUNNING-EVALS-COURSE.md), and Parts 4 and 5 when they are built). They were first written for Part 3 and moved here when the app became a series of six Parts. The API and storage contract is in `docs/SPEC.md` ("Course and lessons", "Parts", "Part 1", "Part 2"). The OpenSpec specs `mission-lesson-shape`, `method-over-mechanics`, `course-structure`, `participant-vocabulary` and `part-terminology` win over this file for their areas.
+Read `docs/SPEC.md` first; its non-negotiable rules apply. These rules apply to **every Part's course** (Part 1 `part-1-course`, Part 2 `part-2-course`, Part 3 [RUNNING-EVALS-COURSE.md](RUNNING-EVALS-COURSE.md), Part 4 `part-4-course`, and Part 5 when it is built). They were first written for Part 3 and moved here when the app became a series of six Parts. The API and storage contract is in `docs/SPEC.md` ("Course and lessons", "Parts", "Part 1", "Part 2"). The OpenSpec specs `mission-lesson-shape`, `method-over-mechanics`, `course-structure`, `participant-vocabulary` and `part-terminology` win over this file for their areas.
 
 Where each Part's own course is described:
 
@@ -9,7 +9,8 @@ Where each Part's own course is described:
 | 1. Structured prompting | `docs/SPEC.md` "Part 1" | `p1-mission` | `part-1-course`, `part-1-exercise-steps` |
 | 2. Defining evaluation criteria | `docs/SPEC.md` "Part 2" | `p2-mission` | `part-2-course`, `part-2-exercise-steps` |
 | 3. Running evals and baseline | [RUNNING-EVALS-COURSE.md](RUNNING-EVALS-COURSE.md) | `mission` | `course-structure` |
-| 4, 5 | not built (Series map shows "Coming soon") | | |
+| 4. Iterating with evaluation-driven development | `docs/SPEC.md` "Part 4 course" | `p4-mission` | `part-4-course`, `part-4-exercise-steps`, `part-4-practice-baseline` |
+| 5 | not built (Series map shows "Coming soon") | | |
 | 6 | live meeting (Series map row only) | | |
 
 Part-specific rules that sit on top of these: Part 1 keeps "discovery before theory" until `p1-frameworks` (no framework is named before it); Part 2 holds the Northwind reference criteria back until the `reference` step. Part 3's rules are in its own file.
@@ -140,13 +141,13 @@ Checked on 2026-11-24 against the certification program's "What We Examine" page
 | Evaluations | Scripts, promptfoo YAML or documented test cases | Part 2 `test-file`; Part 3 `build` | `part-2\test-cases.md`; `check.py` or `promptfooconfig.yaml` | Examiner requirement (the Script and promptfoo tracks are the course's two options) |
 | Evaluations | At least 3 distinct criteria, not variations of one check | Part 2 `draft`, `test-file` | The worksheet and a test cases file that passes the blocking checks | Examiner requirement |
 | Evaluations | Substantive quality checks, not window dressing | Part 2 `thresholds`; Part 3 `fixtures`, `predict`, `run`, `fix` | Thresholds, two fixtures, locked predictions and the run compared with them | Examiner requirement |
-| Evaluations | Capable of 95% or more when the prompt performs well | Part 4 known-good check | A known-good answer and its per-rule score in the log (Part 4, not built) | Examiner requirement. The figure is about what a good answer can score, not a target for every answer |
+| Evaluations | Capable of 95% or more when the prompt performs well | Part 4 known-good check | A known-good answer and its per-rule score (Part 4 `known-good`) | Examiner requirement. The figure is about what a good answer can score, not a target for every answer |
 | Evaluations | Runs on mid-tier models or lower | Sonnet or Haiku choice; Part 3 `generate` | The recorded model (`models_used`) and the model named in the log | Examiner requirement |
 | Evaluations | Clear pass or fail thresholds or scoring rubrics | Part 2 `thresholds` | The threshold column of the test cases | Examiner requirement |
 | Log | At least 2 documented iterations | Part 4 | Iteration entries in `iteration-log.md` | The program says 2 or more iterations. Two rounds after Iteration 0 is a course convention that meets it either way |
 | Log | Each iteration has baseline scores, hypothesis, change, measured results and reasoning | Part 3 `baseline`; Part 4 | `iteration-log.md`, read by the log parser | Examiner requirement |
-| Log | Evidence of the red, green, refactor cycle | Part 4 | Log entries that show a failing check, a fix and a cleanup (Part 4, not built) | Examiner requirement |
-| Log | Chronological progression with cause and effect | Part 4; Part 5 audit entry | Entries in order, each with its reasoning (Part 4 and 5, not built) | Examiner requirement |
+| Log | Evidence of the red, green, refactor cycle | Part 4 | Log entries that show a failing check, a fix and a cleanup (Part 4 `decide`) | Examiner requirement |
+| Log | Chronological progression with cause and effect | Part 4; Part 5 audit entry | Entries in order, each with its reasoning (Part 4 `decide`; Part 5, not built) | Examiner requirement |
 | Package | A ZIP with the three artifacts; a README is optional | Part 5 package | The package built from the kept attempt (Part 5, not built) | Examiner requirement |
 | (none) | Five saved answers per version, the Script track's `check.py`, Iteration 0 numbering, the 95% five-answer coaching target, the attempt manifest | Parts 3 to 5 | `runs\`, `check.py`, `iteration-log.md`, `progress.json` `parts.part-4` | Course convention |
 

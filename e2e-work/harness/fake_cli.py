@@ -1,6 +1,6 @@
 """NOT an AI CLI. A scripted stand-in so the real UI and backend can be exercised
 without a model. It asks an approval-shaped question and waits for Enter from the xterm."""
-import datetime, json, os, pathlib, re, shutil, subprocess, sys, time
+import datetime, hashlib, json, os, pathlib, re, shutil, subprocess, sys, time
 
 ROW = re.compile(r"^(C\d+) (PASS|FAIL|NOT CHECKED)\s+(.*)$")
 
@@ -28,6 +28,18 @@ def mode():
         return MODE.read_text(encoding="utf-8").strip()
     except OSError:
         return ""
+
+
+def events():
+    """Every event this stand-in logged so far (harness-only record)."""
+    out = []
+    if EVENTS.exists():
+        for raw in EVENTS.read_text(encoding="utf-8").splitlines():
+            try:
+                out.append(json.loads(raw))
+            except ValueError:
+                pass
+    return out
 
 
 def approve(name):
@@ -63,17 +75,11 @@ def parse_checker(text):
     return found
 
 
-def baseline_log(line):
-    """The Iteration 0 entry in the exact format of the build skill's run + log mode, from the real checker output."""
-    runs = ["runs/run-%d.txt" % n for n in range(1, 6)]
-    prompt = line.split("The prompt file is ", 1)[1].split(". The model was", 1)[0]
-    model = line.split("The model was ", 1)[1].rstrip().rstrip(".")
+def counted_log(runs, checker, cwd, title, prompt, model, hypothesis=""):
+    """A log entry in the exact format of the build skill's run + log mode, from the real checker output."""
     env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
-    # The promptfoo track has no check.py: the stand-in counts with the Northwind reference checker, which is what
-    # the config encodes, so the app's own (real promptfoo) count is checked against an independent one.
-    checker = str(GOLD / "reference-check.py") if "build-promptfoo-config" in line else "check.py"
     out = subprocess.run([sys.executable, checker] + runs, capture_output=True, text=True, encoding="utf-8",
-                         env=env, timeout=60).stdout
+                         env=env, timeout=60, cwd=cwd).stdout
     results = parse_checker(out.split("== Pass rate per criterion")[0])
     wrong = mode() == "wrong-count"  # the stand-in logs one count too low, so the gate's message can be seen
     rows, checked, passes_all, not_checked = [], 0, 0, []
@@ -96,10 +102,70 @@ def baseline_log(line):
                                                        "fails: " + failing if failing else ""))
     listed = "%d (%s)" % (len(not_checked), ", ".join(not_checked)) if not_checked else "0"
     return "\n".join([
-        "## Iteration 0: baseline", "- Date: " + datetime.date.today().isoformat(), "- Prompt: " + prompt,
+        title, "- Date: " + datetime.date.today().isoformat(), "- Prompt: " + prompt,
         "- Model: " + model, "- Runs: 5", "- Overall: %d / %d" % (passes_all, checked), "- Not checked: " + listed, "",
         "| Criterion | Passed | Rate | Notes |", "| --- | --- | --- | --- |"] + rows + [
-        "", "- Hypothesis:", "- Change:", "- Result:", "- Reasoning:", ""])
+        "", "- Hypothesis:" + (" " + hypothesis if hypothesis else ""), "- Change:", "- Result:", "- Reasoning:", ""])
+
+
+def baseline_log(line):
+    """The Iteration 0 entry, counted on the project's five runs."""
+    runs = ["runs/run-%d.txt" % n for n in range(1, 6)]
+    prompt = line.split("The prompt file is ", 1)[1].split(". The model was", 1)[0]
+    model = line.split("The model was ", 1)[1].rstrip().rstrip(".")
+    # The promptfoo track has no check.py: the stand-in counts with the Northwind reference checker, which is what
+    # the config encodes, so the app's own (real promptfoo) count is checked against an independent one.
+    checker = str(GOLD / "reference-check.py") if "build-promptfoo-config" in line else "check.py"
+    return counted_log(runs, checker, None, "## Iteration 0: baseline", prompt, model)
+
+
+PART4_LOG_LINE = re.compile(r"The prompt file is (\S+)/prompt\.md\. The model was (.+?)\. Append the entry to (\S+) "
+                            r"as Iteration (\d+)\. Copy the Hypothesis word for word from (\S+)")
+TIGHTEN_FIND = "return True, 'found \"Blocker:\" and \"Need:\"'"
+
+
+def part4_checker(config_text):
+    """The promptfoo track's independent checker for a Part 4 attempt: the Northwind reference checker, tightened the same
+    way the config says it is (a Blocker line that mentions test data)."""
+    text = (GOLD / "reference-check.py").read_text(encoding="utf-8")
+    if "test data" in config_text:
+        text = text.replace(TIGHTEN_FIND, "if 'test data' not in text.split('Blocker:', 1)[1].splitlines()[0]:\n"
+                            "        return False, 'blocker does not mention test data'\n    " + TIGHTEN_FIND)
+    target = ROOT / "e2e-work" / "pf-independent-check-part4.py"
+    target.write_text(text, encoding="utf-8")
+    return str(target)
+
+
+def part4_log_entry(line):
+    """The entry for Iteration n of run + log mode: the counts from the attempt's own checker and the saved Hypothesis
+    copied word for word, with Change, Result and Reasoning left empty. Returns (log path, number, entry text)."""
+    m = PART4_LOG_LINE.search(line)
+    folder, model, log, n, hypothesis = pathlib.Path(m.group(1)), m.group(2), m.group(3), int(m.group(4)), m.group(5)
+    saved = " ".join(pathlib.Path(hypothesis).read_text(encoding="utf-8").split())
+    if "build-promptfoo-config" in line:
+        config = (folder / "promptfooconfig.yaml").read_text(encoding="utf-8")
+        runs = [str(folder / "runs" / ("run-%d.txt" % k)) for k in range(1, 6)]
+        entry = counted_log(runs, part4_checker(config), None, "## Iteration %d: round %d" % (n, n), "%s/prompt.md" % m.group(1),
+                            model, saved)
+    else:  # the attempt's own check.py, run in the attempt's folder the way the app runs it
+        runs = ["runs/run-%d.txt" % k for k in range(1, 6)]
+        entry = counted_log(runs, "check.py", str(folder), "## Iteration %d: round %d" % (n, n), "%s/prompt.md" % m.group(1),
+                            model, saved)
+    return log, n, entry
+
+
+def append_log_entry(log, n, entry):
+    """Add the entry to the end of the log. An older entry for the same iteration is replaced, never added twice."""
+    path = pathlib.Path(log)
+    text = path.read_bytes().decode("utf-8") if path.exists() else ""
+    eol = "\r\n" if "\r\n" in text else "\n"
+    mine = re.search(r"^## Iteration %d\b.*?(?=^## Iteration \d+|\Z)" % n, text, re.M | re.S)
+    if mine:
+        text = text[:mine.start()] + text[mine.end():]
+    text = text.rstrip("\r\n") + eol + eol if text.strip() else ""
+    approve(log)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes((text + entry.replace("\n", eol)).encode("utf-8"))
 
 
 PF_TEMPLATE = ROOT / "e2e-work" / "harness" / "standin-promptfooconfig.yaml"
@@ -108,6 +174,36 @@ PART1_WEAKER = ("Subject: Weekly update\n\nDear lead,\n\nThis week was a great s
                 "from Monday to Friday, and I am proud of what I achieved. Here is a long account of every day.\n")
 PART1_BETTER = ("Friday update\n\nNorthwind: reporting feature built, demo run, feedback fixed.\nContoso: estimate reviewed.\n"
                 "Internal: onboarded a teammate.\nBlocker: waiting on client test data access.\nNeed: access this week.\n")
+
+# Part 4 answer sets, chosen by a marker line in the round's prompt ("stand-in answers: gain"). "gain" and "flat" are the
+# authored worked answers (26 of 30 on the Practice and Part 3 checks, so a gain over 25 and then no change), "worse" is
+# a weaker mix, and no marker gives the five Northwind samples, which are the baseline's own answers.
+PART4_MARKER = re.compile(r"stand-in answers:\s*([a-z]+)", re.I)
+PART4_WORSE = ("sample-run-3.txt", "sample-run-5.txt", "fixture-bad.txt", "fixture-polished-but-wrong.txt", "sample-run-3.txt")
+
+
+def part4_blind_folder():
+    return os.getcwd().lower().replace("\\", "/").endswith("/part4/blind")
+
+
+def part4_answer(prompt):
+    """The next of the five answers for this prompt: how many answers this exact prompt has had so far decides which."""
+    digest = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+    seen = 0
+    for e in events():  # the harness notes the start of each round's five answers, so an earlier run never shifts the count
+        if e.get("event") == "part4-round":
+            seen = 0
+        elif e.get("answer_of") == digest:
+            seen += 1
+    k = seen % 5 + 1
+    log("part4-answer", answer_of=digest, number=k)
+    match = PART4_MARKER.search(prompt)
+    kind = match.group(1).lower() if match else ""
+    if kind in ("gain", "flat"):
+        return (GOLD / "part4-worked" / ("round-1" if kind == "gain" else "round-2") / ("run-%d.txt" % k)).read_text(encoding="utf-8")
+    if kind == "worse":
+        return (NW / PART4_WORSE[k - 1]).read_text(encoding="utf-8")
+    return (NW / ("sample-run-%d.txt" % k)).read_text(encoding="utf-8")
 
 
 def pf_config_text():
@@ -153,6 +249,10 @@ def handle(line):
         approve("agent-provider.js")
         pathlib.Path("agent-provider.js").write_bytes(PROVIDER.read_bytes())
         write("promptfooconfig.live.yaml", pf_live_config(cli, model))
+    elif "run + log mode" in line and "/attempts/" in line:
+        work(2)
+        log_name, number, entry = part4_log_entry(line)
+        append_log_entry(log_name, number, entry)
     elif "run + log mode" in line:
         work(2)
         write("iteration-log.md", baseline_log(line))
@@ -184,6 +284,12 @@ def handle(line):
         if mode() != "silent":
             score, verdict, why = HOOK_VARIANTS[os.getpid() % len(HOOK_VARIANTS)]
             write("output.txt", f"Score: {score}/10. {verdict}. {why} <b>bold</b> & <script>x()</script>\n")
+    elif "save only your answer to output.txt" in line.lower() and part4_blind_folder():
+        # Part 4 round folder: the stand-in reads prompt.md and answers from a fixed set picked by the marker the harness
+        # put in its own edit of the prompt, so a round's five answers are known and repeatable. Harness only.
+        work(1)
+        prompt = pathlib.Path("prompt.md").read_text(encoding="utf-8")
+        write("output.txt", part4_answer(prompt))
     elif "Save only your answer to output.txt" in line and "part1" in os.getcwd().lower().replace("\\", "/"):
         # Part 1 run folder: the participant pasted the text, so the stand-in reads prompt.md. A prompt with label lines
         # (a word, then a colon, at the start of a line) gets the better sample answer and any other prompt gets the weaker
@@ -193,7 +299,11 @@ def handle(line):
         labelled = any(re.match(r"^[A-Za-z][A-Za-z ]{0,40}:", row) for row in prompt.splitlines())
         write("output.txt", PART1_BETTER if labelled else PART1_WEAKER)
     elif "output.txt" in line:
-        n = 1 + int(time.time()) % 5
+        # The five Part 3 answers are the five Northwind samples in order, so the baseline is the same on every run
+        # and Part 4 can compare its rounds with a known starting score.
+        seen = sum(1 for e in events() if e.get("event") == "sample")
+        n = seen % 5 + 1
+        log("sample", number=n)
         work(1)
         write("output.txt", (NW / f"sample-run-{n}.txt").read_text(encoding="utf-8"))
     elif "build mode" in line:

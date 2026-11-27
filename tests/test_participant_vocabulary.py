@@ -268,7 +268,7 @@ class LockWords(unittest.TestCase):
 
     def test_every_course_part_has_skip_words_that_say_what_it_teaches_and_why(self):
         courses = [p for p in self.SERIES["parts"] if p["kind"] == "course"]
-        self.assertEqual(len(courses), 3)
+        self.assertEqual(len(courses), 4)
         for part in courses:
             with self.subTest(part=part["id"]):
                 for key in ("teaches", "matters"):

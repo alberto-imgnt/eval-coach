@@ -13,7 +13,7 @@ import threading
 import time
 from pathlib import Path
 
-from . import baseline, criteria_steps, demo_access, gates, import_checks, models, parsers, part_steps, project, promptfoo, resources, runner, scan
+from . import attempt_steps, baseline, criteria_steps, demo_access, gates, import_checks, models, parsers, part_steps, project, promptfoo, resources, runner, scan
 from . import lessons as lesson_lib
 from . import reset as reset_lib
 from . import review as review_lib
@@ -168,7 +168,8 @@ class Engine:
             raise EngineError("not_configured", "Finish the setup page first.")
 
     def _require_known(self, step):
-        if step not in self._steps(self._part_of(step)) and not self._live_exists(step):
+        part = self._part_of(step)
+        if step not in self._steps(part) and step not in part.optional_steps and not self._live_exists(step):
             raise EngineError("unknown_step", f"There is no step called {step!r}.")
 
     def _live_exists(self, step):
@@ -184,10 +185,25 @@ class Engine:
             if not self._live_open():
                 return "locked"
             return "done" if self._step(LIVE)["done"] else "active"
-        for kind, item, status in self._walk(True, self._part_of(step)):
+        part = self._part_of(step)
+        if step in part.optional_steps:
+            return self._optional_status(part, step)
+        for kind, item, status in self._walk(True, part):
             if kind == "step" and item == step:
                 return status
         return "locked"
+
+    def _optional_status(self, part, step):
+        """An optional trailing step: it opens once every required item of its Part is done, in its own order."""
+        if part.id in self._lessons_block()["skipped_parts"]:
+            return "skipped"
+        done = self._done_of(part)
+        if step in done:
+            return "done"
+        if not self._part_open(part) or not self._part_finished(part):
+            return "locked"
+        earlier = part.optional_steps[: part.optional_steps.index(step)]
+        return "active" if all(s in done for s in earlier) else "locked"
 
     def _require_preflight(self):
         if not self.preflight.is_passed(self.paths):
@@ -393,12 +409,19 @@ class Engine:
                     and self._live_open()):
                 optional_steps.append({"id": LIVE, "title": self._text(LIVE)["title"],
                                        "status": "done" if self._step(LIVE)["done"] else "optional"})
+            if chosen.optional_steps and p is not None and passed and self._part_open(chosen):
+                for extra in chosen.optional_steps:
+                    status = self._status(extra)
+                    optional_steps.append({"id": extra, "title": self._text(extra)["title"],
+                                           "status": "optional" if status == "active" else status})
             course_text = self.lesson_text["ui"]
             series_entry = next((x for x in self.series_text["parts"] if x["id"] == chosen.id), None)
             if series_entry is not None and isinstance(series_entry.get("ui"), dict):
                 course_text = _deep_merge(course_text, series_entry["ui"])  # a Part's own header, groups and finished text
             if chosen.id in self.part_ui:
                 course_text = _deep_merge(course_text, self.part_ui[chosen.id])
+            if chosen.id == "part-4" and p is not None:
+                course_text = attempt_steps.finished_text(self, course_text)
             return {
                 "configured": p is not None,
                 "setup": {
@@ -1346,6 +1369,12 @@ class Engine:
         """
         with self._lock:
             self._require_known(step)
+            kind = self.content["steps"].get(step, {}).get("kind")
+            if kind is not None:  # a step with a kind owns its rule for starting by itself
+                method = getattr(store.STEP_KINDS[kind], "auto_start", None)
+                if method is not None:
+                    method(self, step)
+                return
             if not self._auto_start_ok(step):
                 return
             try:
@@ -2023,6 +2052,8 @@ class Engine:
         placement_done = {item["lesson"] for item in self.lessons.data["placement"]
                           if self._placement_passed(item["id"])}
         related = lesson.get("related") or {}
+        # What a passed prediction was about joins the lesson text, so the page shows it beside the prediction.
+        revealed = [v["reveal"] for v in views if v.get("reveal")]
         result = {
             "id": lesson["id"],
             "title": lesson["title"],
@@ -2031,7 +2062,7 @@ class Engine:
             "skippable": lesson["skippable"],
             "status": status,
             "mission": self.lessons.mission_of(lesson["id"]),
-            "body": lesson["body"],
+            "body": "\n\n".join([lesson["body"], *revealed]),
             "activities": views,
             "sources": [{"label": s["label"], "ref": s["ref"]} for s in lesson["sources"]],
             "primary_source": {k: lesson["primary_source"][k] for k in ("label", "ref", "why")},

@@ -2,6 +2,7 @@
 // the participant's unsaved answers for /api/step/submit.
 
 import { h } from './dom.js';
+import { ATTEMPT_STEP_PANELS } from './attempt-steps.js';
 import { CRITERIA_STEP_PANELS } from './criteria-steps.js';
 import { renderMarkdown } from './markdown.js';
 import { PART_STEP_PANELS } from './part-steps.js';
@@ -1022,6 +1023,7 @@ function collectLive(step, drafts) {
 export const PANELS = {
   ...PART_STEP_PANELS,
   ...CRITERIA_STEP_PANELS,
+  ...ATTEMPT_STEP_PANELS,
   generate: { render: renderGenerate },
   build: { render: renderBuild },
   fixtures: { render: renderFixtures },

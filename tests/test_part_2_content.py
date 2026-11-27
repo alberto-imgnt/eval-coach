@@ -576,9 +576,9 @@ class SeriesRow(unittest.TestCase):
         self.assertRegex(body, r"The Practice task is for practice only and is not something to submit")
         self.assertIsNone(GROUP_WORK.search(body))
 
-    def test_part_two_is_a_course_and_parts_four_and_five_are_still_coming_soon(self):
+    def test_part_two_is_a_course_and_part_five_is_still_coming_soon(self):
         kinds = {p["n"]: p["kind"] for p in json.loads(resources.read_text("content/series.json"))["parts"]}
-        self.assertEqual(kinds, {1: "course", 2: "course", 3: "course", 4: "soon", 5: "soon", 6: "live"})
+        self.assertEqual(kinds, {1: "course", 2: "course", 3: "course", 4: "course", 5: "soon", 6: "live"})
 
     def test_the_part_two_words_reach_the_page_only_for_part_two(self):
         home = Path(tempfile.mkdtemp(prefix="eval-coach-series-"))

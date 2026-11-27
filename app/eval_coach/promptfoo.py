@@ -34,6 +34,9 @@ DEAD_PROXY = "http://127.0.0.1:9"
 REASON_PASS = "All checks for this criterion passed."
 _FIXTURE_TESTS = ("fixture-bad", "fixture-polished-but-wrong")
 KNOWN_GOOD_TEST = "known-good"
+# The names a Part 4 attempt folder can run: it holds its own five answers and known-good.txt, but not the fixtures.
+KNOWN_GOOD_PATTERN = f"^{KNOWN_GOOD_TEST}$"
+RUN_TESTS_PATTERN = "^run-[1-5]$"
 _CACHE_MISS = re.compile(r"ENOTCACHED|ENOTFOUND|offline|EAI_AGAIN|ECONN|E404", re.I)
 
 
@@ -82,12 +85,18 @@ def file_for_test(name):
     return name
 
 
-def eval_args(output=RESULTS_NAME):
-    """The eval command's arguments, with promptfoo's own output written to `output`."""
-    return EVAL_ARGS[:-1] + [output]
+def eval_args(output=RESULTS_NAME, only=None):
+    """The eval command's arguments, with promptfoo's own output written to `output`.
+
+    `only` is a pattern for the names of the tests to run. promptfoo then reads only those tests' files, which matters
+    when other tests read files that are not there (promptfoo stops on a missing file, even for a test it was not asked
+    to report on).
+    """
+    head = EVAL_ARGS[:-2] + (["--filter-pattern", only] if only else [])
+    return head + ["-o", output]
 
 
-def run_eval(project, env, npx_argv, runner=None, timeout=EVAL_TIMEOUT, output=RESULTS_NAME):
+def run_eval(project, env, npx_argv, runner=None, timeout=EVAL_TIMEOUT, output=RESULTS_NAME, only=None):
     """Run the exact eval command in the project folder. Returns (exit_code, raw_output, error or None).
 
     A non-zero exit code from failed checks is normal. The output file is deleted first, so one that exists
@@ -104,7 +113,7 @@ def run_eval(project, env, npx_argv, runner=None, timeout=EVAL_TIMEOUT, output=R
         return -1, "", ("The app could not find Node.js, which promptfoo needs. Open the setup page, finish the "
                         "Node.js and promptfoo items, choose Check everything again, then try again.")
     runner = runner or SystemRunner()
-    outcome = runner.run(list(npx_argv) + eval_args(output), timeout=timeout, env=eval_env(env), cwd=str(project))
+    outcome = runner.run(list(npx_argv) + eval_args(output, only), timeout=timeout, env=eval_env(env), cwd=str(project))
     raw = ((outcome.stdout or "") + ("\n" + outcome.stderr if (outcome.stderr or "").strip() else ""))[:RAW_LIMIT]
     if not getattr(outcome, "started", True):
         return -1, raw, ("promptfoo could not be started: " + (outcome.stderr or "").strip()
@@ -204,13 +213,14 @@ def criterion_names(project):
     return {c["id"]: c["name"] for c in parse_test_cases(text) if c.get("name")}
 
 
-def run_selection(project, prefix, expect, env, npx_argv, runner=None, python=None, output=RESULTS_NAME):
+def run_selection(project, prefix, expect, env, npx_argv, runner=None, python=None, output=RESULTS_NAME, only=None):
     """Run the eval, summarize the tests whose names start with prefix, and return a RunResult.
 
     `expect` lists the files the result must report on (for example runs/run-1.txt). The files in the result
-    are the ones the tests read, so the rest of the app treats this like a checker run on those files.
+    are the ones the tests read, so the rest of the app treats this like a checker run on those files. `only` is a
+    pattern for the test names to run and nothing else (see `eval_args`).
     """
-    code, raw, error = run_eval(project, env, npx_argv, runner, output=output)
+    code, raw, error = run_eval(project, env, npx_argv, runner, output=output, only=only)
     if error:
         return _result(False, code, error, raw, [])
     text, error = summarize(project, prefix, python, output=output)

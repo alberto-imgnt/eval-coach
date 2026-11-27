@@ -44,7 +44,7 @@ PROJECT_SKILLS_DIR = "skills"  # only the bundled skill files in it are moved
 PROJECT_KEPT_BY_PROGRESS = PROJECT_STARTING_FILES + (PROJECT_SKILLS_DIR,)
 
 # In the app's own folder, scratch folders the steps and lessons rebuild every time: moved by both resets.
-HOME_SCRATCH = ("blind", "fixtures-work", "key-work", "hook", "demo", "practice", "part1")
+HOME_SCRATCH = ("blind", "fixtures-work", "key-work", "hook", "demo", "practice", "part1", "part4")
 HOME_PENDING = "pending-lessons.json"  # course progress from before a project existed
 # In the app's own folder, setup state: moved only by "Reset app configuration".
 HOME_SETUP_FILES = ("preflight.json", "app.json", "model-cache.json")
